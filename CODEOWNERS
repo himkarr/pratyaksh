@@ -1,0 +1,4 @@
+/backend/ @member-a
+/ai-ml/ @member-b
+/frontend/ @member-c
+/contracts/ @member-a @member-b @member-c

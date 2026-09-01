@@ -6,11 +6,16 @@ services:
     healthcheck: {test: ["CMD-SHELL", "pg_isready -U mplad"], interval: 5s, timeout: 5s, retries: 5}
   ai-ml:
     build: {context: ., dockerfile: ai-ml/Dockerfile}
-    command: uvicorn service.ml_api:app --host 0.0.0.0 --port 8001
+    command: sh -c "python data/synthetic_data_generator.py && python pipeline/train.py && uvicorn service.ml_api:app --host 0.0.0.0 --port 8001"
     ports: ["8001:8001"]
   backend:
     build: {context: ., dockerfile: backend/Dockerfile}
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: sh -c "python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     environment: {DATABASE_URL: postgresql+psycopg://mplad:mplad@db:5432/mplad, ML_SERVICE_URL: http://ai-ml:8001, JWT_SECRET: change-this-before-deployment}
     ports: ["8000:8000"]
     depends_on: {db: {condition: service_healthy}, ai-ml: {condition: service_started}}
+  frontend:
+    build: {context: ., dockerfile: frontend/Dockerfile}
+    environment: {VITE_API_URL: http://localhost:8000}
+    ports: ["5173:5173"]
+    depends_on: {backend: {condition: service_started}}
