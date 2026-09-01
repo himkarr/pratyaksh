@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+dist/
+ai-ml/data/raw/*
+!ai-ml/data/raw/.gitkeep
+.pytest_cache/
