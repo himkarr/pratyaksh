@@ -23,3 +23,7 @@ cd frontend && npm install && npm run dev
 ```
 
 For integration, copy `.env.example` to `.env` and run `docker compose up --build`.
+
+## CI note
+
+The GitHub Actions workflow is temporarily omitted because the repository's current Personal Access Token does not have GitHub's `workflow` permission required to push workflow files. Restore the CI workflow after authenticating with a token that includes that permission.
