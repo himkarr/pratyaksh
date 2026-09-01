@@ -3,3 +3,7 @@ completion_deadline_days: 365
 utilization_overrun_tolerance: 0.02
 high_utilization_low_progress_ratio: 0.80
 low_progress_threshold: 40
+spend_spike_ratio: 0.55
+inactivity_days_threshold: 60
+duplicate_vendor_payment_threshold: 3
+deadline_risk_elapsed_ratio: 0.50

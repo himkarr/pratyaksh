@@ -1,15 +1,16 @@
-import json
-from fastapi import APIRouter, Depends, HTTPException
-from ..core.config import CONTRACTS
-from ..core.rbac import current_user, scope_projects
+from fastapi import APIRouter,Depends,HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from ..db.session import get_db
+from ..models.project import Project
+from ..models.flag import Flag
+from ..core.rbac import current_user,scoped
 from ..services.audit_service import append
-
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+from .routes_projects import serialize as project_json
+from .routes_flags import serialize as flag_json
+router=APIRouter(prefix="/dashboard",tags=["dashboard"])
 @router.get("/{role}")
-def dashboard(role: str, user: dict = Depends(current_user)):
-    if role != user["role"]: raise HTTPException(403, "Dashboard role must match token role")
-    projects = scope_projects(json.loads((CONTRACTS / "sample-data/sample_projects.json").read_text()), user)
-    flags = json.loads((CONTRACTS / "sample-data/sample_flags.json").read_text())
-    flags = [flag for flag in flags if flag["project_id"] in {p["id"] for p in projects}]
-    append(user["sub"], "dashboard.view", "dashboard", role)
-    return {"role": role, "projects": projects, "flags": flags, "summary": {"project_count": len(projects), "flag_count": len(flags)}}
+def dashboard(role:str,user=Depends(current_user),db:Session=Depends(get_db)):
+    if role != user["role"]: raise HTTPException(403,"Dashboard role must match token role")
+    projects=db.scalars(scoped(select(Project),Project,user)).all(); ids=[p.id for p in projects]; flags=db.scalars(select(Flag).where(Flag.project_id.in_(ids))).all(); append(db,user["sub"],"dashboard.view","dashboard",role)
+    return {"role":role,"projects":[project_json(p) for p in projects],"flags":[flag_json(f) for f in flags],"summary":{"project_count":len(projects),"flag_count":len(flags)}}

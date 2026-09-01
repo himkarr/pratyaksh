@@ -6,6 +6,6 @@ All sample records are synthetic and must never be replaced with real MP or cons
 | --- | --- |
 | `role` | `mp`, `state_nodal`, `district`, `ministry` |
 | `severity` | `low`, `medium`, `high`, `critical` |
-| `origin` | `rule`, `ml`, `hybrid` |
+| `origin` | `rule`, `isolation_forest`, `deadline_forecaster` |
 | `project_status` | `sanctioned`, `in_progress`, `completed`, `delayed`, `cancelled` |
 | `flag_category` | `deadline_risk`, `cost_anomaly`, `progress_anomaly`, `duplicate_risk` |

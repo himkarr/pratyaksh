@@ -1,21 +1,11 @@
-"""Named explainable rules. Every output includes a reason and origin tag."""
+"""Named, configurable and explainable rules; all outputs require human review."""
 from datetime import date
 from pathlib import Path
 import yaml
-
 CONFIG = yaml.safe_load((Path(__file__).with_name("rules_config.yaml")).read_text())
 COMPLETION_DEADLINE_DAYS = CONFIG["completion_deadline_days"]
-
+def _flag(triggered, category, severity, confidence, reason): return {"triggered": triggered, "category": category, "severity": severity, "confidence": confidence, "reason": reason, "origin": "rule"}
 def evaluate(project: dict, today: date | None = None) -> list[dict]:
-    today = today or date.today(); flags = []
-    sanctioned, utilized = float(project["sanctioned_amount"]), float(project["utilized_amount"])
-    progress = float(project["physical_progress_percent"])
-    sanction_date = date.fromisoformat(str(project["sanction_date"])) if project.get("sanction_date") else None
-    elapsed = (today - sanction_date).days if sanction_date else int(project.get("days_elapsed", 0))
-    if utilized > sanctioned * (1 + CONFIG["utilization_overrun_tolerance"]):
-        flags.append({"category":"cost_anomaly", "severity":"high", "confidence":.94, "origin":"rule", "reason":"Reported utilization exceeds the sanctioned amount beyond the configured tolerance."})
-    if elapsed > COMPLETION_DEADLINE_DAYS and progress < 100:
-        flags.append({"category":"deadline_risk", "severity":"critical", "confidence":.98, "origin":"rule", "reason":"The project has exceeded the mandatory one-year completion deadline from sanction."})
-    if utilized / max(sanctioned, 1) >= CONFIG["high_utilization_low_progress_ratio"] and progress < CONFIG["low_progress_threshold"]:
-        flags.append({"category":"progress_anomaly", "severity":"high", "confidence":.87, "origin":"rule", "reason":"High fund utilization with low physical progress warrants human review."})
-    return flags
+    today = today or date.today(); allocated = float(project["sanctioned_amount"]); utilized = float(project["utilized_amount"]); progress = float(project["physical_progress_percent"]); elapsed = (today - date.fromisoformat(str(project["sanction_date"]))).days
+    rules = [_flag(utilized > allocated * (1 + CONFIG["utilization_overrun_tolerance"]), "cost_anomaly", "high", .96, "Fund utilization exceeds the sanctioned allocation beyond the configured tolerance."), _flag(elapsed > COMPLETION_DEADLINE_DAYS and progress < 100, "deadline_risk", "critical", .98, "The project is beyond the mandatory one-year completion deadline and remains incomplete."), _flag(elapsed >= COMPLETION_DEADLINE_DAYS * CONFIG["deadline_risk_elapsed_ratio"] and progress < CONFIG["low_progress_threshold"], "deadline_risk", "high", .82, "Low physical progress at this point in the one-year delivery window indicates a likely deadline breach."), _flag(float(project.get("spend_spike_ratio", 0)) >= CONFIG["spend_spike_ratio"] and int(project.get("days_inactive", 0)) >= CONFIG["inactivity_days_threshold"], "cost_anomaly", "medium", .78, "A large recent spend spike followed an unusually long period without a project update."), _flag(project.get("status") == "completed" and utilized <= 0, "progress_anomaly", "high", .93, "The project is marked complete but reports no fund utilization."), _flag(int(project.get("duplicate_vendor_payments", 0)) >= CONFIG["duplicate_vendor_payment_threshold"], "duplicate_risk", "high", .88, "Multiple duplicate vendor-payment patterns were recorded and need auditor review.")]
+    return [rule for rule in rules if rule["triggered"]]

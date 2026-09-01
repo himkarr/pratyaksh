@@ -1,1 +1,10 @@
-"""Database session placeholder; use DATABASE_URL from the root .env for integration."""
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from ..core.config import DATABASE_URL
+engine = create_engine(DATABASE_URL, future=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+class Base(DeclarativeBase): pass
+def get_db():
+    db = SessionLocal()
+    try: yield db
+    finally: db.close()

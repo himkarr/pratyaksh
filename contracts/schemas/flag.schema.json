@@ -1,5 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "Flag", "type": "object",
   "required": ["id", "project_id", "category", "severity", "confidence", "reason", "origin", "created_at"],
-  "properties": {"id": {"type": "string"}, "project_id": {"type": "string"}, "category": {"enum": ["deadline_risk", "cost_anomaly", "progress_anomaly", "duplicate_risk"]}, "severity": {"enum": ["low", "medium", "high", "critical"]}, "confidence": {"type": "number", "minimum": 0, "maximum": 1}, "reason": {"type": "string", "minLength": 1}, "origin": {"enum": ["rule", "ml", "hybrid"]}, "created_at": {"type": "string", "format": "date-time"}}
+  "properties": {"id": {"type": "string"}, "project_id": {"type": "string"}, "category": {"enum": ["deadline_risk", "cost_anomaly", "progress_anomaly", "duplicate_risk"]}, "severity": {"enum": ["low", "medium", "high", "critical"]}, "confidence": {"type": "number", "minimum": 0, "maximum": 1}, "reason": {"type": "string", "minLength": 1}, "origin": {"enum": ["rule", "isolation_forest", "deadline_forecaster"]}, "created_at": {"type": "string", "format": "date-time"}}
 }

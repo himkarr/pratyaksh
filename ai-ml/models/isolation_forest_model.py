@@ -1,16 +1,15 @@
 from pathlib import Path
-import json
-import numpy as np
+from datetime import date
+import joblib, numpy as np
 from sklearn.ensemble import IsolationForest
-
-MODEL_PATH = Path(__file__).with_name("isolation_forest.joblib")
-def vector(project): return [float(project["utilized_amount"])/max(float(project["sanctioned_amount"]),1), float(project["physical_progress_percent"]), float(project.get("days_elapsed", 0))]
+ARTIFACT = Path(__file__).resolve().parents[1] / "artifacts" / "isolation_forest.joblib"
+def vector(project: dict, today=None) -> list[float]:
+    today = today or date.today(); elapsed = (today - date.fromisoformat(str(project["sanction_date"]))).days
+    return [float(project["utilized_amount"]) / max(float(project["sanctioned_amount"]), 1), float(project["physical_progress_percent"]), elapsed / 365, float(project.get("spend_spike_ratio", 0)), 1 / max(int(project.get("vendor_count", 1)), 1)]
 def train(records: list[dict]):
-    model = IsolationForest(contamination=.12, random_state=42).fit(np.array([vector(r) for r in records]))
-    import joblib; joblib.dump(model, MODEL_PATH); return model
-def score(project: dict) -> dict | None:
-    if not MODEL_PATH.exists(): return None
-    import joblib; model = joblib.load(MODEL_PATH)
-    anomaly = model.predict(np.array([vector(project)]))[0] == -1
-    if not anomaly: return None
-    return {"category":"progress_anomaly", "severity":"medium", "confidence":round(float(-model.score_samples(np.array([vector(project)]))[0]), 2), "origin":"ml", "reason":"The record differs from the synthetic peer pattern and should be reviewed by an auditor."}
+    model = IsolationForest(contamination=.12, random_state=42, n_estimators=150).fit(np.array([vector(record) for record in records])); ARTIFACT.parent.mkdir(exist_ok=True); joblib.dump(model, ARTIFACT); return model
+def predict(project: dict) -> dict | None:
+    if not ARTIFACT.exists(): return None
+    model = joblib.load(ARTIFACT); values = np.array([vector(project)]); score = float(-model.score_samples(values)[0])
+    if model.predict(values)[0] != -1: return None
+    return {"category": "progress_anomaly", "severity": "medium", "confidence": min(.95, round(score, 2)), "origin": "isolation_forest", "reason": "The combined utilization, delivery pace, spend velocity, and vendor pattern is unusual compared with synthetic peer projects."}

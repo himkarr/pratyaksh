@@ -1,6 +1,6 @@
 [
-  {"id":"FLG-001","project_id":"PRJ-002","category":"deadline_risk","severity":"critical","confidence":0.98,"reason":"The project is beyond the mandatory one-year completion deadline and physical progress remains 58%.","origin":"hybrid","created_at":"2026-09-01T00:00:00Z"},
+  {"id":"FLG-001","project_id":"PRJ-002","category":"deadline_risk","severity":"critical","confidence":0.98,"reason":"The project is beyond the mandatory one-year completion deadline and physical progress remains 58%.","origin":"deadline_forecaster","created_at":"2026-09-01T00:00:00Z"},
   {"id":"FLG-002","project_id":"PRJ-005","category":"cost_anomaly","severity":"high","confidence":0.94,"reason":"Reported utilization exceeds the sanctioned amount by more than the configured tolerance.","origin":"rule","created_at":"2026-09-01T00:00:00Z"},
-  {"id":"FLG-003","project_id":"PRJ-011","category":"deadline_risk","severity":"critical","confidence":0.96,"reason":"The project is overdue and low progress indicates a likely implementation failure requiring review.","origin":"hybrid","created_at":"2026-09-01T00:00:00Z"},
-  {"id":"FLG-004","project_id":"PRJ-009","category":"progress_anomaly","severity":"high","confidence":0.83,"reason":"High utilization with low physical progress is unusual compared with synthetic peer records.","origin":"ml","created_at":"2026-09-01T00:00:00Z"}
+  {"id":"FLG-003","project_id":"PRJ-011","category":"deadline_risk","severity":"critical","confidence":0.96,"reason":"The project is overdue and low progress indicates a likely implementation failure requiring review.","origin":"rule","created_at":"2026-09-01T00:00:00Z"},
+  {"id":"FLG-004","project_id":"PRJ-009","category":"progress_anomaly","severity":"high","confidence":0.83,"reason":"High utilization with low physical progress is unusual compared with synthetic peer records.","origin":"isolation_forest","created_at":"2026-09-01T00:00:00Z"}
 ]
