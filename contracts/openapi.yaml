@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: MPLAD Aqua Decision Support API
+  version: 0.1.0
+  description: Synthetic-data MVP. Flags are probabilistic review signals, never accusations.
+servers:
+  - url: http://localhost:8000
+paths:
+  /auth/login:
+    post:
+      summary: Issue a JWT for a synthetic demo user
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LoginRequest'}}}}
+      responses: {'200': {description: Token issued, content: {application/json: {schema: {$ref: '#/components/schemas/Token'}}}}}
+  /projects:
+    get:
+      summary: List projects scoped to the caller role
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Projects, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Project'}}}}}
+  /flags:
+    get:
+      summary: List explainable review flags scoped to the caller role
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Flags, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Flag'}}}}}
+  /dashboard/{role}:
+    get:
+      summary: Return dashboard data if path role matches caller role
+      security: [{bearerAuth: []}]
+      parameters: [{name: role, in: path, required: true, schema: {enum: [mp, state_nodal, district, ministry]}}]
+      responses: {'200': {description: Dashboard summary}}
+  /audit-trail:
+    get:
+      summary: List tamper-evident audit events
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Audit events, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/AuditEvent'}}}}}
+components:
+  securitySchemes: {bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}}
+  schemas:
+    LoginRequest: {type: object, required: [user_id], properties: {user_id: {type: string, example: USR-004}}}
+    Token: {type: object, properties: {access_token: {type: string}, token_type: {type: string, example: bearer}}}
+    Project: {$ref: './schemas/project.schema.json'}
+    Flag: {$ref: './schemas/flag.schema.json'}
+    AuditEvent: {$ref: './schemas/audit_event.schema.json'}

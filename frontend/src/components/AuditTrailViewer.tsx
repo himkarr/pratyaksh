@@ -1,0 +1,1 @@
+export function AuditTrailViewer() { return <section><h3>Audit trail</h3><p>Audit entries are append-only and hash-chained in the backend. Ministry users can retrieve them from the API.</p></section>; }

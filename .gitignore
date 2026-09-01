@@ -6,4 +6,5 @@ node_modules/
 dist/
 ai-ml/data/raw/*
 !ai-ml/data/raw/.gitkeep
+ai-ml/models/*.joblib
 .pytest_cache/

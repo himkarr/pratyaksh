@@ -1,0 +1,5 @@
+# MPLAD completion deadline: scheme rule, not a tunable model parameter.
+completion_deadline_days: 365
+utilization_overrun_tolerance: 0.02
+high_utilization_low_progress_ratio: 0.80
+low_progress_threshold: 40

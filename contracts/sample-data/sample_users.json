@@ -1,0 +1,6 @@
+[
+  {"id":"USR-001","name":"Synthetic MP User","role":"mp","state":"Aster","district":"Northfield","constituency_code":"AST-01"},
+  {"id":"USR-002","name":"Synthetic State Officer","role":"state_nodal","state":"Aster","district":null,"constituency_code":null},
+  {"id":"USR-003","name":"Synthetic District Officer","role":"district","state":"Beryl","district":"Eastvale","constituency_code":null},
+  {"id":"USR-004","name":"Synthetic Ministry Officer","role":"ministry","state":null,"district":null,"constituency_code":null}
+]

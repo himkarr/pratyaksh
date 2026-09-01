@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project",
+  "type": "object",
+  "required": ["id", "title", "state", "district", "constituency_code", "sanction_date", "sanctioned_amount", "utilized_amount", "physical_progress_percent", "status"],
+  "properties": {
+    "id": {"type": "string"}, "title": {"type": "string"}, "state": {"type": "string"}, "district": {"type": "string"}, "constituency_code": {"type": "string"},
+    "sanction_date": {"type": "string", "format": "date"}, "expected_completion_date": {"type": "string", "format": "date"}, "actual_completion_date": {"type": ["string", "null"], "format": "date"},
+    "sanctioned_amount": {"type": "number", "minimum": 0}, "utilized_amount": {"type": "number", "minimum": 0}, "physical_progress_percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "status": {"enum": ["sanctioned", "in_progress", "completed", "delayed", "cancelled"]}
+  }
+}

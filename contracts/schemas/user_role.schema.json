@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"UserRole","type":"object","required":["id","name","role"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"role":{"enum":["mp","state_nodal","district","ministry"]},"state":{"type":["string","null"]},"district":{"type":["string","null"]},"constituency_code":{"type":["string","null"]}}}
