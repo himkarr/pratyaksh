@@ -1,1 +1,19 @@
-export function DeadlineForecastBadge({hasRisk, probability}: {hasRisk: boolean; probability?: number}) { const value = probability ?? (hasRisk ? .72 : .12); return <span title={`Predicted breach probability: ${Math.round(value * 100)}%`} className={hasRisk ? "badge risk" : "badge"}>{hasRisk ? `Deadline risk ${Math.round(value * 100)}%` : `Low risk ${Math.round(value * 100)}%`}</span>; }
+export function DeadlineForecastBadge({
+  hasRisk,
+  probability,
+}: {
+  hasRisk: boolean;
+  probability?: number;
+}) {
+  const value = probability ?? (hasRisk ? 0.72 : 0.12);
+  return (
+    <span
+      title={`Predicted breach probability: ${Math.round(value * 100)}%`}
+      className={hasRisk ? "badge risk" : "badge"}
+    >
+      {hasRisk
+        ? `Deadline risk ${Math.round(value * 100)}%`
+        : `Low risk ${Math.round(value * 100)}%`}
+    </span>
+  );
+}

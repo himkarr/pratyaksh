@@ -1,3 +1,29 @@
-import { useState } from "react";
+import {useState} from "react";
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-export function AuditTrailViewer() { const [message, setMessage] = useState("Audit entries are append-only and hash-chained."); const verify = async () => { try { const response = await fetch(`${API}/audit-trail/verify`); const data = await response.json(); setMessage(data.valid ? `Integrity verified (${data.event_count} events).` : `Chain broken at ${data.broken_event_id}.`); } catch { setMessage("Live API unavailable; use Ministry login to verify the seeded chain."); } }; return <section><h3>Audit trail</h3><p>{message}</p><button onClick={verify}>Verify integrity</button></section>; }
+export function AuditTrailViewer() {
+  const [message, setMessage] = useState(
+    "Audit entries are append-only and hash-chained.",
+  );
+  const verify = async () => {
+    try {
+      const response = await fetch(`${API}/audit-trail/verify`);
+      const data = await response.json();
+      setMessage(
+        data.valid
+          ? `Integrity verified (${data.event_count} events).`
+          : `Chain broken at ${data.broken_event_id}.`,
+      );
+    } catch {
+      setMessage(
+        "Live API unavailable; use Ministry login to verify the seeded chain.",
+      );
+    }
+  };
+  return (
+    <section>
+      <h3>Audit trail</h3>
+      <p>{message}</p>
+      <button onClick={verify}>Verify integrity</button>
+    </section>
+  );
+}
