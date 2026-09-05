@@ -1,46 +1,50 @@
-import {createRoot} from "react-dom/client";
+/**
+ * ============================================================================
+ * NATIONAL MPLADS DECISION SUPPORT SYSTEM (SIH26102)
+ * MODULE: main.tsx (Application Bootstrap & Stakeholder Dashboard Router)
+ * ============================================================================
+ * 
+ * DOMAIN CONTEXT & PURPOSE:
+ * -------------------------
+ * This is the root entrypoint of the React application. It wraps the entire component
+ * tree with `RoleProvider` (Role-Based Access Control) and dynamically routes users
+ * to their respective stakeholder dashboard view based on authenticated perspective:
+ * 
+ * - `mp`           -> MPDashboard (Constituency Recommendation & Local Progress)
+ * - `district`     -> DistrictDashboard (Sanctions, Milestone Verification & Fund Releases)
+ * - `state_nodal`  -> StateNodalDashboard (Cross-District Progress & State Compliance)
+ * - `ministry`     -> MinistryDashboard (Apex MoSPI Oversight, AI Anomaly Review & Hash Ledger)
+ */
+
+import React from "react";
+import { createRoot } from "react-dom/client";
 import "./style.css";
-import {RoleProvider, useRole} from "./auth/roleContext";
-import {MPDashboard} from "./dashboards/MPDashboard";
-import {StateNodalDashboard} from "./dashboards/StateNodalDashboard";
-import {DistrictDashboard} from "./dashboards/DistrictDashboard";
-import {MinistryDashboard} from "./dashboards/MinistryDashboard";
+import { RoleProvider, useRole } from "./auth/roleContext";
+import { MPDashboard } from "./dashboards/MPDashboard";
+import { StateNodalDashboard } from "./dashboards/StateNodalDashboard";
+import { DistrictDashboard } from "./dashboards/DistrictDashboard";
+import { MinistryDashboard } from "./dashboards/MinistryDashboard";
+
 function App() {
-  const {user, setRole} = useRole();
-  let view: React.ReactNode;
+  const { user } = useRole();
+
   switch (user.role) {
     case "mp":
-      view = <MPDashboard />;
-      break;
-    case "state_nodal":
-      view = <StateNodalDashboard />;
-      break;
+      return <MPDashboard />;
     case "district":
-      view = <DistrictDashboard />;
-      break;
+      return <DistrictDashboard />;
+    case "state_nodal":
+      return <StateNodalDashboard />;
     default:
-      view = <MinistryDashboard />;
+      return <MinistryDashboard />;
   }
-  return (
-    <>
-      <header>
-        <strong>MPLAD Aqua</strong>
-        <select
-          value={user.role}
-          onChange={(e) => setRole(e.target.value as never)}
-        >
-          <option value="mp">MP</option>
-          <option value="state_nodal">State Nodal</option>
-          <option value="district">District</option>
-          <option value="ministry">Ministry</option>
-        </select>
-      </header>
-      {view}
-    </>
+}
+
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  createRoot(rootElement).render(
+    <RoleProvider>
+      <App />
+    </RoleProvider>
   );
 }
-createRoot(document.getElementById("root")!).render(
-  <RoleProvider>
-    <App />
-  </RoleProvider>,
-);
