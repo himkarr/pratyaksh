@@ -1,4 +1,4 @@
-# SIH26102 — MPLAD Aqua
+# SIH26102 — MPLAD Sapphire
 
 MPLAD Aqua is an explainable, hybrid decision-support MVP for anomaly, fraud-risk, and implementation-inefficiency signals in MPLAD project execution. It is **not an accusation engine**: every flag has a reviewable reason, confidence score, and `rule` / `ml` / `hybrid` origin tag. All included records are clearly labeled synthetic.
 
