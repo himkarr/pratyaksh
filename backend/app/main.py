@@ -1,20 +1,52 @@
-from fastapi import FastAPI, Depends
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-from .api import routes_auth,routes_projects,routes_flags,routes_dashboard
-from .core.rbac import require
-from .db.session import get_db
-from .db.seed import seed
-from .models.audit_event import AuditEvent
-from .services.audit_service import verify_chain
-app=FastAPI(title="MPLAD Aqua API",description="Synthetic-data hybrid review support; flags are not accusations.")
-app.include_router(routes_auth.router); app.include_router(routes_projects.router); app.include_router(routes_flags.router); app.include_router(routes_dashboard.router)
-@app.on_event("startup")
-def startup(): seed()
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .api import (
+    routes_auth,
+    routes_recommendations,
+    routes_projects,
+    routes_evidence,
+    routes_verification,
+    routes_audit
+)
+
+app = FastAPI(
+    title="MPLADS Monitoring & Decision Support System API",
+    description=(
+        "Team Sapphire submission for SIH 2026, Problem Statement SIH26102. "
+        "An AI-powered system to detect anomalies, fraud, and inefficiencies in MPLAD Scheme fund utilization, "
+        "sponsored by MoSPI's Data Informatics & Innovation Division."
+    ),
+    version="2.0.0"
+)
+
+# Enable CORS for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount Routers
+app.include_router(routes_auth.router)
+app.include_router(routes_recommendations.router)
+app.include_router(routes_projects.router)
+app.include_router(routes_evidence.router)
+app.include_router(routes_verification.router)
+app.include_router(routes_audit.router)
+
 @app.get("/health")
-def health(): return {"status":"ok"}
-@app.get("/audit-trail")
-def audit_trail(_=Depends(require("audit:read")),db:Session=Depends(get_db)):
-    return [{"id":e.id,"actor_id":e.actor_id,"action":e.action,"entity_type":e.entity_type,"entity_id":e.entity_id,"created_at":e.created_at.isoformat(),"previous_hash":e.prev_hash,"event_hash":e.this_hash} for e in db.scalars(select(AuditEvent).order_by(AuditEvent.created_at)).all()]
-@app.get("/audit-trail/verify")
-def verify(_=Depends(require("audit:read")),db:Session=Depends(get_db)): return verify_chain(db)
+def health_check():
+    return {
+        "status": "healthy",
+        "service": "MPLADS Monitoring System",
+        "team": "Team Sapphire",
+        "problem_statement": "SIH26102",
+        "schema_version": "29-table-production"
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

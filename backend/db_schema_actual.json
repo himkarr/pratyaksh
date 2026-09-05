@@ -1,0 +1,1626 @@
+{
+  "agency_users": [
+    {
+      "name": "agency_user_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "agency_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "is_primary_contact",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "false"
+    },
+    {
+      "name": "added_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "ai_analysis_results": [
+    {
+      "name": "analysis_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "evidence_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "anomaly_detected",
+      "type": "boolean",
+      "nullable": "YES",
+      "default": "false"
+    },
+    {
+      "name": "anomaly_type",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "image_analysis_result",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "duplicate_detection_result",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "progress_estimation_percentage",
+      "type": "integer",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "confidence_score",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "model_version",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "analyzed_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "audit_logs": [
+    {
+      "name": "log_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "action",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "entity_type",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "entity_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "old_value",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "new_value",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "ip_address",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "timestamp",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "citizen_trust_scores": [
+    {
+      "name": "trust_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "citizen_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "trust_score",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "verified_submissions_count",
+      "type": "integer",
+      "nullable": "YES",
+      "default": "0"
+    },
+    {
+      "name": "rejected_false_reports_count",
+      "type": "integer",
+      "nullable": "YES",
+      "default": "0"
+    },
+    {
+      "name": "gps_timestamp_consistency_score",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "image_authenticity_score",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "independent_corroboration_score",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "last_updated_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "evidence": [
+    {
+      "name": "evidence_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "uploaded_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "evidence_type",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "evidence_category",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "file_url",
+      "type": "text",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "thumbnail_url",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "latitude",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "longitude",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "captured_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "uploaded_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    },
+    {
+      "name": "remarks",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "is_geotagged",
+      "type": "boolean",
+      "nullable": "YES",
+      "default": "false"
+    },
+    {
+      "name": "device_info",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "duplicate_flag",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "false"
+    },
+    {
+      "name": "duplicate_of",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "authenticity_score",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "status",
+      "type": "USER-DEFINED",
+      "nullable": "NO",
+      "default": "'Pending'::evidence_status_enum"
+    }
+  ],
+  "evidence_moderation_queue": [
+    {
+      "name": "moderation_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "evidence_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "flagged_reason",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "moderator_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "decision",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "decided_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    }
+  ],
+  "fund_transfers": [
+    {
+      "name": "transfer_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "source_project_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "destination_project_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "amount",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "reason",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "requested_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "approved_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "status",
+      "type": "USER-DEFINED",
+      "nullable": "NO",
+      "default": "'Requested'::fund_transfer_status_enum"
+    },
+    {
+      "name": "requested_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    },
+    {
+      "name": "decided_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    }
+  ],
+  "implementing_agencies": [
+    {
+      "name": "agency_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "agency_name",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "agency_type",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "registration_number",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "bank_account_masked",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "verified_by_admin",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "false"
+    }
+  ],
+  "model_versions": [
+    {
+      "name": "model_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "model_name",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "version",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "deployed_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "status",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "performance_metrics",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    }
+  ],
+  "mp_constituency_mapping": [
+    {
+      "name": "mapping_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "mp_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "constituency_name",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "state",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "district",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "term_start",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "term_end",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "boundary_geojson",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    }
+  ],
+  "notifications": [
+    {
+      "name": "notification_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "channel",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "title",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "message",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "related_entity_type",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "related_entity_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "is_read",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "false"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    },
+    {
+      "name": "sent_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    }
+  ],
+  "payment_transactions": [
+    {
+      "name": "transaction_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "implementing_agency_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "amount",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "payment_mode",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "cheque_or_utr_no",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "payment_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "linked_milestone_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "anomaly_flag",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "false"
+    }
+  ],
+  "prohibited_categories": [
+    {
+      "name": "category_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "category_name",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "guideline_reference",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "is_active",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "true"
+    }
+  ],
+  "project_financials": [
+    {
+      "name": "financial_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "installment_no",
+      "type": "integer",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "amount_released",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "release_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "amount_utilized",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "utilization_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "balance",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "remarks",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    }
+  ],
+  "project_milestones": [
+    {
+      "name": "milestone_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "milestone_name",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "expected_percentage",
+      "type": "integer",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "evidence_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "verified",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "false"
+    },
+    {
+      "name": "verified_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "verified_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    }
+  ],
+  "project_procurement_records": [
+    {
+      "name": "procurement_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "vendor_user_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "item_name",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "item_description",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "quantity",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "unit",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "unit_price",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "total_amount",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "purchase_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "linked_milestone_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "remarks",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "project_status_history": [
+    {
+      "name": "history_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "previous_status",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "new_status",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "reason",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "changed_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "expected_resume_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "changed_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "projects": [
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_name",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "category",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "recommendation_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "mp_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "constituency_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "is_outside_constituency",
+      "type": "boolean",
+      "nullable": "YES",
+      "default": "false"
+    },
+    {
+      "name": "outside_limit_category",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "sanctioned_amount",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "released_amount",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "utilized_amount",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "tender_reference_no",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "implementing_agency_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "sc_st_beneficiary_flag",
+      "type": "boolean",
+      "nullable": "YES",
+      "default": "false"
+    },
+    {
+      "name": "status",
+      "type": "USER-DEFINED",
+      "nullable": "NO",
+      "default": "'Proposed'::project_status_enum"
+    },
+    {
+      "name": "progress_percentage",
+      "type": "integer",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "is_flagged",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "false"
+    },
+    {
+      "name": "latitude",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "longitude",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "address",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "district",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "state",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "start_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "expected_completion_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "actual_completion_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "created_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "latest_risk_score",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "recommendations": [
+    {
+      "name": "recommendation_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "mp_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "recommendation_letter_url",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "recommended_amount",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "recommendation_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "district_authority_ack_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "status",
+      "type": "USER-DEFINED",
+      "nullable": "NO",
+      "default": "'Pending'::recommendation_status_enum"
+    }
+  ],
+  "risk_scores": [
+    {
+      "name": "risk_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "risk_score",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "anomaly_reasons",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "priority_level",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "recommendation",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "model_version",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "calculated_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "roles": [
+    {
+      "name": "role_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "role_name",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "permissions",
+      "type": "jsonb",
+      "nullable": "NO",
+      "default": "'{}'::jsonb"
+    }
+  ],
+  "rule_engine_logs": [
+    {
+      "name": "rule_log_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "rule_type",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "rule_name",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "rule_result",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "details",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "evaluated_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "sc_st_allocation_tracker": [
+    {
+      "name": "tracker_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "mp_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "financial_year",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "total_recommended",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "sc_allocated",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "st_allocated",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "compliance_status",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    }
+  ],
+  "state_nodal_mapping": [
+    {
+      "name": "nodal_mapping_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "officer_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "state",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "term_start",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "term_end",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "supporting_documents_link": [
+    {
+      "name": "link_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "entity_type",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "entity_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "evidence_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "added_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "added_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "system_config": [
+    {
+      "name": "config_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "config_key",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "config_value",
+      "type": "jsonb",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "updated_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "users": [
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "name",
+      "type": "character varying",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "email",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "phone",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "password_hash",
+      "type": "text",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "role_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "profile_photo_url",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "aadhaar_verified",
+      "type": "boolean",
+      "nullable": "NO",
+      "default": "false"
+    },
+    {
+      "name": "status",
+      "type": "USER-DEFINED",
+      "nullable": "NO",
+      "default": "'active'::user_status_enum"
+    },
+    {
+      "name": "constituency_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "district",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "state",
+      "type": "character varying",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "device_token",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "last_login_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    }
+  ],
+  "verification_evidence_link": [
+    {
+      "name": "link_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "verification_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "evidence_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    }
+  ],
+  "verification_requests": [
+    {
+      "name": "verification_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": "NO",
+      "default": null
+    },
+    {
+      "name": "assigned_officer_id",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "assigned_by",
+      "type": "uuid",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "priority_level",
+      "type": "USER-DEFINED",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "status",
+      "type": "USER-DEFINED",
+      "nullable": "NO",
+      "default": "'Assigned'::verification_status_enum"
+    },
+    {
+      "name": "site_visit_date",
+      "type": "date",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "verification_report",
+      "type": "text",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "gps_lat",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "gps_long",
+      "type": "numeric",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "synced_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    },
+    {
+      "name": "assigned_at",
+      "type": "timestamp with time zone",
+      "nullable": "NO",
+      "default": "now()"
+    },
+    {
+      "name": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": "YES",
+      "default": null
+    }
+  ]
+}
