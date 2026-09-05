@@ -1,0 +1,8 @@
+data/processed/mplads_rule_results.csv
+data/processed/mplads_rule_summary.csv
+data/processed/mplads_rules_not_checkable_yet.csv
+
+# Generated ML data and predictions
+data/features/*.csv
+data/processed/*.csv
+*_predictions.csv
