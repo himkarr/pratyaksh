@@ -13,6 +13,7 @@ from ..models import (
 )
 from ..core.rbac import get_current_user, filter_projects_by_role, require_roles
 from ..services.audit_service import record_audit_event
+from ..services.analysis_service import analyze_project
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -286,6 +287,12 @@ def update_project_status(
         old_value={"status": old_status},
         new_value={"status": new_status, "reason": req.reason}
     )
+
+    # Re-evaluate AI/Rule risk score after status transition
+    try:
+        analyze_project(db=db, project_id=p.project_id, actor_id=current_user.user_id)
+    except Exception:
+        pass
 
     return {
         "message": "Status updated successfully",

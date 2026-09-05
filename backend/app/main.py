@@ -10,6 +10,12 @@ from .api import (
     routes_audit,
     routes_flags,
     routes_dashboard,
+    routes_analysis,
+    routes_financials,
+    routes_compliance,
+    routes_notifications,
+    routes_views,
+    routes_admin,
 )
 
 app = FastAPI(
@@ -35,11 +41,23 @@ app.add_middleware(
 app.include_router(routes_auth.router)
 app.include_router(routes_recommendations.router)
 app.include_router(routes_projects.router)
+app.include_router(routes_financials.router)
 app.include_router(routes_evidence.router)
 app.include_router(routes_verification.router)
+app.include_router(routes_analysis.router)
+app.include_router(routes_compliance.router)
+app.include_router(routes_notifications.router)
+app.include_router(routes_views.router)
+app.include_router(routes_admin.router)
 app.include_router(routes_audit.router)
 app.include_router(routes_flags.router)
 app.include_router(routes_dashboard.router)
+
+from fastapi.responses import RedirectResponse
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/docs")
 
 @app.get("/health")
 def health_check():

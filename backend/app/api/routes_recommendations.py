@@ -9,10 +9,12 @@ from sqlalchemy import select, and_
 from ..db.session import get_db
 from ..models import (
     Recommendation, Project, ProjectStatusHistory, User, 
-    ImplementingAgency, MPConstituencyMapping, Notification
+    ImplementingAgency, MPConstituencyMapping, Notification,
+    ProhibitedCategory
 )
 from ..core.rbac import get_current_user, require_roles
 from ..services.audit_service import record_audit_event
+from ..services.analysis_service import analyze_project
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
@@ -44,6 +46,17 @@ def create_recommendation(
     """
     MP creates a project recommendation.
     """
+    # Validate against prohibited categories (Clause 5.1 of MPLADS Guidelines)
+    prohibited_list = db.execute(
+        select(ProhibitedCategory).where(ProhibitedCategory.is_active == True)
+    ).scalars().all()
+    for pc in prohibited_list:
+        if pc.category_name.lower() in req.category.lower() or req.category.lower() in pc.category_name.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Work category '{req.category}' is non-permissible under MPLADS guidelines: Prohibited Category '{pc.category_name}' ({pc.guideline_reference or 'Clause 5.1'})."
+            )
+
     rec_id = uuid.uuid4()
     target_state = req.state or current_user.state or "Uttar Pradesh"
     target_district = req.district or current_user.district or "Varanasi"
@@ -304,8 +317,13 @@ def action_recommendation(
             related_entity_id=proj.project_id,
             is_read=False
         )
-        db.add(notif)
         db.commit()
+
+        # Auto-trigger baseline AI/Rule Engine analysis
+        try:
+            analyze_project(db=db, project_id=proj.project_id, actor_id=current_user.user_id)
+        except Exception:
+            pass
 
         return {
             "message": "Recommendation approved and project created successfully",
