@@ -225,6 +225,36 @@ class ProjectProcurementRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
 # 14. EVIDENCE
+# Allowed evidence_category values enforced by DB CHECK constraint
+# evidence_evidence_category_check (see Supabase production schema).
+EVIDENCE_CATEGORIES = (
+    "site_photo",
+    "site_video",
+    "purchase_invoice",
+    "completion_certificate",
+    "halt_justification",
+    "utilization_proof",
+    "other",
+)
+# Legacy client/test aliases mapped to valid DB values for backward compatibility.
+EVIDENCE_CATEGORY_ALIASES = {
+    "WorkProgress": "site_photo",
+    "WorkCompletion": "completion_certificate",
+    "CitizenFeedback": "other",
+    "Workprogress": "site_photo",
+    "workprogress": "site_photo",
+}
+
+
+def normalize_evidence_category(value: Optional[str]) -> str:
+    """Map legacy/alias category names to valid DB CHECK values."""
+    if not value:
+        return "site_photo"
+    if value in EVIDENCE_CATEGORIES:
+        return value
+    return EVIDENCE_CATEGORY_ALIASES.get(value, "other")
+
+
 class Evidence(Base):
     __tablename__ = "evidence"
 
@@ -232,7 +262,7 @@ class Evidence(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.project_id"), nullable=False)
     uploaded_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=True)
     evidence_type: Mapped[str] = mapped_column(evidence_type_enum, default="photo", nullable=False)
-    evidence_category: Mapped[Optional[str]] = mapped_column(String(100), default="WorkProgress", nullable=True)
+    evidence_category: Mapped[Optional[str]] = mapped_column(String(100), default="site_photo", nullable=True)
     file_url: Mapped[str] = mapped_column(Text, nullable=False)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     latitude: Mapped[Optional[float]] = mapped_column(Numeric(10, 7), nullable=True)

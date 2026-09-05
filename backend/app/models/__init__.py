@@ -5,7 +5,8 @@ from .schema_models import (
     EvidenceModerationQueue, VerificationRequest, VerificationEvidenceLink,
     ProhibitedCategory, RuleEngineLog, RiskScore, AIAnalysisResult,
     CitizenTrustScore, SCSTAllocationTracker, SystemConfig, Notification,
-    AuditLog, ModelVersion, FundTransfer, SupportingDocumentsLink
+    AuditLog, ModelVersion, FundTransfer, SupportingDocumentsLink,
+    EVIDENCE_CATEGORIES, EVIDENCE_CATEGORY_ALIASES, normalize_evidence_category,
 )
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "EvidenceModerationQueue", "VerificationRequest", "VerificationEvidenceLink",
     "ProhibitedCategory", "RuleEngineLog", "RiskScore", "AIAnalysisResult",
     "CitizenTrustScore", "SCSTAllocationTracker", "SystemConfig", "Notification",
-    "AuditLog", "ModelVersion", "FundTransfer", "SupportingDocumentsLink"
+    "AuditLog", "ModelVersion", "FundTransfer", "SupportingDocumentsLink",
+    "EVIDENCE_CATEGORIES", "EVIDENCE_CATEGORY_ALIASES", "normalize_evidence_category",
 ]

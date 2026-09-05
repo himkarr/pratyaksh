@@ -51,10 +51,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 def require_roles(allowed_roles: List[str]):
     """
     Dependency to enforce that the authenticated user possesses one of the allowed roles.
+    Admin bypasses all role checks (superuser).
     """
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
         user_role = current_user.role.role_name
-        if user_role not in allowed_roles and "Admin" not in allowed_roles:
+        if user_role not in allowed_roles and user_role != "Admin":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access forbidden: Role '{user_role}' is not authorized for this resource"

@@ -8,7 +8,7 @@ from sqlalchemy import select, and_, func
 
 from ..db.session import get_db
 from ..models import (
-    Project, ProjectStatusHistory, User, ImplementingAgency, 
+    Project, ProjectStatusHistory, User, Role, ImplementingAgency,
     VerificationRequest, Evidence, RiskScore, CitizenTrustScore
 )
 from ..core.rbac import get_current_user, filter_projects_by_role, require_roles
@@ -53,16 +53,25 @@ def list_public_projects(
 
     public_list = []
     for p in projects:
-        # Check citizen crowdsourced reports count
-        # In evidence table with category 'CitizenFeedback'
-        reports = db.execute(
-            select(Evidence).where(
-                and_(Evidence.project_id == p.project_id, Evidence.evidence_category == "CitizenFeedback")
+        # Citizen crowdsourced reports: evidence uploaded by Citizen-role users.
+        # (Legacy code filtered evidence_category == "CitizenFeedback", which is
+        # not a valid DB CHECK value — valid values are site_photo/site_video/
+        # purchase_invoice/completion_certificate/halt_justification/
+        # utilization_proof/other. So scope by uploader role instead.)
+        citizen_reports = db.execute(
+            select(Evidence)
+            .join(User, Evidence.uploaded_by == User.user_id)
+            .join(Role, User.role_id == Role.role_id)
+            .where(
+                and_(
+                    Evidence.project_id == p.project_id,
+                    Role.role_name == "Citizen",
+                )
             )
         ).scalars().all()
 
-        confirmed_count = sum(1 for r in reports if r.status == "Verified")
-        total_reports = len(reports)
+        confirmed_count = sum(1 for r in citizen_reports if r.status == "Verified")
+        total_reports = len(citizen_reports)
 
         public_list.append({
             "project_id": str(p.project_id),

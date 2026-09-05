@@ -8,11 +8,17 @@ from sqlalchemy import select, and_
 
 from ..db.session import get_db
 from ..models import Evidence, Project, User, VerificationEvidenceLink
+from ..models.schema_models import (
+    EVIDENCE_CATEGORIES,
+    normalize_evidence_category,
+)
 from ..core.rbac import get_current_user, require_roles
 from ..services.storage_service import upload_evidence_file
 from ..services.audit_service import record_audit_event
 
 router = APIRouter(prefix="/evidence", tags=["Evidence"])
+
+ALLOWED_EVIDENCE_TYPES = ("photo", "video", "document")
 
 class VerifyEvidenceRequest(BaseModel):
     decision: str  # "Verified" or "Rejected"
@@ -24,7 +30,7 @@ async def upload_evidence(
     latitude: float = Form(...),
     longitude: float = Form(...),
     evidence_type: str = Form("photo"),
-    evidence_category: str = Form("WorkProgress"),
+    evidence_category: str = Form("site_photo"),
     remarks: Optional[str] = Form(None),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -33,6 +39,8 @@ async def upload_evidence(
     """
     Multipart upload of progress/completion/citizen evidence directly to Supabase Storage.
     Mandatory geo-tagging validation: latitude and longitude are strictly required.
+    evidence_category must satisfy the DB CHECK constraint; legacy aliases
+    (e.g. WorkProgress -> site_photo, CitizenFeedback -> other) are normalized.
     """
     try:
         p_uuid = uuid.UUID(project_id)
@@ -46,6 +54,19 @@ async def upload_evidence(
     # Validate geo coordinates
     if latitude < -90 or latitude > 90 or longitude < -180 or longitude > 180:
         raise HTTPException(status_code=400, detail="Invalid GPS coordinates provided")
+
+    # Validate + normalize enums against production DB constraints
+    if evidence_type not in ALLOWED_EVIDENCE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid evidence_type '{evidence_type}'. Allowed: {list(ALLOWED_EVIDENCE_TYPES)}",
+        )
+    normalized_category = normalize_evidence_category(evidence_category)
+    if normalized_category not in EVIDENCE_CATEGORIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid evidence_category '{evidence_category}'. Allowed: {list(EVIDENCE_CATEGORIES)}",
+        )
 
     # Read and upload file to Supabase Storage
     file_bytes = await file.read()
@@ -81,7 +102,7 @@ async def upload_evidence(
         project_id=p_uuid,
         uploaded_by=current_user.user_id,
         evidence_type=evidence_type,
-        evidence_category=evidence_category,
+        evidence_category=normalized_category,
         file_url=file_url,
         thumbnail_url=file_url,
         latitude=latitude,
@@ -111,7 +132,7 @@ async def upload_evidence(
         new_value={
             "project_id": str(p_uuid),
             "evidence_id": str(evidence.evidence_id),
-            "category": evidence_category,
+            "category": normalized_category,
             "latitude": latitude,
             "longitude": longitude,
             "file_url": file_url,
@@ -122,6 +143,7 @@ async def upload_evidence(
     return {
         "message": "Evidence uploaded successfully",
         "evidence_id": str(evidence.evidence_id),
+        "evidence_category": normalized_category,
         "file_url": file_url,
         "is_geotagged": True,
         "duplicate_flag": dup_flag,

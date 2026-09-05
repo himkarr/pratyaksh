@@ -7,7 +7,9 @@ from .api import (
     routes_projects,
     routes_evidence,
     routes_verification,
-    routes_audit
+    routes_audit,
+    routes_flags,
+    routes_dashboard,
 )
 
 app = FastAPI(
@@ -36,6 +38,8 @@ app.include_router(routes_projects.router)
 app.include_router(routes_evidence.router)
 app.include_router(routes_verification.router)
 app.include_router(routes_audit.router)
+app.include_router(routes_flags.router)
+app.include_router(routes_dashboard.router)
 
 @app.get("/health")
 def health_check():
