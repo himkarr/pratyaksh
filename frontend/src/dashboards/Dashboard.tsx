@@ -322,7 +322,7 @@ export function Dashboard({ title: _title }: DashboardProps) {
       />
 
       {/* Main Container Area */}
-      <main className="container" style={{ flex: 1, paddingTop: '16px', paddingBottom: '32px' }}>
+      <main className="container" style={{ flex: 1, paddingTop: '24px', paddingBottom: '48px' }}>
         
         {/* ----------------- PAGE TAB 1: DASHBOARD (Overview) ----------------- */}
         {activeTab === 'dashboard' && (

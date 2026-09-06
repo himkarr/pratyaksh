@@ -3,20 +3,21 @@
   --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
   /* Official National Portal Color System (Subtle, Restrained, High-Contrast) */
-  --gov-primary: #0a2540;       /* Deep Navy */
-  --gov-header: #0f2942;        /* Header Navy */
-  --gov-secondary: #1e3a5f;     /* Secondary Slate Navy */
-  --gov-accent: #155eef;        /* Corporate Blue (Functional Links/Highlights) */
-  --gov-subtle: #f1f5f9;        /* Slate 100 */
+  --gov-primary: #123b5d;       /* Deep administrative navy */
+  --gov-header: #0d2d46;        /* Header navy */
+  --gov-secondary: #1e5576;     /* Secondary institutional blue */
+  --gov-accent: #c9781d;        /* Restrained saffron accent */
+  --gov-green: #1f6b52;         /* National green accent */
+  --gov-subtle: #eef4f7;
 
-  --bg-page: #f8fafc;           /* Crisp Slate 50 background */
-  --bg-surface: #ffffff;        /* Pure white cards */
-  --bg-surface-subtle: #f8fafc; /* Table headers, inner panels */
-  --bg-hover: #f1f5f9;
+  --bg-page: #f4f7f8;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f7fafb;
+  --bg-hover: #edf3f5;
 
-  --border-main: #cbd5e1;       /* Slate 300 - sharp, clear edges */
-  --border-light: #e2e8f0;      /* Slate 200 - interior dividers */
-  --border-dark: #94a3b8;       /* Slate 400 */
+  --border-main: #c7d5dc;
+  --border-light: #e2eaee;
+  --border-dark: #91a7b2;
 
   --text-main: #0f172a;         /* Slate 900 - High Contrast Readability */
   --text-body: #334155;         /* Slate 700 */
@@ -42,13 +43,13 @@
   --status-danger-border: #fecaca;
 
   /* Layout & Geometry */
-  --radius-xs: 3px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
 
-  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px 0 rgba(15, 23, 42, 0.04);
-  --shadow-elevated: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 1px 2px rgba(13, 45, 70, 0.04), 0 8px 24px rgba(13, 45, 70, 0.05);
+  --shadow-elevated: 0 12px 32px rgba(13, 45, 70, 0.14);
 
   --base-font-size: 14.5px;
 }
@@ -116,6 +117,22 @@ button {
   outline: none;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--gov-accent) 45%, transparent);
+  outline-offset: 2px;
+}
+
+input::placeholder { color: var(--text-muted); opacity: 0.8; }
+select { min-height: 36px; }
+
+@media (max-width: 768px) {
+  .gov-card-body { padding: 16px !important; }
+  .gov-table th, .gov-table td { padding: 10px; }
+  .gov-btn { min-height: 36px; }
+}
+
 /* Container */
 .container {
   width: 100%;
@@ -133,9 +150,14 @@ button {
 /* Enterprise Structured Card */
 .gov-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-main);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.gov-card:hover {
+  border-color: color-mix(in srgb, var(--border-dark) 72%, var(--border-light));
 }
 
 .gov-card-header {
@@ -229,11 +251,11 @@ button {
 }
 
 .gov-table tr:nth-child(even) td {
-  background: #fbfcfd;
+  background: color-mix(in srgb, var(--bg-surface-subtle) 72%, transparent);
 }
 
 .gov-table tr:hover td {
-  background: #f1f5f9;
+  background: var(--bg-hover);
 }
 
 /* Functional Government Badges */
