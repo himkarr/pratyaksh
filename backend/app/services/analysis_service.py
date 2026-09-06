@@ -6,7 +6,7 @@ from sqlalchemy import select, and_
 
 from ..models import (
     Project, RuleEngineLog, RiskScore, PaymentTransaction,
-    ProjectMilestone, User, SystemConfig
+    ProjectMilestone, User, SystemConfig, AIAnalysisResult
 )
 from .audit_service import record_audit_event
 from .ml_client import predict_sync
@@ -269,6 +269,17 @@ def analyze_project(db: Session, project_id: uuid.UUID, actor_id: Optional[uuid.
         calculated_at=now
     )
     db.add(risk_entry)
+
+    if ml_result is not None:
+        db.add(AIAnalysisResult(
+            analysis_id=uuid.uuid4(),
+            project_id=project.project_id,
+            anomaly_detected=bool(ml_result.get("is_anomaly", False)),
+            anomaly_type="statistical_outlier" if ml_result.get("is_anomaly") else None,
+            progress_estimation_percentage=int(project.progress_percentage or 0),
+            model_version=ml_result.get("model", "mplads_isolation_forest"),
+            analyzed_at=now,
+        ))
 
     # Update project record
     project.is_flagged = is_flagged

@@ -63,6 +63,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, help="import the first N eligible source rows")
     parser.add_argument("--offset", type=int, default=0, help="skip this many eligible rows (for resumable batches)")
+    parser.add_argument("--year", type=int, help="keep eligible rows whose latest source date falls in this year")
+    parser.add_argument("--latest", action="store_true", help="sort filtered rows by latest source date, newest first")
     parser.add_argument("--csv", default=CSV_PATH)
     args = parser.parse_args()
     database_url = os.environ.get("DATABASE_URL")
@@ -75,14 +77,21 @@ def main():
     if missing:
         raise SystemExit(f"CSV is missing required columns: {', '.join(sorted(missing))}")
     valid = df[df.recommended_date.notna() & df.recommended_amount.notna()].copy()
+    date_columns = [column for column in ("recommended_date", "sanction_date", "first_expenditure_date", "last_expenditure_date", "completion_date") if column in valid]
+    parsed_dates = valid[date_columns].apply(pd.to_datetime, errors="coerce")
+    valid["_latest_source_date"] = parsed_dates.max(axis=1)
+    if args.year:
+        valid = valid[valid["_latest_source_date"].dt.year == args.year].copy()
+    if args.latest:
+        valid = valid.sort_values(["_latest_source_date", "work_id"], ascending=[False, False])
     total_eligible = len(valid)
     if args.limit:
         valid = valid.iloc[args.offset:args.offset + args.limit].copy()
     elif args.offset:
         valid = valid.iloc[args.offset:].copy()
-    print(f"Source rows: {len(df):,}; importing: {len(valid):,} (eligible offset {args.offset:,} of {total_eligible:,}); skipped without recommendation: {len(df) - total_eligible:,}")
+    print(f"Source rows: {len(df):,}; importing: {len(valid):,} (eligible offset {args.offset:,} of {total_eligible:,}); skipped without recommendation/filter: {len(df) - total_eligible:,}")
 
-    engine = create_engine(database_url, pool_pre_ping=True)
+    engine = create_engine(database_url, pool_pre_ping=True, connect_args={"prepare_threshold": None})
     metadata = MetaData()
     tables = {name: Table(name, metadata, autoload_with=engine) for name in ("roles", "users", "mp_constituency_mapping", "implementing_agencies", "recommendations", "projects", "project_financials")}
     with engine.connect() as connection:
