@@ -1,4 +1,4 @@
-# MPLAD Aqua — SIH26102
+# MPLAD Sapphire - SIH26102
 
 MPLAD Aqua is an explainable decision-support application for reviewing MPLADS works. It combines scheme-rule checks with an Isolation Forest anomaly signal. A flag is a **human-review priority**, not an accusation or a finding of fraud.
 
