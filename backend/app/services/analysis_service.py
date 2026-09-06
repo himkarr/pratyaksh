@@ -9,6 +9,8 @@ from ..models import (
     ProjectMilestone, User, SystemConfig
 )
 from .audit_service import record_audit_event
+from .ml_client import predict_sync
+from ..core.config import ML_SERVICE_URL
 
 DEFAULT_COMPLETION_DEADLINE_DAYS = 365
 DEFAULT_TENDER_COST_THRESHOLD = 5000000.0  # 50 Lakhs
@@ -181,6 +183,26 @@ def analyze_project(db: Session, project_id: uuid.UUID, actor_id: Optional[uuid.
     rules = evaluate_project_rules(db, project)
     now = datetime.now(timezone.utc)
 
+    # The database stores a normalized project, while the anomaly model expects
+    # source-work features.  Build the available equivalents and treat missing
+    # vendor/evidence fields as unknown/zero rather than fabricating data.
+    ml_result = None
+    if ML_SERVICE_URL:
+        try:
+            elapsed = max(0, (now.date() - (project.start_date or now.date())).days)
+            ml_result = predict_sync({
+                "work_id": str(project.project_id), "sanction_amount": float(project.sanctioned_amount or 0),
+                "expenditure_total": float(project.utilized_amount or 0), "recommended_amount": float(project.sanctioned_amount or 0),
+                "recommendation_to_sanction_days": 0, "sanction_to_first_expenditure_days": elapsed,
+                "sanction_to_completion_days": elapsed if project.actual_completion_date else None,
+                "vendor_count": 0, "expenditure_records": 1 if project.utilized_amount else 0,
+                "has_expenditure": bool(project.utilized_amount), "has_completion_record": project.status == "Completed",
+                "has_completion_image_reference": False, "completion_date": project.actual_completion_date.isoformat() if project.actual_completion_date else None,
+            })
+        except Exception:
+            # Rule-based review remains available if the separate ML service is down.
+            ml_result = None
+
     # Persist rule evaluation logs
     failed_rules = []
     total_risk_points = 0
@@ -200,6 +222,14 @@ def analyze_project(db: Session, project_id: uuid.UUID, actor_id: Optional[uuid.
         if r["rule_result"] == "Fail":
             failed_rules.append(r)
             total_risk_points += r["risk_points"]
+
+    if ml_result and ml_result.get("is_anomaly"):
+        total_risk_points += 15
+        failed_rules.append({
+            "rule_name": "Isolation_Forest_Statistical_Outlier",
+            "details": "ML identified an unusual feature pattern. This is a review signal, not a fraud finding.",
+            "risk_points": 15,
+        })
 
     # Calculate composite risk score capped at 100
     composite_risk_score = min(100.0, float(total_risk_points))

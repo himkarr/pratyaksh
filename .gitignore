@@ -1,4 +1,6 @@
 .env
+# The official source extract is used only for offline ingestion/training.
+mplads_master_project_dataset.csv
 __pycache__/
 *.py[cod]
 .venv/
