@@ -20,7 +20,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useRole } from '../auth/roleContext';
 import { INITIAL_WORKS, WorkItem, WorkReview } from '../data/mpladsData';
 import { sampleFlags } from '../data/mpladsData';
-import { apiClient } from '../api/client';
+import { apiClient, mapBackendProjectsToWorkItems } from '../api/client';
 import { TRANSLATIONS } from '../data/translations';
 import Header from '../components/Header';
 import Navbar from '../components/Navbar';
@@ -84,56 +84,11 @@ export function Dashboard({ title: _title }: DashboardProps) {
       if (token && user.role) {
         try {
           const res = await apiClient.getDashboard(user.role, token);
-          if (res && Array.isArray(res.projects) && res.projects.length > 0) {
-            const mappedWorks: WorkItem[] = res.projects.map((p: any, idx: number) => {
-              const sancCr = Number(((p.sanctioned_amount || 25000000) / 10000000).toFixed(2));
-              const utilCr = Number(((p.utilized_amount || 12000000) / 10000000).toFixed(2));
-              const finPct = sancCr > 0 ? Math.round((utilCr / sancCr) * 100) : 0;
-              const physPct = p.physical_progress_percent ?? (p.status === 'completed' ? 100 : 45);
-              const statusNormalized = 
-                p.status === 'completed' ? 'Completed' :
-                p.status === 'delayed' ? 'Delayed' :
-                p.status === 'in_progress' ? 'Ongoing' :
-                p.status === 'recommended' ? 'Recommended' : 'Sanctioned';
-
-              return {
-                id: p.id,
-                title: p.title || `MPLAD Project ${p.id}`,
-                house: 'Lok Sabha',
-                state: p.state || user.state || 'Maharashtra',
-                district: p.district || user.district || 'Pune',
-                constituency: p.constituency_code || user.constituency_code || 'Constituency',
-                constituency_code: p.constituency_code || user.constituency_code || 'CONST-01',
-                mpName: user.name || 'Member of Parliament',
-                category: 'community',
-                sectorName: 'Community Infrastructure',
-                recommendedAmt: Number((sancCr * 1.05).toFixed(2)),
-                sanctionedAmt: sancCr,
-                expenditureAmt: utilCr,
-                physicalProgress: physPct,
-                financialProgress: finPct,
-                dateSanctioned: p.sanction_date || '2024-02-15',
-                targetCompletion: '2025-02-14',
-                status: statusNormalized as WorkItem['status'],
-                agency: 'District Rural Development Agency (DRDA)',
-                contractor: 'M/s Infra Buildcon India Ltd.',
-                rating: Number((4.0 + (idx % 10) * 0.1).toFixed(1)),
-                reviewsCount: 3,
-                attachments: [
-                  {
-                    id: `att-${p.id}-1`,
-                    type: 'image',
-                    title: 'Geotagged Site Photo - Construction Phase',
-                    stage: 'Execution Phase',
-                    url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18f15f6?w=800&auto=format&fit=crop&q=60'
-                  }
-                ],
-                reviews: []
-              };
-            });
+          if (res && Array.isArray(res.projects)) {
+            const mappedWorks: WorkItem[] = mapBackendProjectsToWorkItems(res.projects);
             setWorks(mappedWorks);
           }
-          if (res && Array.isArray(res.flags) && res.flags.length > 0) {
+          if (res && Array.isArray(res.flags)) {
             setLiveFlags(res.flags);
           }
         } catch {

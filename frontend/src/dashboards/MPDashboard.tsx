@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { 
   Plus, 
   Search, 
@@ -28,9 +28,10 @@ import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
 import { INITIAL_CITIZEN_ISSUES, CitizenIssue } from "../data/citizenData";
 import { TRANSLATIONS } from "../data/translations";
 import { useRole } from "../auth/roleContext";
+import { apiClient, mapBackendProjectsToWorkItems } from "../api/client";
 
 export const MPDashboard: React.FC = () => {
-  const { user } = useRole();
+  const { user, token } = useRole();
 
   // Accessibility & Language Settings
   const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
@@ -43,6 +44,7 @@ export const MPDashboard: React.FC = () => {
 
   // Data States
   const [recommendations, setRecommendations] = useState<MPRecommendation[]>(INITIAL_MP_RECOMMENDATIONS);
+  const [works, setWorks] = useState<WorkItem[]>(INITIAL_WORKS);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -62,8 +64,21 @@ export const MPDashboard: React.FC = () => {
 
   // Filtered Constituency Projects (Scoped to Pune MH-PUNE-01)
   const constituencyWorks = useMemo(() => {
-    return INITIAL_WORKS.filter((w) => w.constituency_code === constituencyCode || w.district === district);
-  }, [constituencyCode, district]);
+    return works.filter((w) => w.constituency_code === constituencyCode || w.district === district);
+  }, [works, constituencyCode, district]);
+
+  useEffect(() => {
+    async function loadProjects() {
+      if (!token) return;
+      try {
+        const data = await apiClient.getProjects(token);
+        setWorks(mapBackendProjectsToWorkItems(data));
+      } catch {
+        // keep offline fallback
+      }
+    }
+    loadProjects();
+  }, [token]);
 
   // High Risk Projects
   const highRiskWorks = useMemo(() => {

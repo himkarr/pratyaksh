@@ -69,13 +69,13 @@ export function AuditTrailViewer() {
           const data = await apiClient.getAuditTrail(token);
           if (Array.isArray(data) && data.length > 0) {
             setEvents(data.map((item: any) => ({
-              id: item.id || `evt-${item.entity_id}`,
-              timestamp: item.created_at,
-              actor: item.actor_id,
+              id: item.log_id || `evt-${item.entity_id}`,
+              timestamp: item.timestamp,
+              actor: item.user_name || item.user_id || "System",
               action: item.action,
               details: `${item.entity_type} ID: ${item.entity_id}`,
-              prev_hash: item.previous_hash || '0000000000000000',
-              hash: item.event_hash || 'a4f89d31b2c45e678'
+              prev_hash: item.prev_hash || '0000000000000000',
+              hash: item.this_hash || 'a4f89d31b2c45e678'
             })));
           }
         } catch {
@@ -90,12 +90,12 @@ export function AuditTrailViewer() {
     setStatus('verifying');
     try {
       const data = await apiClient.verifyAuditTrail(token);
-      if (data.valid) {
+      if (data.verified) {
         setStatus('valid');
-        setStatusMessage(`Live Cryptographic Chain Verified: ${data.event_count || events.length} blocks intact. SHA-256 checksum verified.`);
+        setStatusMessage(`Live Cryptographic Chain Verified: ${data.total_records || events.length} blocks intact. SHA-256 checksum verified.`);
       } else {
         setStatus('error');
-        setStatusMessage(`Chain validation failed at block ID: ${data.broken_event_id}`);
+        setStatusMessage(`Chain validation failed at block ID: ${data.broken_at || "unknown"}`);
       }
     } catch {
       // Mock validation fallback

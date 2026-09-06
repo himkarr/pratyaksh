@@ -25,8 +25,10 @@ ROLE_ALIASES = {
     "ministryuser": "MinistryUser",
     "admin": "Admin",
     "field": "FieldOfficer",
+    "field_officer": "FieldOfficer",
     "fieldofficer": "FieldOfficer",
     "vendor": "Vendor",
+    "contractor": "Vendor",
     "citizen": "Citizen",
 }
 

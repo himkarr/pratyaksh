@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { 
   Building2, 
   Search, 
@@ -37,9 +37,10 @@ import { Button, Alert, Card, CardHeader, CardBody } from "../components/ui";
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
 import { TRANSLATIONS } from "../data/translations";
 import { useRole } from "../auth/roleContext";
+import { apiClient, mapBackendProjectsToWorkItems } from "../api/client";
 
 export const MinistryDashboard: React.FC = () => {
-  const { user } = useRole();
+  const { user, token } = useRole();
 
   // Accessibility & Language
   const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
@@ -60,6 +61,19 @@ export const MinistryDashboard: React.FC = () => {
 
   // Projects Data State
   const [projects, setProjects] = useState<WorkItem[]>(INITIAL_WORKS);
+
+  useEffect(() => {
+    async function loadProjects() {
+      if (!token) return;
+      try {
+        const data = await apiClient.getProjects(token);
+        setProjects(mapBackendProjectsToWorkItems(data));
+      } catch {
+        // keep offline fallback
+      }
+    }
+    loadProjects();
+  }, [token]);
 
   // Model Management & Retraining State
   const [isRetraining, setIsRetraining] = useState<boolean>(false);

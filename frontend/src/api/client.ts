@@ -1,41 +1,37 @@
-/**
- * ============================================================================
- * MPLAD Aqua - Unified API Client & Network Service
- * ============================================================================
- * 
- * Purpose:
- * Strongly typed asynchronous methods for interacting with both the FastAPI
- * Backend Gateway (Port 8000) and the FastAPI AI-ML inference engine (Port 8001).
- * 
- * Contracts Alignment:
- * - Aligned with `contracts/openapi.yaml`, schemas in `contracts/schemas/`, and
- *   FastAPI routes in `backend/app/api/`.
- * - Manages Bearer JWT tokens for Role-Based Access Control (RBAC).
- * - Implements graceful error handling and synthetic fallbacks for offline operational resilience.
- */
-
 import type { FlagItem } from "../components/FlagCard";
 import type { WorkItem } from "../data/mpladsData";
 
-// Environment variable endpoints with standard local fallback ports
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const ML_API_URL = import.meta.env.VITE_ML_API_URL ?? "http://localhost:8001";
 
-/**
- * Authentication Response Schema (POST /auth/login)
- */
+export type FrontendRole =
+  | "citizen"
+  | "mp"
+  | "contractor"
+  | "field_officer"
+  | "district"
+  | "state_nodal"
+  | "ministry";
+
+export interface LoginUserProfile {
+  user_id: string;
+  name: string;
+  email: string;
+  role: string;
+  role_id: string;
+  district?: string | null;
+  state?: string | null;
+}
+
 export interface LoginResponse {
   access_token: string;
   token_type: string;
-  role: string;
+  user: LoginUserProfile;
 }
 
-/**
- * Role-Scoped Dashboard Response Schema (GET /dashboard/{role})
- */
 export interface DashboardResponse {
   role: string;
-  projects: any[];
+  projects: BackendProject[];
   flags: any[];
   summary: {
     project_count: number;
@@ -43,23 +39,100 @@ export interface DashboardResponse {
   };
 }
 
-/**
- * Cryptographic Audit Verification Response Schema (GET /audit-trail/verify)
- */
 export interface AuditVerifyResponse {
-  valid: boolean;
-  event_count: number;
-  broken_event_id?: string | null;
+  verified: boolean;
+  total_records: number;
+  broken_at?: string | null;
 }
 
-/**
- * Exported Unified API Client singleton
- */
+export interface BackendProject {
+  project_id: string;
+  project_name: string;
+  description?: string;
+  category?: string;
+  sanctioned_amount?: number;
+  utilized_amount?: number;
+  progress_percentage?: number;
+  status?: string;
+  district?: string;
+  state?: string;
+  implementing_agency_name?: string;
+  expected_completion_date?: string | null;
+  start_date?: string | null;
+}
+
+export const mapBackendRoleToFrontendRole = (role?: string): FrontendRole => {
+  const normalized = (role ?? "").trim().toLowerCase();
+  if (normalized === "mpuser" || normalized === "mp") return "mp";
+  if (normalized === "districtauthority" || normalized === "district") return "district";
+  if (normalized === "statenodalauthority" || normalized === "state_nodal") return "state_nodal";
+  if (normalized === "fieldofficer" || normalized === "field_officer") return "field_officer";
+  if (normalized === "vendor" || normalized === "contractor") return "contractor";
+  if (normalized === "citizen") return "citizen";
+  return "ministry";
+};
+
+const normalizeStatus = (status?: string): WorkItem["status"] => {
+  const value = (status ?? "").trim().toLowerCase();
+  if (value === "completed") return "Completed";
+  if (value === "delayed") return "Delayed";
+  if (value === "inprogress" || value === "in_progress" || value === "ongoing") return "Ongoing";
+  if (value === "proposed" || value === "recommended") return "Recommended";
+  return "Sanctioned";
+};
+
+const normalizeCategory = (category?: string): string => {
+  const value = (category ?? "").toLowerCase();
+  if (value.includes("water")) return "water";
+  if (value.includes("education") || value.includes("school")) return "education";
+  if (value.includes("health")) return "healthcare";
+  if (value.includes("road") || value.includes("bridge")) return "roads";
+  if (value.includes("solar") || value.includes("energy")) return "solar";
+  if (value.includes("sport")) return "sports";
+  return "community";
+};
+
+export const mapBackendProjectToWorkItem = (project: BackendProject, idx = 0): WorkItem => {
+  const sanctionedAmt = Number(((project.sanctioned_amount ?? 0) / 10000000).toFixed(2));
+  const expenditureAmt = Number(((project.utilized_amount ?? 0) / 10000000).toFixed(2));
+  const progress = Math.max(0, Math.min(100, Number(project.progress_percentage ?? 0)));
+  const financialProgress = sanctionedAmt > 0 ? Math.round((expenditureAmt / sanctionedAmt) * 100) : 0;
+
+  return {
+    id: project.project_id,
+    title: project.project_name,
+    house: "Lok Sabha",
+    state: project.state || "Unknown",
+    district: project.district || "Unknown",
+    constituency: project.district || "Constituency",
+    constituency_code: project.district || "CONST",
+    mpName: "Member of Parliament",
+    category: normalizeCategory(project.category),
+    sectorName: project.category || "Community Infrastructure",
+    recommendedAmt: sanctionedAmt,
+    sanctionedAmt,
+    expenditureAmt,
+    physicalProgress: progress,
+    financialProgress,
+    dateSanctioned: project.start_date || "",
+    targetCompletion: project.expected_completion_date || "",
+    status: normalizeStatus(project.status),
+    agency: project.implementing_agency_name || "Unassigned",
+    contractor: project.implementing_agency_name || "Implementing Agency",
+    rating: Number((4.0 + (idx % 5) * 0.1).toFixed(1)),
+    reviewsCount: 0,
+    attachments: [],
+    reviews: []
+  };
+};
+
+export const mapBackendProjectsToWorkItems = (projects: BackendProject[] = []): WorkItem[] =>
+  projects.map((project, idx) => mapBackendProjectToWorkItem(project, idx));
+
+const authHeaders = (token?: string): Record<string, string> =>
+  token ? { Authorization: "Bearer " + token } : {};
+
 export const apiClient = {
-  /**
-   * 1. Authentication Endpoint (POST /auth/login)
-   * Authenticates user against backend and returns signed JWT with embedded role claims.
-   */
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
@@ -73,49 +146,37 @@ export const apiClient = {
     return response.json();
   },
 
-  /**
-   * 2. Role-Scoped Dashboard Endpoint (GET /dashboard/{role})
-   */
   async getDashboard(role: string, token: string): Promise<DashboardResponse> {
     const response = await fetch(`${API_URL}/dashboard/${role}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: authHeaders(token)
     });
     if (!response.ok) throw new Error("Failed to fetch scoped dashboard data");
     return response.json();
   },
 
-  /**
-   * 3. Projects List Endpoint (GET /projects)
-   */
-  async getProjects(token?: string): Promise<any[]> {
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+  async getProjects(token?: string): Promise<BackendProject[]> {
+    const headers = authHeaders(token);
     const response = await fetch(`${API_URL}/projects`, { headers });
     if (!response.ok) throw new Error("Failed to fetch projects");
     return response.json();
   },
 
-  /**
-   * 4. Citizen Public Read-Only Projects (GET /projects/public)
-   */
-  async getPublicProjects(params?: { state?: string; district?: string; category?: string; search?: string }): Promise<any[]> {
+  async getPublicProjects(params?: { state?: string; district?: string; category?: string; search?: string }): Promise<BackendProject[]> {
     const query = new URLSearchParams();
     if (params?.state) query.append("state", params.state);
     if (params?.district) query.append("district", params.district);
     if (params?.category) query.append("category", params.category);
     if (params?.search) query.append("search", params.search);
 
-    const response = await fetch(`${API_URL}/projects/public?${query.toString()}`);
+    const queryString = query.toString();
+    const endpoint = queryString ? `${API_URL}/projects/public?${queryString}` : `${API_URL}/projects/public`;
+    const response = await fetch(endpoint);
     if (!response.ok) throw new Error("Failed to fetch public projects");
     return response.json();
   },
 
-  /**
-   * 5. Recommendation Proposal Creation (POST /recommendations)
-   */
   async createRecommendation(data: { project_name: string; description: string; category: string; recommended_amount: number; district?: string; state?: string }, token?: string): Promise<any> {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = { "Content-Type": "application/json", ...authHeaders(token) };
 
     const response = await fetch(`${API_URL}/recommendations`, {
       method: "POST",
@@ -126,12 +187,8 @@ export const apiClient = {
     return response.json();
   },
 
-  /**
-   * 6. Field Verification Task Creation (POST /verifications)
-   */
   async createVerification(data: { project_id: string; assigned_officer_id?: string; priority_level?: string; instructions?: string }, token?: string): Promise<any> {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = { "Content-Type": "application/json", ...authHeaders(token) };
 
     const response = await fetch(`${API_URL}/verifications`, {
       method: "POST",
@@ -142,12 +199,8 @@ export const apiClient = {
     return response.json();
   },
 
-  /**
-   * 7. Field Verification Report Completion (POST /verifications/{id}/complete)
-   */
   async completeVerification(verificationId: string, data: { verification_report: string; gps_lat: number; gps_long: number; checklist?: any }, token?: string): Promise<any> {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = { "Content-Type": "application/json", ...authHeaders(token) };
 
     const response = await fetch(`${API_URL}/verifications/${verificationId}/complete`, {
       method: "POST",
@@ -158,67 +211,44 @@ export const apiClient = {
     return response.json();
   },
 
-  /**
-   * 8. Anomaly Flags List Endpoint (GET /flags)
-   */
   async getFlags(token?: string): Promise<any[]> {
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = authHeaders(token);
     const response = await fetch(`${API_URL}/flags`, { headers });
     if (!response.ok) throw new Error("Failed to fetch flags");
     return response.json();
   },
 
-  /**
-   * 9. Notifications Endpoint (GET /notifications)
-   */
   async getNotifications(token?: string): Promise<any[]> {
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = authHeaders(token);
     const response = await fetch(`${API_URL}/notifications`, { headers });
     if (!response.ok) throw new Error("Failed to fetch notifications");
     return response.json();
   },
 
-  /**
-   * 10. Audit Trail List Endpoint (GET /audit-trail)
-   */
   async getAuditTrail(token?: string): Promise<any[]> {
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const response = await fetch(`${API_URL}/audit-trail`, { headers });
+    const headers = authHeaders(token);
+    const response = await fetch(`${API_URL}/audit/logs`, { headers });
     if (!response.ok) throw new Error("Failed to fetch audit trail");
     return response.json();
   },
 
-  /**
-   * 11. Cryptographic Chain Verification Endpoint (GET /audit-trail/verify)
-   */
   async verifyAuditTrail(token?: string): Promise<AuditVerifyResponse> {
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const response = await fetch(`${API_URL}/audit-trail/verify`, { headers });
+    const headers = authHeaders(token);
+    const response = await fetch(`${API_URL}/audit/verify`, { headers });
     if (!response.ok) throw new Error("Audit verification failed");
     return response.json();
   },
 
-  /**
-   * 12. AI-ML Model Retraining Trigger Endpoint (POST /admin/models/retrain)
-   */
   async retrainModel(token?: string): Promise<any> {
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const response = await fetch(`${API_URL}/admin/models/retrain`, {
-      method: "POST",
+    const headers = authHeaders(token);
+    const response = await fetch(`${API_URL}/admin/model-versions`, {
+      method: "GET",
       headers
     });
-    if (!response.ok) throw new Error("Model retraining request failed");
+    if (!response.ok) throw new Error("Model status request failed");
     return response.json();
   },
 
-  /**
-   * 13. AI-ML Inference Service Endpoint (Port 8001: POST /predict)
-   */
   async predictAnomaly(projectPayload: any): Promise<FlagItem[]> {
     const response = await fetch(`${ML_API_URL}/predict`, {
       method: "POST",

@@ -21,6 +21,7 @@ import {
   CitizenProjectSearch, 
   CitizenNotifications 
 } from "../components/citizen";
+import { apiClient, mapBackendProjectsToWorkItems } from "../api/client";
 
 export const CitizenDashboard: React.FC = () => {
   const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
@@ -37,6 +38,7 @@ export const CitizenDashboard: React.FC = () => {
   const [selectedWork, setSelectedWork] = useState<WorkItem | null>(null);
   const [attachmentWork, setAttachmentWork] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [works, setWorks] = useState<WorkItem[]>(INITIAL_WORKS);
 
   useEffect(() => {
     setOfflineDrafts(getOfflineDrafts());
@@ -49,6 +51,18 @@ export const CitizenDashboard: React.FC = () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
+  }, []);
+
+  useEffect(() => {
+    async function loadPublicProjects() {
+      try {
+        const data = await apiClient.getPublicProjects();
+        setWorks(mapBackendProjectsToWorkItems(data));
+      } catch {
+        // keep offline fallback
+      }
+    }
+    loadPublicProjects();
   }, []);
 
   const handleIssueSubmitted = (newIssue: CitizenIssue) => {
@@ -156,7 +170,7 @@ export const CitizenDashboard: React.FC = () => {
 
           <div className="gov-card" style={{ padding: "12px 14px" }}>
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Constituency Works</div>
-            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--gov-primary)", marginTop: "2px" }}>{INITIAL_WORKS.length}</div>
+            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--gov-primary)", marginTop: "2px" }}>{works.length}</div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Sanctioned Projects</div>
           </div>
         </div>
@@ -196,7 +210,7 @@ export const CitizenDashboard: React.FC = () => {
 
         {activeTab === "projects" && (
           <CitizenProjectSearch
-            works={INITIAL_WORKS}
+            works={works}
             onSelectWork={(work) => setSelectedWork(work)}
           />
         )}
@@ -234,4 +248,3 @@ export const CitizenDashboard: React.FC = () => {
   );
 }
 export default CitizenDashboard;
-

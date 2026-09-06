@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { 
   Building, 
   Search, 
@@ -32,9 +32,10 @@ import { Button, Alert, Modal } from "../components/ui";
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
 import { TRANSLATIONS } from "../data/translations";
 import { useRole } from "../auth/roleContext";
+import { apiClient, mapBackendProjectsToWorkItems } from "../api/client";
 
 export const DistrictDashboard: React.FC = () => {
-  const { user } = useRole();
+  const { user, token } = useRole();
 
   // Accessibility & Language Settings
   const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
@@ -53,6 +54,19 @@ export const DistrictDashboard: React.FC = () => {
 
   // Local Projects State
   const [projects, setProjects] = useState<WorkItem[]>(INITIAL_WORKS);
+
+  useEffect(() => {
+    async function loadProjects() {
+      if (!token) return;
+      try {
+        const data = await apiClient.getProjects(token);
+        setProjects(mapBackendProjectsToWorkItems(data));
+      } catch {
+        // keep offline fallback
+      }
+    }
+    loadProjects();
+  }, [token]);
 
   // Selected Anomaly Work for Deep-Dive Modal
   const [selectedWorkForDossier, setSelectedWorkForDossier] = useState<WorkItem | null>(null);

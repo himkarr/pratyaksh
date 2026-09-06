@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { 
   ShieldCheck, 
   Search, 
@@ -28,9 +28,10 @@ import { SubmitVerificationModal, VerificationReportSubmission } from "../compon
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
 import { TRANSLATIONS } from "../data/translations";
 import { useRole } from "../auth/roleContext";
+import { apiClient, mapBackendProjectsToWorkItems } from "../api/client";
 
 export const FieldOfficerDashboard: React.FC = () => {
-  const { user } = useRole();
+  const { user, token } = useRole();
 
   // Accessibility & Language Settings
   const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
@@ -48,6 +49,19 @@ export const FieldOfficerDashboard: React.FC = () => {
 
   // Projects State
   const [projects, setProjects] = useState<WorkItem[]>(INITIAL_WORKS);
+
+  useEffect(() => {
+    async function loadProjects() {
+      if (!token) return;
+      try {
+        const data = await apiClient.getProjects(token);
+        setProjects(mapBackendProjectsToWorkItems(data));
+      } catch {
+        // keep offline fallback
+      }
+    }
+    loadProjects();
+  }, [token]);
   
   // Verification Records List
   const [verificationRecords, setVerificationRecords] = useState<VerificationReportSubmission[]>([

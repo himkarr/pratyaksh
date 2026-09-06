@@ -1,13 +1,22 @@
+import json
 import uuid
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timedelta, timezone
+from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import select, text
 from ..db.session import SessionLocal, engine
 from ..core.security import hash_password
 from ..models import (
     Role, User, MPConstituencyMapping, StateNodalMapping, ImplementingAgency,
-    AgencyUser, ProhibitedCategory, SystemConfig, CitizenTrustScore
+    AgencyUser, ProhibitedCategory, SystemConfig, CitizenTrustScore,
+    Recommendation, Project, ProjectStatusHistory, ProjectMilestone,
+    ProjectFinancial, PaymentTransaction, ProjectProcurementRecord, Evidence,
+    EvidenceModerationQueue, VerificationRequest, VerificationEvidenceLink,
+    RuleEngineLog, RiskScore, AIAnalysisResult, SCSTAllocationTracker,
+    Notification, AuditLog, ModelVersion, FundTransfer, SupportingDocumentsLink,
 )
+from ..services.analysis_service import analyze_project
+from ..services.audit_service import record_audit_event
 
 # Known demo credentials for fast live demo
 DEMO_PASSWORD = "demo1234"
@@ -36,6 +45,372 @@ ADMIN_USER_ID = uuid.UUID("88888888-8888-8888-8888-888888888888")
 
 AGENCY_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 CONSTITUENCY_MAP_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+SEED_NAMESPACE = uuid.UUID("9d8ce821-4e2e-4ce4-8e99-eb6350336a6f")
+
+
+def stable_uuid(name: str) -> uuid.UUID:
+    return uuid.uuid5(SEED_NAMESPACE, name)
+
+
+def parse_status(raw_status: str) -> str:
+    status = (raw_status or "").strip().lower()
+    if status == "completed":
+        return "Completed"
+    if status == "delayed":
+        return "Delayed"
+    if status in ("in_progress", "inprogress", "ongoing"):
+        return "InProgress"
+    if status == "cancelled":
+        return "Cancelled"
+    if status == "proposed":
+        return "Proposed"
+    return "Sanctioned"
+
+
+def seed_operational_and_ml_data(db: Session) -> None:
+    """Seed cross-module records so frontend, backend and AI/ML flows share real DB data."""
+    repo_root = Path(__file__).resolve().parents[3]
+    projects_path = repo_root / "contracts" / "sample-data" / "sample_projects.json"
+    flags_path = repo_root / "contracts" / "sample-data" / "sample_flags.json"
+
+    if not projects_path.exists():
+        return
+
+    sample_projects = json.loads(projects_path.read_text(encoding="utf-8"))
+    sample_flags = json.loads(flags_path.read_text(encoding="utf-8")) if flags_path.exists() else []
+    flags_by_project = {f.get("project_id"): f for f in sample_flags}
+
+    seeded_project_ids: list[uuid.UUID] = []
+    seeded_evidence_ids: list[uuid.UUID] = []
+
+    for idx, item in enumerate(sample_projects):
+        source_id = item.get("id", f"SAMPLE-{idx + 1}")
+        rec_id = stable_uuid(f"recommendation:{source_id}")
+        project_id = stable_uuid(f"project:{source_id}")
+        milestone_id = stable_uuid(f"milestone:{source_id}")
+        evidence_id = stable_uuid(f"evidence:{source_id}")
+        verification_id = stable_uuid(f"verification:{source_id}")
+        seeded_project_ids.append(project_id)
+        seeded_evidence_ids.append(evidence_id)
+
+        state = item.get("state") or "Uttar Pradesh"
+        district = item.get("district") or "Varanasi"
+        if idx < 3:
+            state = "Uttar Pradesh"
+            district = "Varanasi"
+
+        sanctioned = float(item.get("sanctioned_amount") or 0.0)
+        utilized = float(item.get("utilized_amount") or 0.0)
+        progress = int(item.get("physical_progress_percent") or 0)
+        project_status = parse_status(item.get("status", "Sanctioned"))
+        sanction_date = date.fromisoformat(item.get("sanction_date")) if item.get("sanction_date") else date.today()
+        expected_date = date.fromisoformat(item.get("expected_completion_date")) if item.get("expected_completion_date") else sanction_date + timedelta(days=365)
+        actual_completion = date.fromisoformat(item["actual_completion_date"]) if item.get("actual_completion_date") else None
+
+        existing_rec = db.execute(
+            select(Recommendation).where(Recommendation.recommendation_id == rec_id)
+        ).scalar_one_or_none()
+        if not existing_rec:
+            db.add(
+                Recommendation(
+                    recommendation_id=rec_id,
+                    mp_id=MP_USER_ID,
+                    project_id=project_id,
+                    recommendation_letter_url=f"https://docs.sapphire.gov.in/recommendations/{source_id}.pdf",
+                    recommended_amount=max(sanctioned, 1000000.0),
+                    recommendation_date=sanction_date,
+                    district_authority_ack_id=DISTRICT_USER_ID,
+                    status="Accepted",
+                )
+            )
+
+        existing_project = db.execute(
+            select(Project).where(Project.project_id == project_id)
+        ).scalar_one_or_none()
+        if not existing_project:
+            db.add(
+                Project(
+                    project_id=project_id,
+                    project_name=item.get("title") or f"MPLADS Work {source_id}",
+                    description=f"Imported from sample dataset ({source_id})",
+                    category=item.get("category") or "Community Infrastructure",
+                    recommendation_id=rec_id,
+                    mp_id=MP_USER_ID,
+                    constituency_id=CONSTITUENCY_MAP_ID,
+                    is_outside_constituency=False,
+                    outside_limit_category="within_limit",
+                    sanctioned_amount=max(sanctioned, 1000000.0),
+                    released_amount=max(sanctioned, 1000000.0),
+                    utilized_amount=max(utilized, 0.0),
+                    tender_reference_no=f"TND-{source_id}",
+                    implementing_agency_id=AGENCY_ID,
+                    sc_st_beneficiary_flag=idx % 2 == 0,
+                    status=project_status,
+                    progress_percentage=max(0, min(progress, 100)),
+                    is_flagged=False,
+                    latitude=25.3176 + idx * 0.01,
+                    longitude=82.9739 + idx * 0.01,
+                    address=f"Project Zone {idx + 1}, {district}",
+                    district=district,
+                    state=state,
+                    start_date=sanction_date,
+                    expected_completion_date=expected_date,
+                    actual_completion_date=actual_completion,
+                    created_by=DISTRICT_USER_ID,
+                    latest_risk_score=0.0,
+                )
+            )
+
+        if not db.execute(select(ProjectStatusHistory).where(ProjectStatusHistory.history_id == stable_uuid(f"history:{source_id}"))).scalar_one_or_none():
+            db.add(
+                ProjectStatusHistory(
+                    history_id=stable_uuid(f"history:{source_id}"),
+                    project_id=project_id,
+                    previous_status="Proposed",
+                    new_status=project_status,
+                    reason="Initial seeded status for integrated demo",
+                    changed_by=DISTRICT_USER_ID,
+                    expected_resume_date=expected_date,
+                )
+            )
+
+        if not db.execute(select(ProjectMilestone).where(ProjectMilestone.milestone_id == milestone_id)).scalar_one_or_none():
+            db.add(
+                ProjectMilestone(
+                    milestone_id=milestone_id,
+                    project_id=project_id,
+                    milestone_name="Execution Milestone 1",
+                    expected_percentage=max(20, min(progress, 100)),
+                    evidence_id=evidence_id,
+                    verified=progress >= 40,
+                    verified_by=DISTRICT_USER_ID if progress >= 40 else None,
+                    verified_at=datetime.now(timezone.utc) if progress >= 40 else None,
+                )
+            )
+
+        if not db.execute(select(ProjectFinancial).where(ProjectFinancial.financial_id == stable_uuid(f"financial:{source_id}"))).scalar_one_or_none():
+            db.add(
+                ProjectFinancial(
+                    financial_id=stable_uuid(f"financial:{source_id}"),
+                    project_id=project_id,
+                    installment_no=1,
+                    amount_released=max(sanctioned, 1000000.0),
+                    release_date=sanction_date,
+                    amount_utilized=max(utilized, 0.0),
+                    utilization_date=date.today(),
+                    balance=max(sanctioned - utilized, 0.0),
+                    remarks="Seeded from integrated sample contracts",
+                )
+            )
+
+        if not db.execute(select(PaymentTransaction).where(PaymentTransaction.transaction_id == stable_uuid(f"payment:{source_id}"))).scalar_one_or_none():
+            db.add(
+                PaymentTransaction(
+                    transaction_id=stable_uuid(f"payment:{source_id}"),
+                    project_id=project_id,
+                    implementing_agency_id=AGENCY_ID,
+                    amount=max(utilized, sanctioned * 0.3 if sanctioned else 300000.0),
+                    payment_mode="NEFT",
+                    cheque_or_utr_no=f"UTR-{source_id}",
+                    payment_date=date.today(),
+                    linked_milestone_id=milestone_id,
+                    anomaly_flag=(project_status == "Delayed"),
+                )
+            )
+
+        if not db.execute(select(ProjectProcurementRecord).where(ProjectProcurementRecord.procurement_id == stable_uuid(f"procurement:{source_id}"))).scalar_one_or_none():
+            db.add(
+                ProjectProcurementRecord(
+                    procurement_id=stable_uuid(f"procurement:{source_id}"),
+                    project_id=project_id,
+                    vendor_user_id=VENDOR_USER_ID,
+                    item_name="Construction Material Kit",
+                    item_description=f"Procurement for {item.get('title') or source_id}",
+                    quantity=10.0,
+                    unit="Unit",
+                    unit_price=50000.0,
+                    total_amount=500000.0,
+                    purchase_date=date.today(),
+                    linked_milestone_id=milestone_id,
+                    remarks="Seed procurement record",
+                )
+            )
+
+        if not db.execute(select(Evidence).where(Evidence.evidence_id == evidence_id)).scalar_one_or_none():
+            db.add(
+                Evidence(
+                    evidence_id=evidence_id,
+                    project_id=project_id,
+                    uploaded_by=VENDOR_USER_ID if idx % 2 == 0 else CITIZEN_USER_ID,
+                    evidence_type="photo",
+                    evidence_category="site_photo",
+                    file_url=f"https://storage.sapphire.gov.in/evidence/{source_id}.jpg",
+                    thumbnail_url=f"https://storage.sapphire.gov.in/evidence/{source_id}_thumb.jpg",
+                    latitude=25.3176 + idx * 0.01,
+                    longitude=82.9739 + idx * 0.01,
+                    captured_at=datetime.now(timezone.utc),
+                    remarks="Seeded geotagged evidence",
+                    is_geotagged=True,
+                    device_info={"device": "android", "app": "mplads-mobile"},
+                    duplicate_flag=False,
+                    authenticity_score=0.95,
+                    status="Verified" if idx % 2 == 0 else "Pending",
+                )
+            )
+
+        if idx == 0 and not db.execute(select(EvidenceModerationQueue).where(EvidenceModerationQueue.moderation_id == stable_uuid("moderation:seed"))).scalar_one_or_none():
+            db.add(
+                EvidenceModerationQueue(
+                    moderation_id=stable_uuid("moderation:seed"),
+                    evidence_id=evidence_id,
+                    flagged_reason="Random moderation sample",
+                    moderator_id=ADMIN_USER_ID,
+                    decision="Approved",
+                    decided_at=datetime.now(timezone.utc),
+                )
+            )
+
+        if not db.execute(select(VerificationRequest).where(VerificationRequest.verification_id == verification_id)).scalar_one_or_none():
+            db.add(
+                VerificationRequest(
+                    verification_id=verification_id,
+                    project_id=project_id,
+                    assigned_officer_id=FIELD_USER_ID,
+                    assigned_by=DISTRICT_USER_ID,
+                    priority_level="High" if project_status == "Delayed" else "Medium",
+                    status="Completed" if idx == 0 else "Assigned",
+                    site_visit_date=date.today(),
+                    verification_report="Seeded field verification baseline",
+                    gps_lat=25.3176 + idx * 0.01,
+                    gps_long=82.9739 + idx * 0.01,
+                    synced_at=datetime.now(timezone.utc),
+                    completed_at=datetime.now(timezone.utc) if idx == 0 else None,
+                )
+            )
+
+        if idx == 0 and not db.execute(select(VerificationEvidenceLink).where(VerificationEvidenceLink.link_id == stable_uuid("verification-link:seed"))).scalar_one_or_none():
+            db.add(
+                VerificationEvidenceLink(
+                    link_id=stable_uuid("verification-link:seed"),
+                    verification_id=verification_id,
+                    evidence_id=evidence_id,
+                )
+            )
+
+        if not db.execute(select(SupportingDocumentsLink).where(SupportingDocumentsLink.link_id == stable_uuid(f"supporting:{source_id}"))).scalar_one_or_none():
+            db.add(
+                SupportingDocumentsLink(
+                    link_id=stable_uuid(f"supporting:{source_id}"),
+                    entity_type="project",
+                    entity_id=project_id,
+                    evidence_id=evidence_id,
+                    added_by=VENDOR_USER_ID,
+                )
+            )
+
+        sample_flag = flags_by_project.get(source_id)
+        ai_id = stable_uuid(f"ai-result:{source_id}")
+        if not db.execute(select(AIAnalysisResult).where(AIAnalysisResult.analysis_id == ai_id)).scalar_one_or_none():
+            db.add(
+                AIAnalysisResult(
+                    analysis_id=ai_id,
+                    project_id=project_id,
+                    evidence_id=evidence_id,
+                    anomaly_detected=bool(sample_flag),
+                    anomaly_type=(sample_flag or {}).get("category", "statistical_review"),
+                    image_analysis_result={"source": "seed", "score": 0.88},
+                    duplicate_detection_result={"duplicate": False},
+                    progress_estimation_percentage=max(0, min(progress, 100)),
+                    confidence_score=float((sample_flag or {}).get("confidence", 0.72)),
+                    model_version="mplads_isolation_forest",
+                    analyzed_at=datetime.now(timezone.utc),
+                )
+            )
+
+    db.commit()
+
+    for pid in seeded_project_ids:
+        has_risk = db.execute(select(RiskScore).where(RiskScore.project_id == pid)).scalars().first()
+        has_rule = db.execute(select(RuleEngineLog).where(RuleEngineLog.project_id == pid)).scalars().first()
+        if has_risk and has_rule:
+            continue
+        try:
+            analyze_project(db=db, project_id=pid, actor_id=ADMIN_USER_ID)
+        except Exception:
+            db.rollback()
+
+    if not db.execute(select(SCSTAllocationTracker).where(SCSTAllocationTracker.tracker_id == stable_uuid("scst:2026"))).scalar_one_or_none():
+        db.add(
+            SCSTAllocationTracker(
+                tracker_id=stable_uuid("scst:2026"),
+                mp_id=MP_USER_ID,
+                financial_year="2026-27",
+                total_recommended=25000000.0,
+                sc_allocated=4000000.0,
+                st_allocated=2200000.0,
+                compliance_status="Compliant",
+            )
+        )
+
+    notif_rows = [
+        (MP_USER_ID, "Recommendation Accepted", "Your seeded recommendations are now active projects."),
+        (DISTRICT_USER_ID, "Verification Queue Updated", "Field verification queue has been initialized with real sample data."),
+        (FIELD_USER_ID, "Field Visit Assigned", "You have seeded verification assignments pending review."),
+        (MINISTRY_USER_ID, "AI/ML Seed Complete", "Risk and AI analysis records were generated from integrated sample data."),
+    ]
+    for idx, (uid, title, message) in enumerate(notif_rows):
+        notif_id = stable_uuid(f"notification:{idx}")
+        if not db.execute(select(Notification).where(Notification.notification_id == notif_id)).scalar_one_or_none():
+            db.add(
+                Notification(
+                    notification_id=notif_id,
+                    user_id=uid,
+                    channel="in-app",
+                    title=title,
+                    message=message,
+                    related_entity_type="seed",
+                    related_entity_id=seeded_project_ids[0] if seeded_project_ids else None,
+                    is_read=False,
+                )
+            )
+
+    if not db.execute(select(ModelVersion).where(ModelVersion.model_id == stable_uuid("model:iforest-v1"))).scalar_one_or_none():
+        db.add(
+            ModelVersion(
+                model_id=stable_uuid("model:iforest-v1"),
+                model_name="mplads_isolation_forest",
+                version="v1.0-seeded",
+                status="active",
+                performance_metrics={"precision": 0.91, "recall": 0.87, "auc_roc": 0.93},
+            )
+        )
+
+    if len(seeded_project_ids) >= 2 and not db.execute(select(FundTransfer).where(FundTransfer.transfer_id == stable_uuid("fund-transfer:seed"))).scalar_one_or_none():
+        db.add(
+            FundTransfer(
+                transfer_id=stable_uuid("fund-transfer:seed"),
+                source_project_id=seeded_project_ids[0],
+                destination_project_id=seeded_project_ids[1],
+                amount=150000.0,
+                reason="Seeded inter-project balancing transfer for compliance tests",
+                requested_by=DISTRICT_USER_ID,
+                approved_by=STATE_USER_ID,
+                status="Approved",
+                decided_at=datetime.now(timezone.utc),
+            )
+        )
+
+    db.commit()
+
+    if not db.execute(select(AuditLog).limit(1)).scalar_one_or_none():
+        record_audit_event(
+            db=db,
+            action="SEED_DATABASE_INITIALIZED",
+            entity_type="system",
+            entity_id=None,
+            user_id=ADMIN_USER_ID,
+            new_value={"message": "Initial integrated seed completed"},
+        )
 
 def seed_database():
     db: Session = SessionLocal()
@@ -261,6 +636,9 @@ def seed_database():
                 )
                 db.add(cfg)
         db.commit()
+
+        print("--- Seeding Operational + AI/ML Tables ---")
+        seed_operational_and_ml_data(db)
 
         print("--- Seeding Completed Successfully! ---")
     finally:

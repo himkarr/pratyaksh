@@ -18,7 +18,7 @@
 
 import React, { createContext, useContext, useState } from "react";
 import sampleUsers from "../../../contracts/sample-data/sample_users.json";
-import { apiClient } from "../api/client";
+import { apiClient, mapBackendRoleToFrontendRole } from "../api/client";
 
 export type Role =
   | "citizen"
@@ -136,11 +136,14 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiClient.login(email, password);
       setToken(data.access_token);
-      const matched = DEFAULT_USERS.find(item => item.role === data.role) || {
-        id: "usr-live",
-        email,
-        name: email.split("@")[0].toUpperCase(),
-        role: data.role as Role
+      const frontendRole = mapBackendRoleToFrontendRole(data.user?.role);
+      const matched = DEFAULT_USERS.find(item => item.role === frontendRole) || {
+        id: data.user?.user_id || "usr-live",
+        email: data.user?.email || email,
+        name: data.user?.name || email.split("@")[0].toUpperCase(),
+        role: frontendRole,
+        district: data.user?.district || undefined,
+        state: data.user?.state || undefined
       };
       setUser(matched);
       setIsAuthenticated(true);
@@ -186,4 +189,3 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
  */
 export const useRole = () => useContext(RoleContext);
 export default useRole;
-
