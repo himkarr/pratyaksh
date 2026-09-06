@@ -20,38 +20,112 @@ import React, { createContext, useContext, useState } from "react";
 import sampleUsers from "../../../contracts/sample-data/sample_users.json";
 import { apiClient } from "../api/client";
 
-export type Role = "mp" | "state_nodal" | "district" | "ministry";
+export type Role =
+  | "citizen"
+  | "mp"
+  | "contractor"
+  | "field_officer"
+  | "district"
+  | "state_nodal"
+  | "ministry";
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: Role;
+  constituency?: string;
   constituency_code?: string;
   state?: string;
   district?: string;
 }
 
-const DEFAULT_USERS: User[] = sampleUsers as User[];
+const ALL_ROLES_DEFAULT_USERS: User[] = [
+  {
+    id: "usr-citizen-01",
+    email: "citizen.pune@gmail.com",
+    name: "Rajesh Kumar (Citizen)",
+    role: "citizen",
+    state: "Maharashtra",
+    district: "Pune"
+  },
+  {
+    id: "usr-mp-01",
+    email: "mp.pune@sansad.nic.in",
+    name: "Hon. MP - Pune Constituency",
+    role: "mp",
+    constituency_code: "AST-01",
+    state: "Maharashtra",
+    district: "Pune"
+  },
+  {
+    id: "usr-contractor-01",
+    email: "contractor.infra@agency.gov.in",
+    name: "Maharashtra State PWD Contractor",
+    role: "contractor",
+    state: "Maharashtra",
+    district: "Pune"
+  },
+  {
+    id: "usr-field-01",
+    email: "field.pune@nic.in",
+    name: "Senior Field Inspection Officer",
+    role: "field_officer",
+    state: "Maharashtra",
+    district: "Pune"
+  },
+  {
+    id: "usr-district-01",
+    email: "dm.pune@maharashtra.gov.in",
+    name: "District Collector / DM Pune",
+    role: "district",
+    state: "Maharashtra",
+    district: "Pune"
+  },
+  {
+    id: "usr-state-01",
+    email: "nodal.planning@maharashtra.gov.in",
+    name: "State Nodal Department - Maharashtra",
+    role: "state_nodal",
+    state: "Maharashtra"
+  },
+  {
+    id: "usr-ministry-01",
+    email: "admin.mospi@gov.in",
+    name: "Apex MoSPI Administrator",
+    role: "ministry"
+  }
+];
+
+const DEFAULT_USERS: User[] = [
+  ...ALL_ROLES_DEFAULT_USERS,
+  ...(sampleUsers as any[])
+];
 
 interface RoleContextType {
   user: User;
   token?: string;
+  isAuthenticated: boolean;
   setRole: (role: Role) => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  showLogin: () => void;
 }
+
 
 const RoleContext = createContext<RoleContextType>({
   user: DEFAULT_USERS[0],
+  isAuthenticated: false,
   setRole: () => undefined,
   login: async () => undefined,
-  logout: () => undefined
+  logout: () => undefined,
+  showLogin: () => undefined
 });
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User>(DEFAULT_USERS[0]);
   const [token, setToken] = useState<string | undefined>();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   /**
    * Authenticates user against backend POST /auth/login.
@@ -69,12 +143,14 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
         role: data.role as Role
       };
       setUser(matched);
+      setIsAuthenticated(true);
     } catch {
       // Offline fallback: match user from synthetic catalog
       const matched = DEFAULT_USERS.find(item => item.email.toLowerCase() === email.toLowerCase()) ||
                       DEFAULT_USERS.find(item => item.role === 'ministry') ||
                       DEFAULT_USERS[0];
       setUser(matched);
+      setIsAuthenticated(true);
     }
   };
 
@@ -87,15 +163,19 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Clears active token and resets to default public session.
+   * Clears active token and resets to default unauthenticated state.
    */
   const logout = () => {
     setToken(undefined);
-    setUser(DEFAULT_USERS[0]);
+    setIsAuthenticated(false);
+  };
+
+  const showLogin = () => {
+    setIsAuthenticated(false);
   };
 
   return (
-    <RoleContext.Provider value={{ user, token, login, logout, setRole }}>
+    <RoleContext.Provider value={{ user, token, isAuthenticated, login, logout, setRole, showLogin }}>
       {children}
     </RoleContext.Provider>
   );
@@ -106,3 +186,4 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
  */
 export const useRole = () => useContext(RoleContext);
 export default useRole;
+

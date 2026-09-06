@@ -25,10 +25,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  X, Lock, KeyRound, ShieldAlert, CheckCircle2, UserCheck, 
+  X, Lock, KeyRound, ShieldAlert, CheckCircle2, UserCheck, User,
   Landmark, Building2, MapPin, Award, ArrowRight 
 } from 'lucide-react';
 import { useRole, Role } from '../auth/roleContext';
+
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -43,6 +44,14 @@ const SEEDED_CREDENTIALS: Record<Role, {
   scopeDesc: string;
   icon: any;
 }> = {
+  citizen: {
+    email: "citizen.pune@gmail.com",
+    pass: "demo1234",
+    label: "Citizen Portal User",
+    scopeLabel: "Public Citizen Scope",
+    scopeDesc: "Submit local issues, track project status, and view constituency MP works.",
+    icon: User
+  },
   mp: {
     email: "mp_demo@aqua.test",
     pass: "demo1234",
@@ -50,6 +59,22 @@ const SEEDED_CREDENTIALS: Record<Role, {
     scopeLabel: "Constituency Scope (AST-01)",
     scopeDesc: "Recommend local area works, monitor physical execution & fund burn rate.",
     icon: Landmark
+  },
+  contractor: {
+    email: "contractor.infra@agency.gov.in",
+    pass: "demo1234",
+    label: "Contractor / Implementing Agency",
+    scopeLabel: "Project Execution Scope",
+    scopeDesc: "Update construction progress, upload evidence photos, and submit completion certificates.",
+    icon: Building2
+  },
+  field_officer: {
+    email: "field.pune@nic.in",
+    pass: "demo1234",
+    label: "Field Inspection Officer",
+    scopeLabel: "Ground Verification Scope",
+    scopeDesc: "Conduct physical verification of high-risk projects, capture geotagged evidence, and submit verification reports.",
+    icon: MapPin
   },
   district: {
     email: "district_demo@aqua.test",
@@ -76,6 +101,7 @@ const SEEDED_CREDENTIALS: Record<Role, {
     icon: Award
   }
 };
+
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   if (!isOpen) return null;
