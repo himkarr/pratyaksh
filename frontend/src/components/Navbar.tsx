@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { 
-  Landmark, HelpCircle, LogIn, BarChart3, LayoutDashboard, 
+  LogIn, BarChart3, LayoutDashboard, 
   FileText, AlertTriangle, ShieldCheck, BookOpen 
 } from 'lucide-react';
 import { TranslationDict } from '../data/translations';
@@ -63,34 +63,35 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t, 
         {/* Brand Logo & Scheme Name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
-            background: 'var(--gov-primary)',
-            color: '#fff',
-            width: '36px',
-            height: '36px',
-            borderRadius: 'var(--radius-xs)',
+            width: '40px',
+            height: '40px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            border: '1px solid var(--border-dark)'
+            borderRight: '1px solid var(--border-light)',
+            paddingRight: '10px'
           }}>
-            <Landmark size={20} color="#ffffff" />
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+              alt="State Emblem of India"
+              width="30"
+              height="30"
+              style={{ objectFit: 'contain' }}
+            />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{
                 fontSize: '1.15rem',
                 fontWeight: 800,
                 letterSpacing: '-0.3px',
                 color: 'var(--gov-primary)'
               }}>
-                MPLADS <span style={{ color: 'var(--gov-accent)' }}>e-SAKSHI Aqua</span>
-              </span>
-              <span className="gov-badge gov-badge-info" style={{ fontSize: '0.68rem', padding: '1px 5px' }}>
-                National Portal
+                MPLADS <span style={{ color: 'var(--gov-accent)' }}>e-SAKSHI</span>
               </span>
             </div>
             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-              Decision-Support, Anomaly & Statutory 1-Year Compliance System
+              Decision support and compliance dashboard
             </p>
           </div>
         </div>

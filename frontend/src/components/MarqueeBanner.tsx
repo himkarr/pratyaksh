@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Megaphone, Pause, Play, BookOpen } from 'lucide-react';
+import { Megaphone, Pause, Play } from 'lucide-react';
 import { TranslationDict } from '../data/translations';
 
 interface MarqueeBannerProps {
@@ -126,23 +126,7 @@ export function MarqueeBanner({ onOpenPolicy }: MarqueeBannerProps) {
             {isPaused ? <Play size={10} color="var(--gov-primary)" /> : <Pause size={10} />}
           </button>
 
-          <button
-            onClick={onOpenPolicy}
-            className="gov-btn gov-btn-secondary"
-            style={{
-              padding: '2px 8px',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              color: 'var(--gov-accent)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              height: '22px'
-            }}
-          >
-            <BookOpen size={11} />
-            <span>Guidelines</span>
-          </button>
+
         </div>
       </div>
     </div>
