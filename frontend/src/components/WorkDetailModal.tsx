@@ -4,6 +4,13 @@ import {
   FileText, ShieldCheck, AlertTriangle, Printer, Download, Eye, Star, UserCheck 
 } from 'lucide-react';
 import { WorkItem } from '../data/mpladsData';
+import { 
+  ProjectTimeline, 
+  FinancialSummary, 
+  EvidenceSection, 
+  RiskSection, 
+  DeadlineSection 
+} from './project';
 
 interface WorkDetailModalProps {
   work: WorkItem | null;
@@ -33,7 +40,7 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
       <div
         className="gov-modal-content"
         style={{
-          maxWidth: '780px',
+          maxWidth: '820px',
           padding: '0',
           borderRadius: 'var(--radius-sm)',
           overflow: 'hidden',
@@ -143,114 +150,37 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
             </div>
           </div>
 
-          {/* Key Financial & Physical Metrics Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-            <div className="gov-card" style={{ padding: '10px 12px' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                Sanctioned Amount
-              </div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
-                ₹ {work.sanctionedAmt.toFixed(2)} Cr
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Admin Sanctioned</div>
-            </div>
+          {/* Financial Breakdown Section */}
+          <FinancialSummary project={work} />
 
-            <div className="gov-card" style={{ padding: '10px 12px' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                Audited Expenditure
-              </div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--gov-primary)', marginTop: '2px' }}>
-                ₹ {work.expenditureAmt.toFixed(2)} Cr
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{finPct}% Drawdown</div>
-            </div>
+          {/* Statutory 365-Day Timeline Section */}
+          <ProjectTimeline
+            project={work}
+            predictedCompletionDate={work.status === 'Completed' ? work.targetCompletion : '2025-04-18'}
+            elapsedDays={isDelayed ? 320 : 190}
+            delayRatio={isDelayed ? 1.35 : 0.95}
+          />
 
-            <div className="gov-card" style={{ padding: '10px 12px' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                Physical Progress
-              </div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: work.physicalProgress === 100 ? 'var(--status-success-text)' : 'var(--text-main)', marginTop: '2px' }}>
-                {work.physicalProgress}%
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Site Verified</div>
-            </div>
+          {/* AI Risk & Anomaly Signals Section */}
+          <RiskSection
+            riskLevel={isDelayed ? "HIGH" : "LOW"}
+            verificationPriority={isDelayed ? "PRIORITY_1" : "PRIORITY_3"}
+            mlRiskScore={isDelayed ? 0.88 : 0.24}
+            ruleRiskScore={isDelayed ? 0.80 : 0.15}
+            combinedRiskScore={isDelayed ? 0.85 : 0.20}
+            ruleFailures={isDelayed ? [
+              "Rule R-03: Expenditure trajectory deviates from statutory 12-month burn rate benchmark",
+              "Rule R-07: Mid-stage geotag photos pending field officer re-inspection"
+            ] : ["Rule R-01: Compliant milestone execution velocity"]}
+            riskReason={isDelayed ? "Unusual ML anomaly pattern; 1-year ceiling deadline risk require review" : "Standard progress pattern; routine monitoring"}
+          />
 
-            <div className="gov-card" style={{ padding: '10px 12px' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                1-Year Statutory Rule
-              </div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isDelayed ? 'var(--status-danger-text)' : 'var(--status-success-text)', marginTop: '4px' }}>
-                {isDelayed ? 'Overdue (>365d)' : 'Compliant (<365d)'}
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Target: {work.targetCompletion}</div>
-            </div>
-          </div>
-
-          {/* 6-Stage Milestone Progress Tracker */}
-          <div className="gov-card" style={{ padding: '14px 16px' }}>
-            <h5 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px', textTransform: 'uppercase' }}>
-              Statutory 6-Stage Milestone Execution Pipeline
-            </h5>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
-              {milestones.map((m, idx) => (
-                <div key={idx} style={{
-                  background: m.completed ? 'var(--status-success-bg)' : 'var(--bg-surface-subtle)',
-                  border: `1px solid ${m.completed ? 'var(--status-success-border)' : 'var(--border-main)'}`,
-                  padding: '8px',
-                  borderRadius: 'var(--radius-xs)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {m.completed ? (
-                      <CheckCircle2 size={12} color="var(--status-success-text)" />
-                    ) : (
-                      <Clock size={12} color="var(--text-muted)" />
-                    )}
-                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: m.completed ? 'var(--status-success-text)' : 'var(--text-muted)' }}>
-                      Stage {idx + 1}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                    {m.title}
-                  </div>
-                  <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
-                    {m.date}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Implementing Agency & Contractor Metadata */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="gov-card" style={{ padding: '12px 14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <Building2 size={14} color="var(--gov-primary)" />
-                <h6 style={{ fontSize: '0.76rem', fontWeight: 800, textTransform: 'uppercase' }}>Implementing Agency</h6>
-              </div>
-              <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                {work.agency}
-              </p>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                District Project Execution Division · PFMS SNA Account: <b>SNA-PFMS-IN-00982</b>
-              </p>
-            </div>
-
-            <div className="gov-card" style={{ padding: '12px 14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <UserCheck size={14} color="var(--gov-primary)" />
-                <h6 style={{ fontSize: '0.76rem', fontWeight: 800, textTransform: 'uppercase' }}>Authorized Vendor / Contractor</h6>
-              </div>
-              <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                {work.contractor}
-              </p>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                GSTIN: <b>27AAACI1234F1Z5</b> · Verification Status: <b>KYC Approved</b>
-              </p>
-            </div>
-          </div>
+          {/* Geotagged Evidence Section */}
+          <EvidenceSection
+            attachments={work.attachments || []}
+            canUpload={true}
+            onUploadClick={() => { onClose(); onViewAttachments(work); }}
+          />
 
           {/* Actions Bar */}
           <div style={{
@@ -296,3 +226,4 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
   );
 }
 export default WorkDetailModal;
+

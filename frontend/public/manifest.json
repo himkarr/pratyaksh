@@ -1,0 +1,23 @@
+{
+  "name": "eSAKSHI MPLADS Monitoring Portal",
+  "short_name": "eSAKSHI",
+  "description": "Government of India MPLADS Implementation, Verification & Anomaly Decision Support Portal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0a2540",
+  "orientation": "any",
+  "categories": ["government", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/assets/parliament_hero.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/parliament_hero.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

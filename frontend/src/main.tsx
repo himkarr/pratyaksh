@@ -6,45 +6,72 @@
  * 
  * DOMAIN CONTEXT & PURPOSE:
  * -------------------------
- * This is the root entrypoint of the React application. It wraps the entire component
- * tree with `RoleProvider` (Role-Based Access Control) and dynamically routes users
- * to their respective stakeholder dashboard view based on authenticated perspective:
- * 
- * - `mp`           -> MPDashboard (Constituency Recommendation & Local Progress)
- * - `district`     -> DistrictDashboard (Sanctions, Milestone Verification & Fund Releases)
- * - `state_nodal`  -> StateNodalDashboard (Cross-District Progress & State Compliance)
- * - `ministry`     -> MinistryDashboard (Apex MoSPI Oversight, AI Anomaly Review & Hash Ledger)
+ * Root entrypoint of the React application. Integrates PWA Service Worker registration,
+ * Network Connection Status banner (ONLINE, OFFLINE, SYNCING), RoleProvider RBAC, and
+ * dynamic stakeholder dashboard routing.
  */
 
-import React from "react";
+import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import { RoleProvider, useRole } from "./auth/roleContext";
+import { NetworkStatusBanner } from "./components/NetworkStatusBanner";
+import { LoginPage } from "./pages/LoginPage";
+import { CitizenDashboard } from "./dashboards/CitizenDashboard";
 import { MPDashboard } from "./dashboards/MPDashboard";
-import { StateNodalDashboard } from "./dashboards/StateNodalDashboard";
+import { ContractorDashboard } from "./dashboards/ContractorDashboard";
+import { FieldOfficerDashboard } from "./dashboards/FieldOfficerDashboard";
 import { DistrictDashboard } from "./dashboards/DistrictDashboard";
+import { StateNodalDashboard } from "./dashboards/StateNodalDashboard";
 import { MinistryDashboard } from "./dashboards/MinistryDashboard";
 
-function App() {
-  const { user } = useRole();
+function AppContent() {
+  const { user, isAuthenticated } = useRole();
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   switch (user.role) {
+    case "citizen":
+      return <CitizenDashboard />;
     case "mp":
       return <MPDashboard />;
+    case "contractor":
+      return <ContractorDashboard />;
+    case "field_officer":
+      return <FieldOfficerDashboard />;
     case "district":
       return <DistrictDashboard />;
     case "state_nodal":
       return <StateNodalDashboard />;
+    case "ministry":
     default:
       return <MinistryDashboard />;
   }
 }
 
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  createRoot(rootElement).render(
+function RootApp() {
+  useEffect(() => {
+    // Register PWA Service Worker for offline shell caching
+    if ("serviceWorker" in navigator && import.meta.env.PROD) {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        console.log("eSAKSHI PWA Service Worker registered:", reg.scope);
+      }).catch((err) => {
+        console.warn("Service Worker registration failed:", err);
+      });
+    }
+  }, []);
+
+  return (
     <RoleProvider>
-      <App />
+      <NetworkStatusBanner />
+      <AppContent />
     </RoleProvider>
   );
+}
+
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  createRoot(rootElement).render(<RootApp />);
 }
