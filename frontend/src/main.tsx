@@ -28,29 +28,37 @@ import { StateNodalDashboard } from "./dashboards/StateNodalDashboard";
 import { MinistryDashboard } from "./dashboards/MinistryDashboard";
 
 function AppContent() {
-  const { user, isAuthenticated } = useRole();
+  const { user, isAuthenticated, setRole } = useRole();
 
   if (!isAuthenticated) {
     return <LoginPage />;
   }
 
-  switch (user.role) {
-    case "citizen":
-      return <CitizenDashboard />;
-    case "mp":
-      return <MPDashboard />;
-    case "contractor":
-      return <ContractorDashboard />;
-    case "field_officer":
-      return <FieldOfficerDashboard />;
-    case "district":
-      return <DistrictDashboard />;
-    case "state_nodal":
-      return <StateNodalDashboard />;
-    case "ministry":
-    default:
-      return <MinistryDashboard />;
-  }
+  const renderDashboard = () => {
+    switch (user.role) {
+      case "citizen":
+        return <CitizenDashboard />;
+      case "mp":
+        return <MPDashboard />;
+      case "contractor":
+        return <ContractorDashboard />;
+      case "field_officer":
+        return <FieldOfficerDashboard />;
+      case "district":
+        return <DistrictDashboard />;
+      case "state_nodal":
+        return <StateNodalDashboard />;
+      case "ministry":
+      default:
+        return <MinistryDashboard />;
+    }
+  };
+
+  return (
+    <ErrorBoundary activeRole={user.role} onSelectRole={setRole}>
+      {renderDashboard()}
+    </ErrorBoundary>
+  );
 }
 
 function RootApp() {

@@ -403,14 +403,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-bottom: 1.5px solid #e2e8f0;
   border-right: none;
   white-space: nowrap;
 }
 
 .gov-table td {
-  padding: 12px 16px;
+  padding: 14px 18px;
+  vertical-align: middle;
   border-bottom: 1px solid #f1f5f9;
   border-right: none;
   color: var(--text-main);

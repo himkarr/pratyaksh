@@ -43,57 +43,57 @@ export interface User {
 const ALL_ROLES_DEFAULT_USERS: User[] = [
   {
     id: "usr-citizen-01",
-    email: "citizen@sapphire.gov.in",
-    name: "Citizen Stakeholder (Public Transparency)",
+    email: "citizen@nirikshak.gov.in",
+    name: "Citizen Transparency Portal",
     role: "citizen",
-    state: "Andaman And Nicobar Islands",
-    district: "ANDAMAN AND NICOBAR ISLANDS"
+    state: "Madhya Pradesh",
+    district: "Jabalpur"
   },
   {
     id: "usr-mp-01",
-    email: "mp@sapphire.gov.in",
-    name: "Hon'ble Bishnu Pada Ray (MP)",
+    email: "mp.varanasi@nirikshak.gov.in",
+    name: "Hon'ble MP (Varanasi)",
     role: "mp",
-    constituency: "Andaman and Nicobar Islands",
-    constituency_code: "AN-SOU-01",
-    state: "Andaman And Nicobar Islands",
-    district: "ANDAMAN AND NICOBAR ISLANDS"
+    constituency: "Varanasi",
+    constituency_code: "UP-VAR-01",
+    state: "Uttar Pradesh",
+    district: "Varanasi"
   },
   {
     id: "usr-contractor-01",
-    email: "vendor@sapphire.gov.in",
-    name: "South Andamans Implementing District Authority",
+    email: "vendor.jabalpur@nirikshak.gov.in",
+    name: "Jabalpur Implementing Infrastructure Agency",
     role: "contractor",
-    state: "Andaman And Nicobar Islands",
-    district: "ANDAMAN AND NICOBAR ISLANDS"
+    state: "Madhya Pradesh",
+    district: "Jabalpur"
   },
   {
     id: "usr-field-01",
-    email: "fieldofficer@sapphire.gov.in",
-    name: "Suresh Patil (Senior Field Inspection Officer)",
+    email: "field.inspector@nirikshak.gov.in",
+    name: "Field Quality Inspector (Er. Rajesh Kumar)",
     role: "field_officer",
-    state: "Andaman And Nicobar Islands",
-    district: "ANDAMAN AND NICOBAR ISLANDS"
+    state: "Madhya Pradesh",
+    district: "Jabalpur"
   },
   {
     id: "usr-district-01",
-    email: "district@sapphire.gov.in",
-    name: "District Magistrate & Collector (South Andaman)",
+    email: "district.jabalpur@nirikshak.gov.in",
+    name: "Smt. G. Srijana, IAS",
     role: "district",
-    state: "Andaman And Nicobar Islands",
-    district: "ANDAMAN AND NICOBAR ISLANDS"
+    state: "Madhya Pradesh",
+    district: "Jabalpur"
   },
   {
     id: "usr-state-01",
-    email: "statenodal@sapphire.gov.in",
-    name: "State Nodal Department (Planning & Development)",
+    email: "state.up@nirikshak.gov.in",
+    name: "State Nodal Officer (UP)",
     role: "state_nodal",
-    state: "Andaman And Nicobar Islands"
+    state: "Uttar Pradesh"
   },
   {
     id: "usr-ministry-01",
-    email: "ministry@sapphire.gov.in",
-    name: "MoSPI Joint Secretary (Apex Admin)",
+    email: "admin@nirikshak.gov.in",
+    name: "Admin (NIC MoSPI)",
     role: "ministry"
   }
 ];
@@ -115,8 +115,8 @@ interface RoleContextType {
 
 
 const RoleContext = createContext<RoleContextType>({
-  user: DEFAULT_USERS[0],
-  isAuthenticated: false,
+  user: DEFAULT_USERS[6], // Default to Ministry
+  isAuthenticated: true,
   setRole: () => undefined,
   login: async () => undefined,
   logout: () => undefined,
@@ -124,9 +124,40 @@ const RoleContext = createContext<RoleContextType>({
 });
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User>(DEFAULT_USERS[0]);
-  const [token, setToken] = useState<string | undefined>();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [user, setUser] = useState<User>(() => {
+    try {
+      const savedRole = localStorage.getItem("mplads_active_role") as Role | null;
+      if (savedRole) {
+        const found = DEFAULT_USERS.find(item => item.role === savedRole);
+        if (found) return found;
+      }
+      const savedUser = localStorage.getItem("mplads_active_user");
+      if (savedUser) {
+        return JSON.parse(savedUser);
+      }
+    } catch {}
+    // Default to Ministry (Joint Secretary MoSPI) for comprehensive apex demo overview
+    return DEFAULT_USERS.find(u => u.role === "ministry") || DEFAULT_USERS[0];
+  });
+
+  const [token, setToken] = useState<string | undefined>(() => {
+    try {
+      return localStorage.getItem("mplads_token") || undefined;
+    } catch {
+      return undefined;
+    }
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      const auth = localStorage.getItem("mplads_authenticated");
+      // If user has explicitly logged out, respect it; otherwise default to authenticated
+      if (auth === "false") return false;
+      return true;
+    } catch {
+      return true;
+    }
+  });
 
   /**
    * Authenticates user against backend POST /auth/login.
@@ -148,35 +179,66 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(matched);
       setIsAuthenticated(true);
+      try {
+        localStorage.setItem("mplads_token", data.access_token);
+        localStorage.setItem("mplads_active_role", matched.role);
+        localStorage.setItem("mplads_active_user", JSON.stringify(matched));
+        localStorage.setItem("mplads_authenticated", "true");
+      } catch {}
     } catch {
       // Validate credentials against official catalog
-      const matched = DEFAULT_USERS.find(item => item.email.toLowerCase() === email.toLowerCase()) ||
+      const emailLower = email.toLowerCase();
+      const matched = DEFAULT_USERS.find(item => item.email.toLowerCase() === emailLower) ||
+                      DEFAULT_USERS.find(item => {
+                        const prefix = item.email.split("@")[0].toLowerCase();
+                        return emailLower.includes(prefix) || emailLower.split("@")[0] === prefix;
+                      }) ||
                       DEFAULT_USERS.find(item => item.role === 'ministry') ||
                       DEFAULT_USERS[0];
       setUser(matched);
       setIsAuthenticated(true);
+      try {
+        localStorage.setItem("mplads_active_role", matched.role);
+        localStorage.setItem("mplads_active_user", JSON.stringify(matched));
+        localStorage.setItem("mplads_authenticated", "true");
+      } catch {}
     }
   };
 
   /**
-   * Role Switcher helper.
+   * Instant Role Switcher helper (Zero-friction perspective switching).
    */
   const setRole = (role: Role) => {
     const matched = DEFAULT_USERS.find(item => item.role === role) || DEFAULT_USERS[0];
     setUser(matched);
+    setIsAuthenticated(true);
+    try {
+      localStorage.setItem("mplads_active_role", role);
+      localStorage.setItem("mplads_active_user", JSON.stringify(matched));
+      localStorage.setItem("mplads_authenticated", "true");
+    } catch {}
   };
 
   /**
-   * Clears active token and resets to default citizen unauthenticated state.
+   * Clears active token and resets to unauthenticated state.
    */
   const logout = () => {
     setToken(undefined);
     setIsAuthenticated(false);
-    setUser(DEFAULT_USERS[0]);
+    setUser(DEFAULT_USERS.find(u => u.role === "citizen") || DEFAULT_USERS[0]);
+    try {
+      localStorage.removeItem("mplads_token");
+      localStorage.removeItem("mplads_active_role");
+      localStorage.removeItem("mplads_active_user");
+      localStorage.setItem("mplads_authenticated", "false");
+    } catch {}
   };
 
   const showLogin = () => {
     setIsAuthenticated(false);
+    try {
+      localStorage.setItem("mplads_authenticated", "false");
+    } catch {}
   };
 
   return (

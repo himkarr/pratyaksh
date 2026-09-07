@@ -24,10 +24,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <Alert type="danger" title="Access Denied (403 Unauthorized)">
           Your current role (<strong>{user.role.toUpperCase()}</strong>) does not have authorization to view this resource.
         </Alert>
-        <div style={{ marginTop: "16px", display: "flex", gap: "10px", justifyContent: "center" }}>
-          <Button variant="secondary" onClick={() => setRole(allowedRoles[0])}>
-            Switch to Authorized Role ({allowedRoles[0]})
-          </Button>
+        <div style={{ marginTop: "16px", display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+          {allowedRoles.map((r) => (
+            <Button key={r} variant="primary" onClick={() => setRole(r)}>
+              Switch to {r.toUpperCase()}
+            </Button>
+          ))}
         </div>
       </div>
     );

@@ -14,7 +14,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   onSelect,
   showRisk = true
 }) => {
-  const formatCurrency = (valInCr: number) => `₹${valInCr.toFixed(2)} Cr`;
+  const formatCurrency = (valInCr: number | undefined | null) => `₹${(Number(valInCr || 0)).toFixed(2)} Cr`;
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -99,7 +99,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
       {onSelect && (
         <CardFooter style={{ justifyContent: "space-between" }}>
-          <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>Agency: {project.agency.slice(0, 24)}...</span>
+          <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>Agency: {(project.agency || "Implementing Agency").slice(0, 24)}...</span>
           <Button variant="secondary" size="sm" onClick={() => onSelect(project)}>
             View Details <ArrowRight size={13} />
           </Button>

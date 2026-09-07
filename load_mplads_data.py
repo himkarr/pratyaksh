@@ -16,7 +16,9 @@ import uuid
 from datetime import timedelta
 
 import pandas as pd
+# pyrefly: ignore [missing-import]
 from sqlalchemy import MetaData, Table, bindparam, create_engine, select
+# pyrefly: ignore [missing-import]
 from sqlalchemy.dialects.postgresql import insert
 
 CSV_PATH = "mplads_master_project_dataset.csv"
@@ -95,25 +97,32 @@ def main():
     metadata = MetaData()
     tables = {name: Table(name, metadata, autoload_with=engine) for name in ("roles", "users", "mp_constituency_mapping", "implementing_agencies", "recommendations", "projects", "project_financials")}
     with engine.connect() as connection:
-        role_ids = dict(connection.execute(select(tables["roles"].c.role_name, tables["roles"].c.role_id)).all())
-    if "MPUser" not in role_ids:
+        raw_roles = connection.execute(select(tables["roles"].c.role_name, tables["roles"].c.role_id)).all()
+        role_ids = {str(k).lower(): v for k, v in raw_roles}
+        exact_roles = {str(k): v for k, v in raw_roles}
+
+    mp_role_id = exact_roles.get("MPUser") or role_ids.get("mpuser") or role_ids.get("mp_user") or role_ids.get("mp")
+    if not mp_role_id:
         raise SystemExit("Supabase roles table does not contain MPUser.")
 
     mp_rows, mapping_rows, agency_rows, rec_rows, project_rows, financial_rows = [], [], [], [], [], []
     seen_mps, seen_mappings, seen_agencies = set(), set(), set()
     for _, source in valid.iterrows():
         work_id = clean_text(source.work_id)
-        mp_name, state, agency_name = limited_text(source.mp, 255), limited_text(source.state, 100), limited_text(source.ida, 255)
-        mp_id, agency_id = stable_id("mp", f"{mp_name}|{state}"), stable_id("agency", agency_name)
+        mp_name = limited_text(source.mp, 255, "Unknown MP")
+        state = limited_text(source.state, 100, "Unknown")
+        agency_name = limited_text(source.ida, 255, "Unknown Agency")
+        mp_id = stable_id("mp", f"{mp_name}|{state}")
+        agency_id = stable_id("agency", agency_name)
         constituency = limited_text(source.get("constituency"), 255)
         mapping_id = stable_id("constituency", f"{mp_id}|{constituency}") if constituency else None
         project_id, recommendation_id = stable_id("project", work_id), stable_id("recommendation", work_id)
         if mp_id not in seen_mps:
             seen_mps.add(mp_id)
-            mp_rows.append({"user_id": mp_id, "name": mp_name, "email": f"mplads-mp-{mp_id.hex[:24]}@import.invalid", "password_hash": "!imported-public-record-not-a-login!", "role_id": role_ids["MPUser"], "status": "active", "state": state, "aadhaar_verified": False})
+            mp_rows.append({"user_id": mp_id, "name": mp_name, "email": f"mplads-mp-{mp_id.hex[:24]}@import.invalid", "password_hash": "!imported-public-record-not-a-login!", "role_id": mp_role_id, "status": "active", "state": state, "aadhaar_verified": False})
         if mapping_id and mapping_id not in seen_mappings:
             seen_mappings.add(mapping_id)
-            mapping_rows.append({"mapping_id": mapping_id, "mp_id": mp_id, "constituency_name": constituency, "state": state})
+            mapping_rows.append({"mapping_id": mapping_id, "mp_id": mp_id, "constituency_name": constituency or "Unknown", "state": state})
         if agency_id not in seen_agencies:
             seen_agencies.add(agency_id)
             agency_rows.append({"agency_id": agency_id, "agency_name": agency_name, "agency_type": "GovtDept", "verified_by_admin": True})
@@ -122,7 +131,9 @@ def main():
         status = STATUS_MAP.get(clean_text(source.get("work_status")), "Proposed")
         rec_rows.append({"recommendation_id": recommendation_id, "mp_id": mp_id, "recommended_amount": clean_number(source.recommended_amount), "recommendation_date": recommended_date, "status": "Accepted"})
         description = limited_text(source.get("work_description"), 250)
-        project_rows.append({"project_id": project_id, "project_name": limited_text(source.get("work_description"), 250, work_id), "description": description, "category": limited_text(source.get("work_category"), 100, "Uncategorised"), "recommendation_id": recommendation_id, "mp_id": mp_id, "constituency_id": mapping_id, "sanctioned_amount": sanctioned, "released_amount": sanctioned, "utilized_amount": utilized, "implementing_agency_id": agency_id, "status": status, "progress_percentage": PROGRESS_MAP[status], "district": limited_text(constituency or agency_name, 100), "state": state, "start_date": clean_date(source.get("first_expenditure_date")) or sanction_date, "expected_completion_date": sanction_date + timedelta(days=365), "actual_completion_date": clean_date(source.get("completion_date")), "is_flagged": False, "latest_risk_score": 0})
+        expected_completion = (sanction_date + timedelta(days=365)) if sanction_date else None
+        district_name = limited_text(constituency or agency_name, 100, "Unknown")
+        project_rows.append({"project_id": project_id, "project_name": limited_text(source.get("work_description"), 250, work_id), "description": description, "category": limited_text(source.get("work_category"), 100, "Uncategorised"), "recommendation_id": recommendation_id, "mp_id": mp_id, "constituency_id": mapping_id, "sanctioned_amount": sanctioned, "released_amount": sanctioned, "utilized_amount": utilized, "implementing_agency_id": agency_id, "status": status, "progress_percentage": PROGRESS_MAP.get(status, 0), "district": district_name, "state": state, "start_date": clean_date(source.get("first_expenditure_date")) or sanction_date, "expected_completion_date": expected_completion, "actual_completion_date": clean_date(source.get("completion_date")), "is_flagged": False, "latest_risk_score": 0})
         financial_rows.append({"financial_id": stable_id("financial", work_id), "project_id": project_id, "installment_no": 1, "amount_released": sanctioned, "release_date": sanction_date, "amount_utilized": utilized, "utilization_date": clean_date(source.get("last_expenditure_date")), "balance": sanctioned - utilized, "remarks": "Imported from official MPLADS public works dataset."})
 
     # recommendations.project_id and projects.recommendation_id are circular FKs.
@@ -134,7 +145,11 @@ def main():
         insert_ignore(connection, tables["projects"], project_rows)
         insert_ignore(connection, tables["project_financials"], financial_rows)
         update = tables["recommendations"].update().where(tables["recommendations"].c.recommendation_id == bindparam("rid")).values(project_id=bindparam("pid"))
-        connection.execute(update, [{"rid": row["recommendation_id"], "pid": stable_id("project", clean_text(source.work_id))} for row, (_, source) in zip(rec_rows, valid.iterrows())])
+        update_params = [{"rid": row["recommendation_id"], "pid": stable_id("project", clean_text(source.work_id))} for row, (_, source) in zip(rec_rows, valid.iterrows())]
+        for start in range(0, len(update_params), 1000):
+            batch = update_params[start:start + 1000]
+            if batch:
+                connection.execute(update, batch)
     print(f"Import complete: {len(project_rows):,} projects. Re-running this command is safe.")
 
 
