@@ -52,8 +52,8 @@ export function Header(props: HeaderProps) {
   return (
     <header 
       style={{
-        background: theme === 'dark' ? '#070e17' : '#071224',
-        color: '#ffffff',
+        background: 'var(--gov-header)',
+        color: 'var(--text-white)',
         fontSize: '0.72rem',
         padding: '3px 0',
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
@@ -85,7 +85,7 @@ export function Header(props: HeaderProps) {
               alignItems: 'center',
               gap: '5px',
               background: 'rgba(255, 255, 255, 0.08)',
-              color: '#ffffff',
+              color: 'var(--text-white)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: '4px',
               padding: '2px 8px',
@@ -104,7 +104,7 @@ export function Header(props: HeaderProps) {
         {/* Right: GIGW Accessibility Text Size (A- | A | A+) & Theme */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ffffff', fontWeight: 600 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-white)', fontWeight: 600 }}>
             <button
               type="button"
               onClick={() => setFontScale('sm')}
@@ -113,7 +113,7 @@ export function Header(props: HeaderProps) {
                 border: fontScale === 'sm' ? '1px solid #38bdf8' : '1px solid transparent',
                 borderRadius: '3px',
                 padding: '1px 5px',
-                color: fontScale === 'sm' ? '#38bdf8' : '#ffffff',
+                color: fontScale === 'sm' ? '#38bdf8' : 'var(--text-white)',
                 fontSize: '0.74rem',
                 fontWeight: fontScale === 'sm' ? 800 : 500,
                 cursor: 'pointer'
@@ -131,7 +131,7 @@ export function Header(props: HeaderProps) {
                 border: fontScale === 'base' ? '1px solid #38bdf8' : '1px solid transparent',
                 borderRadius: '3px',
                 padding: '1px 5px',
-                color: fontScale === 'base' ? '#38bdf8' : '#ffffff',
+                color: fontScale === 'base' ? '#38bdf8' : 'var(--text-white)',
                 fontSize: '0.78rem',
                 fontWeight: fontScale === 'base' ? 800 : 500,
                 cursor: 'pointer'
@@ -149,7 +149,7 @@ export function Header(props: HeaderProps) {
                 border: fontScale === 'lg' ? '1px solid #38bdf8' : '1px solid transparent',
                 borderRadius: '3px',
                 padding: '1px 5px',
-                color: fontScale === 'lg' ? '#38bdf8' : '#ffffff',
+                color: fontScale === 'lg' ? '#38bdf8' : 'var(--text-white)',
                 fontSize: '0.82rem',
                 fontWeight: fontScale === 'lg' ? 800 : 500,
                 cursor: 'pointer'

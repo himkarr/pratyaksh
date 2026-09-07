@@ -135,9 +135,9 @@ export const CitizenDashboard: React.FC = () => {
         )}
 
         {/* Hero Welcome & Primary Action CTA Banner */}
-        <div style={{ background: "var(--gov-header)", color: "#ffffff", padding: "20px 24px", borderRadius: "var(--radius-sm)", border: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+        <div style={{ background: "var(--gov-header)", color: "var(--text-white)", padding: "20px 24px", borderRadius: "var(--radius-sm)", border: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
           <div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--text-white)", margin: "0 0 6px 0" }}>
               Public Area Grievance & Project Tracking
             </h2>
             <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "600px", lineHeight: "1.4", margin: 0 }}>

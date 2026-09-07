@@ -62,7 +62,7 @@ export function MarqueeBanner({ onOpenPolicy }: MarqueeBannerProps) {
           alignItems: 'center',
           gap: '6px',
           background: 'var(--gov-primary)',
-          color: '#ffffff',
+          color: 'var(--text-white)',
           padding: '3px 8px',
           borderRadius: 'var(--radius-xs)',
           fontSize: '0.68rem',

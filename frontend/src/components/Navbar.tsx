@@ -80,7 +80,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
   return (
     <nav 
       style={{
-        background: 'var(--bg-surface, #ffffff)',
+        background: 'var(--bg-surface, var(--text-white))',
         borderBottom: '1px solid var(--border-light, #e2e8f0)',
         padding: '8px 0',
         position: 'sticky',
@@ -194,7 +194,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
             >
               <div style={{
                 background: 'var(--gov-primary)',
-                color: '#ffffff',
+                color: 'var(--text-white)',
                 padding: '4px',
                 borderRadius: '5px',
                 display: 'flex',
@@ -223,7 +223,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                 top: 'calc(100% + 6px)',
                 right: 0,
                 width: '300px',
-                background: 'var(--bg-surface, #ffffff)',
+                background: 'var(--bg-surface, var(--text-white))',
                 border: '1px solid var(--border-main, #cbd5e1)',
                 borderRadius: '10px',
                 boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25), 0 8px 10px -6px rgba(15, 23, 42, 0.1)',
@@ -271,7 +271,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
                           background: isSelected ? 'var(--gov-primary)' : 'var(--bg-hover, #f1f5f9)',
-                          color: isSelected ? '#ffffff' : 'var(--text-muted, #64748b)',
+                          color: isSelected ? 'var(--text-white)' : 'var(--text-muted, #64748b)',
                           padding: '5px',
                           borderRadius: '5px',
                           display: 'flex',

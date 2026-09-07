@@ -90,7 +90,7 @@ export const CreateRecommendationModal: React.FC<CreateRecommendationModalProps>
 
     setTimeout(() => {
       const newRec: MPRecommendation = {
-        id: `REC-MH-PUNE-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+        id: `REC-${constituencyCode || "REC"}-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
         title: title.trim(),
         category,
         estimatedCost: Number(costNum.toFixed(2)),

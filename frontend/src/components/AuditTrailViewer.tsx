@@ -219,7 +219,7 @@ export function AuditTrailViewer() {
             <div style={{
               padding: '12px 16px',
               background: 'var(--gov-header)',
-              color: '#ffffff',
+              color: 'var(--text-white)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -228,7 +228,7 @@ export function AuditTrailViewer() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileCode size={16} color="#fbbf24" />
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#ffffff' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-white)' }}>
                   Cryptographic Audit Block Inspector: {selectedEvent.id}
                 </h4>
               </div>

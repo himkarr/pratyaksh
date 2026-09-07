@@ -23,7 +23,7 @@ export function Footer({ t: _t, onOpenPolicy }: FooterProps) {
   return (
     <footer style={{
       background: 'var(--gov-header)',
-      color: '#ffffff',
+      color: 'var(--text-white)',
       marginTop: '40px',
       borderTop: '3px solid var(--gov-primary)'
     }} className="no-print">

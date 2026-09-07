@@ -148,7 +148,7 @@ export function FilterBar({
                 fontWeight: 600,
                 borderRadius: '2px',
                 background: house === 'Lok Sabha' ? 'var(--gov-primary)' : 'transparent',
-                color: house === 'Lok Sabha' ? '#ffffff' : 'var(--text-body)'
+                color: house === 'Lok Sabha' ? 'var(--text-white)' : 'var(--text-body)'
               }}
             >
               Lok Sabha (543)
@@ -161,7 +161,7 @@ export function FilterBar({
                 fontWeight: 600,
                 borderRadius: '2px',
                 background: house === 'Rajya Sabha' ? 'var(--gov-primary)' : 'transparent',
-                color: house === 'Rajya Sabha' ? '#ffffff' : 'var(--text-body)'
+                color: house === 'Rajya Sabha' ? 'var(--text-white)' : 'var(--text-body)'
               }}
             >
               Rajya Sabha (245)
@@ -389,7 +389,7 @@ export function FilterBar({
                   whiteSpace: 'nowrap',
                   border: isSelected ? '1px solid var(--gov-primary)' : '1px solid var(--border-main)',
                   background: isSelected ? 'var(--gov-primary)' : 'var(--bg-surface-subtle)',
-                  color: isSelected ? '#ffffff' : 'var(--text-body)'
+                  color: isSelected ? 'var(--text-white)' : 'var(--text-body)'
                 }}
               >
                 {sec.name}

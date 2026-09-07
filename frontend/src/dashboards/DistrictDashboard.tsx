@@ -150,7 +150,7 @@ export const DistrictDashboard: React.FC = () => {
         <div 
           style={{ 
             background: "var(--gov-header)", 
-            color: "#ffffff", 
+            color: "var(--text-white)", 
             padding: "20px 24px", 
             borderRadius: "var(--radius-sm)", 
             border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -162,7 +162,7 @@ export const DistrictDashboard: React.FC = () => {
           }}
         >
           <div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--text-white)", margin: "0 0 6px 0" }}>
               {districtName} District Authority Workspace
             </h2>
             <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
@@ -341,12 +341,20 @@ export const DistrictDashboard: React.FC = () => {
                 </thead>
                 <tbody>
                   {districtProjects.map((work) => (
-                    <tr key={work.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                    <tr 
+                      key={work.id} 
+                      onClick={() => setSelectedWorkForDetail(work)}
+                      style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
+                      title="Click on project to inspect full official dossier"
+                    >
                       <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
                         {work.id}
                       </td>
                       <td style={{ padding: "10px 12px", maxWidth: "260px" }}>
-                        <div style={{ fontWeight: 700, color: "var(--text-main)" }}>{work.title}</div>
+                        <div style={{ fontWeight: 700, color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span>{work.title}</span>
+                          <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
+                        </div>
                         <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
                           Category: {work.category} | Agency: {work.agency}
                         </div>
@@ -369,7 +377,7 @@ export const DistrictDashboard: React.FC = () => {
                           {work.status.toUpperCase()}
                         </span>
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                           <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
                             Inspect

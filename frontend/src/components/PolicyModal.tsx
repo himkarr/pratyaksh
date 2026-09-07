@@ -68,7 +68,7 @@ export function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff'
+              color: 'var(--text-white)'
             }}>
               <BookOpen size={15} />
             </div>
