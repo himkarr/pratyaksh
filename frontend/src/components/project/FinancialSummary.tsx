@@ -8,9 +8,9 @@ export interface FinancialSummaryProps {
 }
 
 export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) => {
-  const formatCurrency = (valInCr: number) => `₹${valInCr.toFixed(2)} Cr`;
+  const formatCurrency = (valInCr: number | undefined | null) => `₹${Number(valInCr || 0).toFixed(2)} Cr`;
 
-  const unspentAmt = Math.max(0, project.sanctionedAmt - project.expenditureAmt);
+  const unspentAmt = Math.max(0, (project?.sanctionedAmt || 0) - (project?.expenditureAmt || 0));
 
   return (
     <Card>

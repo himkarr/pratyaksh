@@ -46,11 +46,11 @@ export const pwaUtils = {
           });
         },
         (err) => {
-          // Provide fallback coordinates if GPS permission is denied in demo environment
+          // Provide fallback coordinates if GPS permission is denied or location is unavailable
           console.warn("GPS Location fetch warning:", err.message);
           resolve({
-            latitude: 18.5204,
-            longitude: 73.8567,
+            latitude: 25.3176,
+            longitude: 82.9739,
             accuracy: 10,
             timestamp: new Date().toISOString()
           });

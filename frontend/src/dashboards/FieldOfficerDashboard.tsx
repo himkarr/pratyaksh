@@ -22,21 +22,17 @@ import { Footer } from "../components/Footer";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { AttachmentsModal } from "../components/AttachmentsModal";
 import { PolicyModal } from "../components/PolicyModal";
+import { LoginModal } from "../components/LoginModal";
 import { Button, Alert } from "../components/ui";
 import { SubmitVerificationModal, VerificationReportSubmission } from "../components/field/SubmitVerificationModal";
 
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
-import { TRANSLATIONS } from "../data/translations";
-import { useRole } from "../auth/roleContext";
+import { usePreferences } from "../context/PreferencesContext";
+import { useRole, Role } from "../auth/roleContext";
 
 export const FieldOfficerDashboard: React.FC = () => {
   const { user } = useRole();
-
-  // Accessibility & Language Settings
-  const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [lang, setLang] = useState<"en" | "hi">("en");
-  const t = TRANSLATIONS[lang];
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Tab View
   const [activeTab, setActiveTab] = useState<"pending_queue" | "my_verifications" | "flagged_projects">("pending_queue");
@@ -76,6 +72,8 @@ export const FieldOfficerDashboard: React.FC = () => {
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
 
   // Field Officer Info
   const officerName = user.name || "Senior Field Inspection Officer";
@@ -84,7 +82,7 @@ export const FieldOfficerDashboard: React.FC = () => {
   // Verification Tasks Queue with Priority Assignment
   const verificationQueue = useMemo(() => {
     return projects.map((work, idx) => {
-      const isHighRisk = work.status === "Delayed" || work.financialProgress > work.physicalProgress + 15;
+      const isHighRisk = work.status === "Delayed" || (work.financialProgress || 0) > (work.physicalProgress || 0) + 15;
       const priority = isHighRisk ? "PRIORITY_1" : idx % 2 === 0 ? "PRIORITY_2" : "PRIORITY_3";
       const record = verificationRecords.find((r) => r.workId === work.id);
       const verificationStatus = record ? record.verificationStatus : "PENDING";
@@ -105,9 +103,9 @@ export const FieldOfficerDashboard: React.FC = () => {
       if (statusFilter !== "all" && item.verificationStatus !== statusFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchTitle = item.title.toLowerCase().includes(q);
-        const matchId = item.id.toLowerCase().includes(q);
-        const matchMp = item.mpName.toLowerCase().includes(q);
+        const matchTitle = (item.title || "").toLowerCase().includes(q);
+        const matchId = (item.id || "").toLowerCase().includes(q);
+        const matchMp = (item.mpName || "").toLowerCase().includes(q);
         if (!matchTitle && !matchId && !matchMp) return false;
       }
       return true;
@@ -154,7 +152,10 @@ export const FieldOfficerDashboard: React.FC = () => {
         activeTab="dashboard"
         setActiveTab={() => {}}
         onOpenPolicy={() => setIsPolicyOpen(true)}
-        onOpenLogin={() => {}}
+        onOpenLogin={(role) => {
+          setTargetLoginRole(role);
+          setIsLoginOpen(true);
+        }}
         t={t}
         flagCount={kpis.priority1Count}
       />
@@ -177,20 +178,17 @@ export const FieldOfficerDashboard: React.FC = () => {
           }}
         >
           <div>
-            <div style={{ fontSize: "0.74rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#93c5fd", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Compass size={14} />
-              Senior Field Inspection Officer Workspace | District Collectorate ({district})
-            </div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "4px 0 6px 0" }}>
-              {officerName} — Inspection Queue Portal
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+              {officerName} — Field Inspection Workspace
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4" }}>
-              Perform on-site physical verifications of MPLADS works, inspect AI/rule anomaly signals, capture geotagged photo evidence, and submit official inspection reports.
+            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
+              On-site physical verifications, geotagged evidence capture, and inspection report submissions.
             </p>
           </div>
 
-          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.1)", borderRadius: "var(--radius-xs)", fontSize: "0.78rem" }}>
-            Active Scope: <strong>{district} District</strong> | Assigned Tasks: <strong>{kpis.totalAssigned} Works</strong>
+          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.08)", borderRadius: "var(--radius-xs)", fontSize: "0.80rem", border: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#34d399", display: "inline-block" }}></span>
+            <span>Field Officer · {district} District</span>
           </div>
         </div>
 
@@ -491,6 +489,15 @@ export const FieldOfficerDashboard: React.FC = () => {
       <PolicyModal
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => {
+          setIsLoginOpen(false);
+          setTargetLoginRole(undefined);
+        }}
+        initialRole={targetLoginRole}
       />
 
       <Footer t={t} onOpenPolicy={() => setIsPolicyOpen(true)} />

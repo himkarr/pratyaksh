@@ -18,13 +18,14 @@
  *      * Linear burn rate trajectory benchmarks
  *      * Mandatory geotagged photographic milestone stages
  * 3. Fallback Offline Resilience:
- *    - Provides rich initial state so the frontend remains fully functional and
- *      demonstrable even when external backend/ML services are offline.
+ *    - Provides rich initial state so the frontend remains fully functional
+ *      even when external backend/ML services are offline.
  */
 
 import sampleProjects from "../../../contracts/sample-data/sample_projects.json";
 import sampleFlags from "../../../contracts/sample-data/sample_flags.json";
 import sampleUsers from "../../../contracts/sample-data/sample_users.json";
+import officialWorksRaw from "./officialWorks.json";
 
 export interface Sector {
   id: string;
@@ -158,95 +159,8 @@ export const MONTHLY_SPEND_TREND = [
   { month: "Mar '25", sanctionedCap: 25.0, cumulativeDisbursed: 25.0, cumulativeSpent: 23.9, targetLinear: 25.00 }
 ];
 
-// Generate works harmonized with contracts/sample_projects.json
-export const INITIAL_WORKS: WorkItem[] = sampleProjects.map((p: any, idx) => {
-  const sancCr = Number(((p.sanctioned_amount || 25000000) / 10000000).toFixed(2));
-  const utilCr = Number(((p.utilized_amount || 12000000) / 10000000).toFixed(2));
-  const recCr = Number((sancCr * 1.05).toFixed(2));
-  const finPct = sancCr > 0 ? Math.round((utilCr / sancCr) * 100) : 0;
-  const physPct = p.physical_progress_percent ?? (p.status === 'completed' ? 100 : (idx % 2 === 0 ? 65 : 35));
-
-  const statusNormalized = 
-    p.status === 'completed' ? 'Completed' :
-    p.status === 'delayed' ? 'Delayed' :
-    p.status === 'in_progress' ? 'Ongoing' :
-    p.status === 'recommended' ? 'Recommended' : 'Sanctioned';
-
-  const sectorName = p.sector || (idx % 4 === 0 ? 'Drinking Water' : idx % 4 === 1 ? 'Education' : idx % 4 === 2 ? 'Roads' : 'Health');
-
-  const categoryId = 
-    sectorName === 'Drinking Water' ? 'water' :
-    sectorName === 'Education' ? 'education' :
-    sectorName === 'Health' ? 'healthcare' :
-    sectorName === 'Roads' ? 'roads' :
-    sectorName === 'Community Assets' ? 'community' :
-    sectorName === 'Renewable Energy' ? 'solar' :
-    sectorName === 'Sports' ? 'sports' : 'community';
-
-  return {
-    id: p.id,
-    title: p.title,
-    house: 'Lok Sabha',
-    state: p.state || 'Maharashtra',
-    district: p.district || 'Pune',
-    constituency: p.constituency_code === 'MH-PUNE-01' ? 'Pune' :
-                  p.constituency_code === 'UP-VARAN-01' ? 'Varanasi' :
-                  p.constituency_code === 'KA-BLR-01' ? 'Bangalore South' :
-                  p.constituency_code === 'DL-NDLS-01' ? 'New Delhi' : 'Mumbai South',
-    constituency_code: p.constituency_code,
-    mpName: p.constituency_code === 'UP-VARAN-01' ? 'Narendra Modi' :
-            p.constituency_code === 'MH-PUNE-01' ? 'Murlidhar Mohol' :
-            p.constituency_code === 'KA-BLR-01' ? 'Tejasvi Surya' : 'Arvind Sawant',
-    category: categoryId,
-    sectorName: sectorName,
-    recommendedAmt: recCr,
-    sanctionedAmt: sancCr,
-    expenditureAmt: utilCr,
-    physicalProgress: physPct,
-    financialProgress: finPct,
-    dateSanctioned: p.sanction_date || '2024-02-15',
-    targetCompletion: '2025-02-14', // 1 Year Statutory Rule
-    status: statusNormalized as WorkItem['status'],
-    agency: p.implementing_agency || 'District Rural Development Agency (DRDA)',
-    contractor: p.vendor_name || 'M/s Infra Buildcon India Ltd.',
-    rating: Number((4.0 + (idx % 10) * 0.1).toFixed(1)),
-    reviewsCount: 3 + (idx % 7),
-    attachments: [
-      {
-        id: `att-${p.id}-1`,
-        type: 'image',
-        title: 'Geotagged Site Photo - Construction Phase',
-        stage: 'Execution Phase',
-        url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18f15f6?w=800&auto=format&fit=crop&q=60'
-      },
-      {
-        id: `att-${p.id}-2`,
-        type: 'document',
-        title: 'Signed Administrative Sanction Order',
-        stage: 'Sanction Stage',
-        url: '#'
-      }
-    ],
-    reviews: [
-      {
-        id: `rev-${p.id}-1`,
-        author: 'Ramesh Sharma (Resident)',
-        rating: 5,
-        date: '2024-05-10',
-        comment: 'High quality work execution and timely progress in our area.',
-        verified: true
-      },
-      {
-        id: `rev-${p.id}-2`,
-        author: 'Priya K. (Social Auditor)',
-        rating: 4,
-        date: '2024-06-02',
-        comment: 'Asset physical verification completed. Meets technical specifications.',
-        verified: true
-      }
-    ]
-  };
-});
+// Official works loaded from Supabase application database
+export const INITIAL_WORKS: WorkItem[] = (officialWorksRaw as unknown as WorkItem[]);
 
 export const SCHEME_POLICIES = {
   title: "Guidelines on Member of Parliament Local Area Development Scheme (MPLADS) & e-SAKSHI Implementation",

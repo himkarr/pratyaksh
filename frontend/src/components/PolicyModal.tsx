@@ -22,6 +22,7 @@
 import React from 'react';
 import { X, BookOpen, CheckCircle2 } from 'lucide-react';
 import { SCHEME_POLICIES } from '../data/mpladsData';
+import { useBodyScrollLock } from '../utils/scrollLock';
 
 interface PolicyModalProps {
   isOpen: boolean;
@@ -29,13 +30,23 @@ interface PolicyModalProps {
 }
 
 export function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (
     <div className="gov-modal-backdrop" onClick={onClose}>
       <div
         className="gov-modal-content"
-        style={{ maxWidth: '720px', padding: '0' }}
+        style={{ 
+          maxWidth: '720px', 
+          maxHeight: 'min(90vh, 720px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          padding: '0',
+          overscrollBehavior: 'contain'
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -45,7 +56,8 @@ export function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'var(--bg-surface-subtle)'
+          background: 'var(--bg-surface-subtle)',
+          flexShrink: 0
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
@@ -78,7 +90,19 @@ export function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
         </div>
 
         {/* Content */}
-        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '68vh', overflowY: 'auto' }}>
+        <div 
+          className="gov-modal-body"
+          style={{ 
+            padding: '16px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '12px', 
+            overflowY: 'auto',
+            flex: '1 1 auto',
+            minHeight: 0,
+            overscrollBehavior: 'contain'
+          }}
+        >
           <div style={{
             background: 'var(--bg-surface-subtle)',
             padding: '10px 14px',

@@ -20,10 +20,11 @@
 
 import React, { useMemo } from 'react';
 import { Search, RotateCcw, MapPin, User, Building, Layers, Calendar, Filter } from 'lucide-react';
-import { SECTORS, TENURES, STATES_AND_CONSTITUENCIES } from '../data/mpladsData';
+import { SECTORS, TENURES, STATES_AND_CONSTITUENCIES, INITIAL_WORKS, WorkItem } from '../data/mpladsData';
 import { TranslationDict } from '../data/translations';
 
 interface FilterBarProps {
+  works?: WorkItem[];
   house: string;
   setHouse: (house: string) => void;
   tenure: string;
@@ -44,6 +45,7 @@ interface FilterBarProps {
 }
 
 export function FilterBar({
+  works,
   house,
   setHouse,
   tenure,
@@ -62,24 +64,44 @@ export function FilterBar({
   activeFilterCount,
   t
 }: FilterBarProps) {
-  // Memoized list of available States/UTs from static/live lookup table
-  const availableStates = useMemo(() => Object.keys(STATES_AND_CONSTITUENCIES), []);
+  const allWorks = works || INITIAL_WORKS;
 
-  // Filter constituencies belonging strictly to the currently selected State
-  const rawConstituencies = useMemo(() => {
-    if (!selectedState || !STATES_AND_CONSTITUENCIES[selectedState]) return [];
-    return STATES_AND_CONSTITUENCIES[selectedState]["Lok Sabha"] || [];
-  }, [selectedState]);
+  // Dynamically derived list of available States/UTs from dataset and catalog
+  const availableStates = useMemo(() => {
+    const statesFromWorks = allWorks.map(w => w.state).filter(Boolean);
+    const statesFromCatalog = Object.keys(STATES_AND_CONSTITUENCIES);
+    return Array.from(new Set([...statesFromWorks, ...statesFromCatalog])).sort();
+  }, [allWorks]);
 
-  // Unique list of constituency names
+  // Dynamically derived constituencies scoped to selected State
   const availableConstituencies = useMemo(() => {
-    return Array.from(new Set(rawConstituencies.map(c => c.name)));
-  }, [rawConstituencies]);
+    const scopedWorks = selectedState 
+      ? allWorks.filter(w => w.state?.toLowerCase() === selectedState.toLowerCase())
+      : allWorks;
+    const fromWorks = scopedWorks.map(w => w.constituency).filter(Boolean);
+    const fromCatalog = selectedState && STATES_AND_CONSTITUENCIES[selectedState]
+      ? (STATES_AND_CONSTITUENCIES[selectedState]["Lok Sabha"] || []).map(c => c.name)
+      : [];
+    return Array.from(new Set([...fromWorks, ...fromCatalog])).sort();
+  }, [selectedState, allWorks]);
 
-  // Unique list of Hon'ble MPs associated with the selected State
+  // Dynamically derived Hon'ble MPs scoped to State and Constituency
   const availableMps = useMemo(() => {
-    return Array.from(new Set(rawConstituencies.map(c => c.mp)));
-  }, [rawConstituencies]);
+    let scopedWorks = allWorks;
+    if (selectedState) {
+      scopedWorks = scopedWorks.filter(w => w.state?.toLowerCase() === selectedState.toLowerCase());
+    }
+    if (selectedConstituency) {
+      scopedWorks = scopedWorks.filter(w => w.constituency?.toLowerCase() === selectedConstituency.toLowerCase());
+    }
+    const fromWorks = scopedWorks.map(w => w.mpName).filter(Boolean);
+    const fromCatalog = selectedState && STATES_AND_CONSTITUENCIES[selectedState]
+      ? (STATES_AND_CONSTITUENCIES[selectedState]["Lok Sabha"] || [])
+          .filter(c => !selectedConstituency || c.name.toLowerCase() === selectedConstituency.toLowerCase())
+          .map(c => c.mp)
+      : [];
+    return Array.from(new Set([...fromWorks, ...fromCatalog])).sort();
+  }, [selectedState, selectedConstituency, allWorks]);
 
   // Filter tenures available for the currently chosen House (Lok Sabha vs Rajya Sabha)
   const filteredTenures = useMemo(() => {
@@ -272,11 +294,14 @@ export function FilterBar({
             <select
               value={selectedConstituency}
               onChange={(e) => {
-                setSelectedConstituency(e.target.value);
-                const match = rawConstituencies.find(c => c.name === e.target.value);
-                if (match) setSelectedMp(match.mp);
+                const val = e.target.value;
+                setSelectedConstituency(val);
+                if (val) {
+                  const match = allWorks.find(w => w.constituency?.toLowerCase() === val.toLowerCase());
+                  if (match?.mpName) setSelectedMp(match.mpName);
+                  if (match?.state && !selectedState) setSelectedState(match.state);
+                }
               }}
-              disabled={!selectedState}
               style={{
                 width: '100%',
                 padding: '6px 8px',
@@ -284,8 +309,7 @@ export function FilterBar({
                 border: '1px solid var(--border-main)',
                 borderRadius: 'var(--radius-xs)',
                 color: 'var(--text-main)',
-                fontSize: '0.8rem',
-                opacity: !selectedState ? 0.6 : 1
+                fontSize: '0.8rem'
               }}
             >
               <option value="">{t.allConstituencies}</option>
@@ -301,8 +325,15 @@ export function FilterBar({
             </label>
             <select
               value={selectedMp}
-              onChange={(e) => setSelectedMp(e.target.value)}
-              disabled={!selectedState}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedMp(val);
+                if (val) {
+                  const match = allWorks.find(w => w.mpName?.toLowerCase() === val.toLowerCase());
+                  if (match?.constituency && !selectedConstituency) setSelectedConstituency(match.constituency);
+                  if (match?.state && !selectedState) setSelectedState(match.state);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '6px 8px',
@@ -310,8 +341,7 @@ export function FilterBar({
                 border: '1px solid var(--border-main)',
                 borderRadius: 'var(--radius-xs)',
                 color: 'var(--text-main)',
-                fontSize: '0.8rem',
-                opacity: !selectedState ? 0.6 : 1
+                fontSize: '0.8rem'
               }}
             >
               <option value="">{t.allMPs}</option>

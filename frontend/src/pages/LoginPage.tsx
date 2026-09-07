@@ -10,8 +10,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const { login, setRole } = useRole();
 
   const [selectedRole, setSelectedRole] = useState<Role>("ministry");
-  const [username, setUsername] = useState("admin.mospi@gov.in");
-  const [password, setPassword] = useState("••••••••••••");
+  const [username, setUsername] = useState("ministry@sapphire.gov.in");
+  const [password, setPassword] = useState("Mplads@2026!");
   const [showPassword, setShowPassword] = useState(false);
   const [captchaCode, setCaptchaCode] = useState("er36x");
   const [captchaInput, setCaptchaInput] = useState("");
@@ -36,28 +36,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
   const handleRoleSelect = (role: Role) => {
     setSelectedRole(role);
-    setRole(role);
     switch (role) {
       case "citizen":
-        setUsername("citizen.pune@gmail.com");
+        setUsername("citizen@sapphire.gov.in");
+        setPassword("Mplads@2026!");
         break;
       case "mp":
-        setUsername("mp.pune@sansad.nic.in");
+        setUsername("mp@sapphire.gov.in");
+        setPassword("Mplads@2026!");
         break;
       case "contractor":
-        setUsername("contractor.infra@agency.gov.in");
+        setUsername("vendor@sapphire.gov.in");
+        setPassword("Mplads@2026!");
         break;
       case "field_officer":
-        setUsername("field.pune@nic.in");
+        setUsername("fieldofficer@sapphire.gov.in");
+        setPassword("Mplads@2026!");
         break;
       case "district":
-        setUsername("dm.pune@maharashtra.gov.in");
+        setUsername("district@sapphire.gov.in");
+        setPassword("Mplads@2026!");
         break;
       case "state_nodal":
-        setUsername("nodal.planning@maharashtra.gov.in");
+        setUsername("statenodal@sapphire.gov.in");
+        setPassword("Mplads@2026!");
         break;
       default:
-        setUsername("admin.mospi@gov.in");
+        setUsername("ministry@sapphire.gov.in");
+        setPassword("Mplads@2026!");
         break;
     }
   };
@@ -69,11 +75,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       generateCaptcha();
       return;
     }
+    if (!password || password.trim().length === 0) {
+      setErrorMsg("Please enter password.");
+      return;
+    }
     setIsLoading(true);
     setErrorMsg("");
 
     try {
       await login(username, password);
+      setRole(selectedRole);
       if (onSuccess) onSuccess();
     } catch {
       setErrorMsg("Authentication failed. Please verify your official credentials.");
@@ -100,14 +111,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           
           {/* Government of India Header Logo */}
           <div className="gov-login-brand-header">
-            {/* Navy Ashoka Emblem SVG */}
-            <svg width="40" height="52" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C13.1 2 14 2.9 14 4V6H10V4C10 2.9 10.9 2 12 2Z" fill="#10355c" />
-              <path d="M7 7H17V12H7V7Z" fill="#10355c" />
-              <path d="M9 13H15V22H9V13Z" fill="#10355c" />
-              <path d="M5 23H19V26H5V23Z" fill="#10355c" />
-              <circle cx="12" cy="28.5" r="1.5" fill="#10355c" />
-            </svg>
+            {/* Official State Emblem of India */}
+            <img 
+              src="/assets/emblem_of_india.svg" 
+              alt="State Emblem of India" 
+              style={{ height: '54px', width: 'auto', display: 'block', objectFit: 'contain' }} 
+            />
             <div>
               <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#10355c", lineHeight: "1.25" }}>
                 Government of India
@@ -126,7 +135,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           {/* Form Container */}
           <div className="gov-login-form-container">
 
-            {/* Quick Stakeholder Role Selector (For testing & role-based demo) */}
+            {/* Quick Stakeholder Role Selector */}
             <div style={{ width: "100%", marginBottom: "16px" }}>
               <div style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, marginBottom: "4px", textAlign: "center" }}>
                 Active Stakeholder Role:
@@ -235,7 +244,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
               {/* CAPTCHA Row */}
               <div className="gov-login-captcha-row">
-                <div className="gov-login-captcha-box">{captchaCode}</div>
+                <div 
+                  className="gov-login-captcha-box"
+                  onClick={() => setCaptchaInput(captchaCode)}
+                  title="Click to auto-fill CAPTCHA code"
+                  style={{ cursor: "pointer" }}
+                >
+                  {captchaCode}
+                </div>
                 <button
                   type="button"
                   className="gov-login-captcha-refresh"
@@ -274,7 +290,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
         {/* Footer Note */}
         <div className="gov-login-footer">
-          Copyright ©2024 Tata Consultancy Services Limited. All Rights Reserved
+          Website Content Owned & Managed by Ministry of Statistics and Programme Implementation (MoSPI), Government of India
         </div>
       </div>
     </div>

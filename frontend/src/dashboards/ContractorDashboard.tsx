@@ -23,21 +23,17 @@ import { Footer } from "../components/Footer";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { AttachmentsModal } from "../components/AttachmentsModal";
 import { PolicyModal } from "../components/PolicyModal";
+import { LoginModal } from "../components/LoginModal";
 import { Button, Alert } from "../components/ui";
 import { UpdateProgressModal, ProgressUpdateSubmission } from "../components/contractor/UpdateProgressModal";
 
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
-import { TRANSLATIONS } from "../data/translations";
-import { useRole } from "../auth/roleContext";
+import { usePreferences } from "../context/PreferencesContext";
+import { useRole, Role } from "../auth/roleContext";
 
 export const ContractorDashboard: React.FC = () => {
   const { user } = useRole();
-
-  // Accessibility & Language
-  const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [lang, setLang] = useState<"en" | "hi">("en");
-  const t = TRANSLATIONS[lang];
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Active View Tab
   const [activeTab, setActiveTab] = useState<"assigned_projects" | "offline_queue" | "completion_records">("assigned_projects");
@@ -57,15 +53,9 @@ export const ContractorDashboard: React.FC = () => {
       physicalProgress: 65,
       expenditureIncurredAmt: 1.45,
       stageName: "Structural Superstructure Execution",
-      notes: "Column casting completed. Awaiting strength test verification before beam pouring.",
+      notes: "Level 2 RCC slab casting finalized with ultrasonic compressive strength testing. Reinforcement steel bar bending verified.",
       photos: [
-        {
-          name: "Site_Beam_Casting_Geotagged.jpg",
-          url: "https://images.unsplash.com/photo-1541888946425-d0fbb18f15f6?w=800&auto=format&fit=crop&q=60",
-          lat: 18.5204,
-          lng: 73.8567,
-          timestamp: "2024-05-18 11:15 AM"
-        }
+        { name: "Slab_Casting_Level2.jpg", url: "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=400&q=80", lat: 18.5204, lng: 73.8567, timestamp: "2024-05-18 10:45 AM" }
       ],
       documents: [{ name: "MB_Extract_Cycle_3.pdf", size: "1.8 MB", type: "Measurement Book" }],
       isCompletionReport: false,
@@ -78,6 +68,8 @@ export const ContractorDashboard: React.FC = () => {
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Contractor info
@@ -91,9 +83,9 @@ export const ContractorDashboard: React.FC = () => {
       if (selectedCategoryFilter !== "all" && w.category !== selectedCategoryFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchTitle = w.title.toLowerCase().includes(q);
-        const matchId = w.id.toLowerCase().includes(q);
-        const matchAgency = w.agency.toLowerCase().includes(q);
+        const matchTitle = (w.title || "").toLowerCase().includes(q);
+        const matchId = (w.id || "").toLowerCase().includes(q);
+        const matchAgency = (w.agency || "").toLowerCase().includes(q);
         if (!matchTitle && !matchId && !matchAgency) return false;
       }
       return true;
@@ -103,7 +95,7 @@ export const ContractorDashboard: React.FC = () => {
   // Key KPI Summary Numbers
   const kpis = useMemo(() => {
     const totalAssigned = projects.length;
-    const totalOutlay = projects.reduce((acc, p) => acc + p.sanctionedAmt, 0);
+    const totalOutlay = projects.reduce((acc, p) => acc + (p.sanctionedAmt || 0), 0);
     const ongoing = projects.filter((p) => p.status === "Ongoing").length;
     const completed = projects.filter((p) => p.status === "Completed").length;
     const delayed = projects.filter((p) => p.status === "Delayed").length;
@@ -159,7 +151,10 @@ export const ContractorDashboard: React.FC = () => {
         activeTab="dashboard"
         setActiveTab={() => {}}
         onOpenPolicy={() => setIsPolicyOpen(true)}
-        onOpenLogin={() => {}}
+        onOpenLogin={(role) => {
+          setTargetLoginRole(role);
+          setIsLoginOpen(true);
+        }}
         t={t}
         flagCount={kpis.delayed}
       />
@@ -182,15 +177,11 @@ export const ContractorDashboard: React.FC = () => {
           }}
         >
           <div>
-            <div style={{ fontSize: "0.74rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#93c5fd", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-              <HardHat size={14} />
-              Implementing Agency & PWD Contractor Gateway | eSAKSHI Field Portal
-            </div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "4px 0 6px 0" }}>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
               {agencyName} ({district} Circle)
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4" }}>
-              Submit milestone progress reports, upload geotagged site photographs, attach Measurement Book (MB) copies, and issue completion certificates for statutory verification.
+            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
+              Milestone progress updates, geotagged site photographs, and Measurement Book (MB) submissions.
             </p>
           </div>
 
@@ -613,6 +604,15 @@ export const ContractorDashboard: React.FC = () => {
       <PolicyModal
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => {
+          setIsLoginOpen(false);
+          setTargetLoginRole(undefined);
+        }}
+        initialRole={targetLoginRole}
       />
 
       <Footer t={t} onOpenPolicy={() => setIsPolicyOpen(true)} />

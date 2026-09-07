@@ -48,10 +48,11 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({ work
             onChange={(e) => setSelectedSector(e.target.value)}
             options={[
               { value: "all", label: "All Sectors" },
-              { value: "water", label: "Drinking Water" },
-              { value: "education", label: "Education" },
               { value: "roads", label: "Roads & Bridges" },
-              { value: "healthcare", label: "Healthcare" }
+              { value: "water", label: "Drinking Water" },
+              { value: "community", label: "Community Centers & Halls" },
+              { value: "education", label: "Education & Schools" },
+              { value: "healthcare", label: "Healthcare & Clinics" }
             ]}
           />
 

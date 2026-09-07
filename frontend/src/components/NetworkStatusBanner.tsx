@@ -106,7 +106,7 @@ export const NetworkStatusBanner: React.FC = () => {
             fontSize: "0.70rem"
           }}
         >
-          Toggle Demo Network Mode ({networkState === "ONLINE" ? "Go Offline" : "Go Online"})
+          Network Simulation Mode ({networkState === "ONLINE" ? "Simulate Offline" : "Restore Online"})
         </button>
       </div>
     </div>

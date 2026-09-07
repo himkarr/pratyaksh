@@ -27,20 +27,16 @@ import { Footer } from "../components/Footer";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { AttachmentsModal } from "../components/AttachmentsModal";
 import { PolicyModal } from "../components/PolicyModal";
+import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Modal } from "../components/ui";
 
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
-import { TRANSLATIONS } from "../data/translations";
-import { useRole } from "../auth/roleContext";
+import { usePreferences } from "../context/PreferencesContext";
+import { useRole, Role } from "../auth/roleContext";
 
 export const DistrictDashboard: React.FC = () => {
   const { user } = useRole();
-
-  // Accessibility & Language Settings
-  const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [lang, setLang] = useState<"en" | "hi">("en");
-  const t = TRANSLATIONS[lang];
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Active Section Navigation
   const [activeTab, setActiveTab] = useState<"district_projects" | "verifications_review" | "anomaly_dossiers" | "district_reports">("district_projects");
@@ -59,27 +55,29 @@ export const DistrictDashboard: React.FC = () => {
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
 
   // Action Toast State
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // District Authority Info
-  const collectorName = user.name || "District Collector & DM Pune";
-  const districtName = user.district || "Pune";
-  const stateName = user.state || "Maharashtra";
+  const collectorName = user.name || "District Magistrate & Collector (South Andaman)";
+  const districtName = user.district || "ANDAMAN AND NICOBAR ISLANDS";
+  const stateName = user.state || "Andaman And Nicobar Islands";
 
   // Filtered District Projects
   const districtProjects = useMemo(() => {
     return projects.filter((w) => {
       if (statusFilter !== "all" && w.status !== statusFilter) return false;
-      if (riskFilter === "high" && !(w.status === "Delayed" || w.financialProgress > w.physicalProgress + 15)) return false;
+      if (riskFilter === "high" && !(w.status === "Delayed" || (w.financialProgress || 0) > (w.physicalProgress || 0) + 15)) return false;
       if (categoryFilter !== "all" && w.category !== categoryFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchTitle = w.title.toLowerCase().includes(q);
-        const matchId = w.id.toLowerCase().includes(q);
-        const matchMp = w.mpName.toLowerCase().includes(q);
-        const matchAgency = w.agency.toLowerCase().includes(q);
+        const matchTitle = (w.title || "").toLowerCase().includes(q);
+        const matchId = (w.id || "").toLowerCase().includes(q);
+        const matchMp = (w.mpName || "").toLowerCase().includes(q);
+        const matchAgency = (w.agency || "").toLowerCase().includes(q);
         if (!matchTitle && !matchId && !matchMp && !matchAgency) return false;
       }
       return true;
@@ -88,18 +86,18 @@ export const DistrictDashboard: React.FC = () => {
 
   // High Risk Flagged Projects in District
   const highRiskProjects = useMemo(() => {
-    return projects.filter((w) => w.status === "Delayed" || w.financialProgress > w.physicalProgress + 15);
+    return projects.filter((w) => w.status === "Delayed" || (w.financialProgress || 0) > (w.physicalProgress || 0) + 15);
   }, [projects]);
 
   // KPI Metrics
   const kpis = useMemo(() => {
     const totalProjects = projects.length;
-    const totalSanctionedAmt = projects.reduce((acc, p) => acc + p.sanctionedAmt, 0);
-    const totalExpAmt = projects.reduce((acc, p) => acc + p.expenditureAmt, 0);
+    const totalSanctionedAmt = projects.reduce((acc, p) => acc + (p.sanctionedAmt || 0), 0);
+    const totalExpAmt = projects.reduce((acc, p) => acc + (p.expenditureAmt || 0), 0);
     const ongoingCount = projects.filter((p) => p.status === "Ongoing").length;
     const completedCount = projects.filter((p) => p.status === "Completed").length;
     const delayedCount = projects.filter((p) => p.status === "Delayed").length;
-    const utilizationRate = Math.round((totalExpAmt / totalSanctionedAmt) * 100);
+    const utilizationRate = totalSanctionedAmt > 0 ? Math.round((totalExpAmt / totalSanctionedAmt) * 100) : 0;
 
     return { totalProjects, totalSanctionedAmt, totalExpAmt, ongoingCount, completedCount, delayedCount, utilizationRate };
   }, [projects]);
@@ -135,10 +133,13 @@ export const DistrictDashboard: React.FC = () => {
       />
 
       <Navbar
-        activeTab="dashboard"
-        setActiveTab={() => {}}
+        activeTab={activeTab === "district_projects" ? "dashboard" : "home"}
+        setActiveTab={() => setActiveTab("district_projects")}
         onOpenPolicy={() => setIsPolicyOpen(true)}
-        onOpenLogin={() => {}}
+        onOpenLogin={(role) => {
+          setTargetLoginRole(role);
+          setIsLoginOpen(true);
+        }}
         t={t}
         flagCount={highRiskProjects.length}
       />
@@ -161,20 +162,17 @@ export const DistrictDashboard: React.FC = () => {
           }}
         >
           <div>
-            <div style={{ fontSize: "0.74rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#93c5fd", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Building size={14} />
-              Office of the District Magistrate & District Collector | {stateName}
-            </div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "4px 0 6px 0" }}>
-              {collectorName} — {districtName} District Authority Workspace
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+              {districtName} District Authority Workspace
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4" }}>
-              Review MP work recommendations, grant statutory administrative sanctions, verify field officer inspection reports, audit AI anomaly signals, and enforce contract compliance.
+            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
+              Review MP work recommendations, grant administrative sanctions, and verify project milestone execution.
             </p>
           </div>
 
-          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.1)", borderRadius: "var(--radius-xs)", fontSize: "0.78rem" }}>
-            District Outlay Ceiling: <strong>₹{kpis.totalSanctionedAmt.toFixed(2)} Cr</strong> | Utilization: <strong>{kpis.utilizationRate}%</strong>
+          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.08)", borderRadius: "var(--radius-xs)", fontSize: "0.80rem", border: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#34d399", display: "inline-block" }}></span>
+            <span>District Authority · {districtName}</span>
           </div>
         </div>
 
@@ -586,6 +584,15 @@ export const DistrictDashboard: React.FC = () => {
       <PolicyModal
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => {
+          setIsLoginOpen(false);
+          setTargetLoginRole(undefined);
+        }}
+        initialRole={targetLoginRole}
       />
 
       <Footer t={t} onOpenPolicy={() => setIsPolicyOpen(true)} />

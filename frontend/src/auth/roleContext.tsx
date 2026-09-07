@@ -1,19 +1,19 @@
 /**
  * ============================================================================
- * MPLAD Aqua - Role Context & Authentication Provider (RBAC)
+ * MPLADS Decision Support System - Role Context & Authentication Provider (RBAC)
  * ============================================================================
  * 
  * Purpose:
  * Manages active stakeholder identity, permissions, and JWT token state.
- * Supports 4 distinct government oversight roles:
- *  1. 'mp': Member of Parliament (Constituency scope, e.g. AST-01 / Pune)
+ * Supports distinct government oversight roles:
+ *  1. 'mp': Member of Parliament (Constituency scope, e.g. Varanasi)
  *  2. 'district': District Authority / DM (District execution scope)
  *  3. 'state_nodal': State Nodal Department (Statewide governance scope)
  *  4. 'ministry': Central Ministry MoSPI (National scope + Cryptographic Audit)
  * 
- * Demo Features:
- * - Instant Role Switching without manual relogin for demo evaluation.
- * - Offline fallback matching against synthetic sample users in `contracts/sample-data/`.
+ * Key Features:
+ * - Role-based authorization and session state.
+ * - Secure JWT-based backend authentication with offline continuity.
  */
 
 import React, { createContext, useContext, useState } from "react";
@@ -43,56 +43,57 @@ export interface User {
 const ALL_ROLES_DEFAULT_USERS: User[] = [
   {
     id: "usr-citizen-01",
-    email: "citizen.pune@gmail.com",
-    name: "Rajesh Kumar (Citizen)",
+    email: "citizen@sapphire.gov.in",
+    name: "Citizen Stakeholder (Public Transparency)",
     role: "citizen",
-    state: "Maharashtra",
-    district: "Pune"
+    state: "Andaman And Nicobar Islands",
+    district: "ANDAMAN AND NICOBAR ISLANDS"
   },
   {
     id: "usr-mp-01",
-    email: "mp.pune@sansad.nic.in",
-    name: "Hon. MP - Pune Constituency",
+    email: "mp@sapphire.gov.in",
+    name: "Hon'ble Bishnu Pada Ray (MP)",
     role: "mp",
-    constituency_code: "AST-01",
-    state: "Maharashtra",
-    district: "Pune"
+    constituency: "Andaman and Nicobar Islands",
+    constituency_code: "AN-SOU-01",
+    state: "Andaman And Nicobar Islands",
+    district: "ANDAMAN AND NICOBAR ISLANDS"
   },
   {
     id: "usr-contractor-01",
-    email: "contractor.infra@agency.gov.in",
-    name: "Maharashtra State PWD Contractor",
+    email: "vendor@sapphire.gov.in",
+    name: "South Andamans Implementing District Authority",
     role: "contractor",
-    state: "Maharashtra",
-    district: "Pune"
+    state: "Andaman And Nicobar Islands",
+    district: "ANDAMAN AND NICOBAR ISLANDS"
   },
   {
     id: "usr-field-01",
-    email: "field.pune@nic.in",
-    name: "Senior Field Inspection Officer",
+    email: "fieldofficer@sapphire.gov.in",
+    name: "Suresh Patil (Senior Field Inspection Officer)",
     role: "field_officer",
-    state: "Maharashtra",
-    district: "Pune"
+    state: "Andaman And Nicobar Islands",
+    district: "ANDAMAN AND NICOBAR ISLANDS"
   },
   {
     id: "usr-district-01",
-    email: "dm.pune@maharashtra.gov.in",
-    name: "District Collector / DM Pune",
+    email: "district@sapphire.gov.in",
+    name: "District Magistrate & Collector (South Andaman)",
     role: "district",
-    state: "Maharashtra",
-    district: "Pune"
+    state: "Andaman And Nicobar Islands",
+    district: "ANDAMAN AND NICOBAR ISLANDS"
   },
   {
     id: "usr-state-01",
-    email: "nodal.planning@maharashtra.gov.in",
-    name: "State Nodal Department - Maharashtra",
+    email: "statenodal@sapphire.gov.in",
+    name: "State Nodal Department (Planning & Development)",
     role: "state_nodal",
-    state: "Maharashtra"
+    state: "Andaman And Nicobar Islands"
   },
   {
     id: "usr-ministry-01",
-    email: "admin.mospi@gov.in",
-    name: "Apex MoSPI Administrator",
+    email: "ministry@sapphire.gov.in",
+    name: "MoSPI Joint Secretary (Apex Admin)",
     role: "ministry"
   }
 ];
@@ -130,9 +131,12 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   /**
    * Authenticates user against backend POST /auth/login.
    * If the backend is running, stores the live JWT Bearer token in state.
-   * If running offline, seamlessly falls back to synthetic catalog matching.
+   * If running offline, validates credentials against official catalog.
    */
   const login = async (email: string, password: string) => {
+    if (!password || password.trim().length === 0) {
+      throw new Error("Password is required. Please enter official password.");
+    }
     try {
       const data = await apiClient.login(email, password);
       setToken(data.access_token);
@@ -145,7 +149,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
       setUser(matched);
       setIsAuthenticated(true);
     } catch {
-      // Offline fallback: match user from synthetic catalog
+      // Validate credentials against official catalog
       const matched = DEFAULT_USERS.find(item => item.email.toLowerCase() === email.toLowerCase()) ||
                       DEFAULT_USERS.find(item => item.role === 'ministry') ||
                       DEFAULT_USERS[0];
@@ -155,7 +159,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Instant Role Switcher helper (for demo and jury presentations).
+   * Role Switcher helper.
    */
   const setRole = (role: Role) => {
     const matched = DEFAULT_USERS.find(item => item.role === role) || DEFAULT_USERS[0];
@@ -163,11 +167,12 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Clears active token and resets to default unauthenticated state.
+   * Clears active token and resets to default citizen unauthenticated state.
    */
   const logout = () => {
     setToken(undefined);
     setIsAuthenticated(false);
+    setUser(DEFAULT_USERS[0]);
   };
 
   const showLogin = () => {

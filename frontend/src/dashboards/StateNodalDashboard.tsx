@@ -25,20 +25,16 @@ import { Footer } from "../components/Footer";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { AttachmentsModal } from "../components/AttachmentsModal";
 import { PolicyModal } from "../components/PolicyModal";
+import { LoginModal } from "../components/LoginModal";
 import { Button, Alert } from "../components/ui";
 
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
-import { TRANSLATIONS } from "../data/translations";
-import { useRole } from "../auth/roleContext";
+import { usePreferences } from "../context/PreferencesContext";
+import { useRole, Role } from "../auth/roleContext";
 
 export const StateNodalDashboard: React.FC = () => {
   const { user } = useRole();
-
-  // Accessibility & Language Settings
-  const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [lang, setLang] = useState<"en" | "hi">("en");
-  const t = TRANSLATIONS[lang];
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState<"state_projects" | "district_performance" | "escalations" | "state_reports">("state_projects");
@@ -59,6 +55,8 @@ export const StateNodalDashboard: React.FC = () => {
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
 
   // Toast Notification
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -74,7 +72,7 @@ export const StateNodalDashboard: React.FC = () => {
       if (selectedMp !== "all" && w.mpName !== selectedMp) return false;
       if (selectedStatus !== "all" && w.status !== selectedStatus) return false;
       
-      const isHighRisk = w.status === "Delayed" || w.financialProgress > w.physicalProgress + 15;
+      const isHighRisk = w.status === "Delayed" || (w.financialProgress || 0) > (w.physicalProgress || 0) + 15;
       if (selectedRiskLevel === "HIGH" && !isHighRisk) return false;
       if (selectedRiskLevel === "LOW" && isHighRisk) return false;
 
@@ -82,10 +80,10 @@ export const StateNodalDashboard: React.FC = () => {
       
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchTitle = w.title.toLowerCase().includes(q);
-        const matchId = w.id.toLowerCase().includes(q);
-        const matchDist = w.district.toLowerCase().includes(q);
-        const matchMp = w.mpName.toLowerCase().includes(q);
+        const matchTitle = (w.title || "").toLowerCase().includes(q);
+        const matchId = (w.id || "").toLowerCase().includes(q);
+        const matchDist = (w.district || "").toLowerCase().includes(q);
+        const matchMp = (w.mpName || "").toLowerCase().includes(q);
         if (!matchTitle && !matchId && !matchDist && !matchMp) return false;
       }
       return true;
@@ -94,28 +92,29 @@ export const StateNodalDashboard: React.FC = () => {
 
   // High Risk Projects across State
   const stateHighRiskProjects = useMemo(() => {
-    return projects.filter((w) => w.status === "Delayed" || w.financialProgress > w.physicalProgress + 15);
+    return projects.filter((w) => w.status === "Delayed" || (w.financialProgress || 0) > (w.physicalProgress || 0) + 15);
   }, [projects]);
 
   // District Performance Metrics Aggregation
   const districtPerformance = useMemo(() => {
-    const districts = ["Pune", "Mumbai Suburban", "Nagpur", "Thane", "Nashik"];
+    const rawDistricts = Array.from(new Set(projects.map((p) => p.district))).filter(Boolean);
+    const districts = rawDistricts.length > 0 ? rawDistricts : ["ANDAMAN AND NICOBAR ISLANDS", "ANANTAPUR", "SOUTH GOA", "UJJARPUR", "VELLORE"];
     return districts.map((dist, idx) => {
-      const distWorks = projects.filter((p) => p.district === dist || idx === 0);
-      const totalOutlay = distWorks.reduce((acc, p) => acc + p.sanctionedAmt, 0) || 5.0;
-      const totalExp = distWorks.reduce((acc, p) => acc + p.expenditureAmt, 0) || 3.8;
-      const utilRate = Math.round((totalExp / totalOutlay) * 100);
-      const highRiskCount = distWorks.filter((p) => p.status === "Delayed").length;
+      const distWorks = projects.filter((p) => p.district === dist);
+      const totalOutlay = distWorks.reduce((acc, p) => acc + (p.sanctionedAmt || 0), 0);
+      const totalExp = distWorks.reduce((acc, p) => acc + (p.expenditureAmt || 0), 0);
+      const utilRate = totalOutlay > 0 ? Math.round((totalExp / totalOutlay) * 100) : 72;
+      const highRiskCount = distWorks.filter((p) => p.status === "Delayed" || (p.financialProgress || 0) > (p.physicalProgress || 0) + 15).length;
 
       return {
         rank: idx + 1,
-        district: dist,
-        totalWorks: distWorks.length || 12,
+        district: dist.replace(/\(.*\)/, '').trim(),
+        totalWorks: distWorks.length,
         outlayAmt: totalOutlay,
         expenditureAmt: totalExp,
         utilizationRate: utilRate,
         highRiskCount,
-        status: utilRate > 75 ? "High Performing" : utilRate > 50 ? "Moderate" : "Needs Review"
+        status: utilRate >= 70 ? "High Performing" : utilRate >= 50 ? "Moderate" : "Needs Review"
       };
     });
   }, [projects]);
@@ -123,13 +122,14 @@ export const StateNodalDashboard: React.FC = () => {
   // Key KPI Numbers
   const kpis = useMemo(() => {
     const totalProjects = projects.length;
-    const totalOutlay = projects.reduce((acc, p) => acc + p.sanctionedAmt, 0);
-    const totalExp = projects.reduce((acc, p) => acc + p.expenditureAmt, 0);
-    const avgUtilization = Math.round((totalExp / totalOutlay) * 100);
-    const highRiskCount = stateHighRiskProjects.length;
+    const totalOutlay = projects.reduce((acc, p) => acc + (p.sanctionedAmt || 0), 0);
+    const totalExp = projects.reduce((acc, p) => acc + (p.expenditureAmt || 0), 0);
+    const avgUtilization = totalOutlay > 0 ? Math.round((totalExp / totalOutlay) * 100) : 0;
+    const highRiskCount = projects.filter((p) => p.status === "Delayed" || (p.financialProgress || 0) > (p.physicalProgress || 0) + 15).length;
+    const completedCount = projects.filter((p) => p.status === "Completed").length;
 
-    return { totalProjects, totalOutlay, totalExp, avgUtilization, highRiskCount };
-  }, [projects, stateHighRiskProjects]);
+    return { totalProjects, totalOutlay, totalExp, avgUtilization, highRiskCount, completedCount };
+  }, [projects]);
 
   // Handlers
   const handleEscalationAction = (workId: string, actionType: string) => {
@@ -154,7 +154,10 @@ export const StateNodalDashboard: React.FC = () => {
         activeTab="dashboard"
         setActiveTab={() => {}}
         onOpenPolicy={() => setIsPolicyOpen(true)}
-        onOpenLogin={() => {}}
+        onOpenLogin={(role) => {
+          setTargetLoginRole(role);
+          setIsLoginOpen(true);
+        }}
         t={t}
         flagCount={kpis.highRiskCount}
       />
@@ -177,20 +180,17 @@ export const StateNodalDashboard: React.FC = () => {
           }}
         >
           <div>
-            <div style={{ fontSize: "0.74rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#93c5fd", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Landmark size={14} />
-              Apex State Nodal Department | Planning Department, Government of {stateName}
-            </div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "4px 0 6px 0" }}>
-              Statewide MPLADS Monitoring & Cross-District Oversight Portal
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+              Statewide MPLADS Monitoring — {stateName}
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4" }}>
-              Monitor cross-district MPLADS implementation velocity, track statewide fund utilization rates, resolve inter-district escalations, and audit high-risk anomaly clusters.
+            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
+              Cross-district implementation monitoring, statewide fund utilization tracking, and project milestone oversight.
             </p>
           </div>
 
-          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.1)", borderRadius: "var(--radius-xs)", fontSize: "0.78rem" }}>
-            Statewide Outlay: <strong>₹{kpis.totalOutlay.toFixed(2)} Cr</strong> | State Avg Utilization: <strong>{kpis.avgUtilization}%</strong>
+          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.08)", borderRadius: "var(--radius-xs)", fontSize: "0.80rem", border: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#34d399", display: "inline-block" }}></span>
+            <span>State Nodal Authority · {stateName}</span>
           </div>
         </div>
 
@@ -312,12 +312,10 @@ export const StateNodalDashboard: React.FC = () => {
                 <div>
                   <label style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>District</label>
                   <select className="gov-select" style={{ width: "100%" }} value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)}>
-                    <option value="all">All Districts</option>
-                    <option value="Pune">Pune</option>
-                    <option value="Mumbai Suburban">Mumbai Suburban</option>
-                    <option value="Nagpur">Nagpur</option>
-                    <option value="Thane">Thane</option>
-                    <option value="Nashik">Nashik</option>
+                    <option value="all">All Districts ({projects.length} Works)</option>
+                    {Array.from(new Set(projects.map(p => p.district))).filter(Boolean).map(dist => (
+                      <option key={dist} value={dist}>{dist.replace(/\(.*\)/, '').trim()}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -565,6 +563,15 @@ export const StateNodalDashboard: React.FC = () => {
       <PolicyModal
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => {
+          setIsLoginOpen(false);
+          setTargetLoginRole(undefined);
+        }}
+        initialRole={targetLoginRole}
       />
 
       <Footer t={t} onOpenPolicy={() => setIsPolicyOpen(true)} />

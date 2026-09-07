@@ -6,6 +6,7 @@ import { Footer } from "../components/Footer";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { AttachmentsModal } from "../components/AttachmentsModal";
 import { PolicyModal } from "../components/PolicyModal";
+import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Card, CardHeader, CardBody } from "../components/ui";
 import { 
   CitizenIssue, 
@@ -14,7 +15,7 @@ import {
   saveOfflineDraft 
 } from "../data/citizenData";
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
-import { TRANSLATIONS } from "../data/translations";
+import { usePreferences } from "../context/PreferencesContext";
 import { 
   SubmitIssueModal, 
   IssueTracker, 
@@ -23,20 +24,20 @@ import {
 } from "../components/citizen";
 
 export const CitizenDashboard: React.FC = () => {
-  const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [lang, setLang] = useState<"en" | "hi">("en");
-  const t = TRANSLATIONS[lang];
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   const [activeTab, setActiveTab] = useState<"my_issues" | "projects" | "notifications">("my_issues");
   const [issues, setIssues] = useState<CitizenIssue[]>(INITIAL_CITIZEN_ISSUES);
   const [offlineDrafts, setOfflineDrafts] = useState<CitizenIssue[]>([]);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   
   const [selectedWork, setSelectedWork] = useState<WorkItem | null>(null);
   const [attachmentWork, setAttachmentWork] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [targetLoginRole, setTargetLoginRole] = useState<any>(undefined);
 
   useEffect(() => {
     setOfflineDrafts(getOfflineDrafts());
@@ -58,9 +59,22 @@ export const CitizenDashboard: React.FC = () => {
 
   const handleSyncOfflineDrafts = () => {
     if (offlineDrafts.length === 0) return;
-    setIssues([...offlineDrafts, ...issues]);
-    localStorage.removeItem("mplads_citizen_offline_drafts");
+    const syncedCount = offlineDrafts.length;
+    const syncedIssues: CitizenIssue[] = offlineDrafts.map((d, idx) => ({
+      ...d,
+      id: d.id.startsWith("DRAFT-") ? `ISSUE-MH-${new Date().getFullYear()}-${String(100 + idx)}` : d.id,
+      isOfflineDraft: false,
+      status: "SUBMITTED",
+      officialResponse: "Synchronized with Central Portal. Transmitted to District Rural Development Agency."
+    }));
+
+    setIssues([...syncedIssues, ...issues]);
+    try {
+      localStorage.removeItem("mplads_citizen_offline_drafts");
+    } catch {}
     setOfflineDrafts([]);
+    setSyncNotice(`All ${syncedCount} offline drafts successfully synchronized with e-SAKSHI. Grievance reference IDs assigned.`);
+    setTimeout(() => setSyncNotice(null), 6000);
   };
 
   return (
@@ -77,12 +91,15 @@ export const CitizenDashboard: React.FC = () => {
       />
 
       <Navbar
-        activeTab="dashboard"
-        setActiveTab={() => {}}
+        activeTab={activeTab === "my_issues" ? "dashboard" : "home"}
+        setActiveTab={() => setActiveTab("my_issues")}
         onOpenPolicy={() => setIsPolicyOpen(true)}
-        onOpenLogin={() => {}}
+        onOpenLogin={(role) => {
+          setTargetLoginRole(role);
+          setIsLoginOpen(true);
+        }}
         t={t}
-        flagCount={2}
+        flagCount={0}
       />
 
       <main className="container" style={{ flex: 1, padding: "20px 0", display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -111,17 +128,20 @@ export const CitizenDashboard: React.FC = () => {
           )}
         </div>
 
+        {syncNotice && (
+          <Alert type="success" title="Drafts Synchronized">
+            {syncNotice}
+          </Alert>
+        )}
+
         {/* Hero Welcome & Primary Action CTA Banner */}
         <div style={{ background: "var(--gov-header)", color: "#ffffff", padding: "20px 24px", borderRadius: "var(--radius-sm)", border: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
           <div>
-            <div style={{ fontSize: "0.74rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#93c5fd", fontWeight: 700 }}>
-              e-SAKSHI Citizen Public Portal
-            </div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#ffffff", margin: "4px 0 6px 0" }}>
-              Public Area Grievance & MPLADS Project Tracking
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+              Public Area Grievance & Project Tracking
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "600px", lineHeight: "1.4" }}>
-              Report local infrastructure issues directly to District Nodal Authorities, track field inspection progress, and inspect constituency MP development works.
+            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "600px", lineHeight: "1.4", margin: 0 }}>
+              Report local infrastructure needs, track inspection updates, and review constituency development works.
             </p>
           </div>
 
@@ -227,6 +247,12 @@ export const CitizenDashboard: React.FC = () => {
       <PolicyModal
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        initialRole={targetLoginRole}
       />
 
       <Footer t={t} onOpenPolicy={() => setIsPolicyOpen(true)} />

@@ -48,13 +48,14 @@
   --focus-ring: 0 0 0 3px rgba(21, 94, 239, 0.25);
 
   /* Layout & Geometry */
-  --radius-xs: 3px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-full: 9999px;
 
-  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px 0 rgba(15, 23, 42, 0.04);
-  --shadow-elevated: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 4px 14px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-elevated: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
 
   --base-font-size: 14.5px;
 }
@@ -85,9 +86,63 @@
 }
 
 /* Accessibility Font Resizer */
+html[data-font-scale='sm'] { font-size: 13px; zoom: 0.90; }
+html[data-font-scale='base'] { font-size: 14.5px; zoom: 1; }
+html[data-font-scale='lg'] { font-size: 16.5px; zoom: 1.12; }
 body[data-font-scale='sm'] { --base-font-size: 13px; }
 body[data-font-scale='base'] { --base-font-size: 14.5px; }
-body[data-font-scale='lg'] { --base-font-size: 16px; }
+body[data-font-scale='lg'] { --base-font-size: 16.5px; }
+
+[data-theme='dark'] nav {
+  background: #0d1829 !important;
+  border-bottom: 1px solid #1e2f47 !important;
+}
+
+[data-theme='dark'] .gov-modal-content {
+  background: #0f1c2e !important;
+  border-color: #283a54 !important;
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  background-color: #111d2e !important;
+  color: #f8fafc !important;
+  border-color: #283a54 !important;
+}
+
+[data-theme='dark'] table th {
+  background-color: #162438 !important;
+  color: #cbd5e1 !important;
+  border-color: #283a54 !important;
+}
+
+[data-theme='dark'] table td {
+  border-color: #1e2f47 !important;
+  color: #e2e8f0 !important;
+}
+
+[data-theme='dark'] table tr:hover td {
+  background-color: #1c2e47 !important;
+}
+
+[data-theme='dark'] .gov-login-page,
+[data-theme='dark'] .gov-login-right {
+  background-color: #0d1829 !important;
+}
+
+[data-theme='dark'] .gov-login-heading {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .gov-login-brand-header div div {
+  color: #e2e8f0 !important;
+}
+
+[data-theme='dark'] .gov-login-footer {
+  color: #94a3b8 !important;
+}
 
 * {
   box-sizing: border-box;
@@ -210,15 +265,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 /* Enterprise Structured Card */
 .gov-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-main);
+  border: 1px solid #e2e8f0;
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gov-card:hover {
+  box-shadow: 0 8px 20px -3px rgba(15, 23, 42, 0.07);
 }
 
 .gov-card-header {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-light);
   background: var(--bg-surface-subtle);
+  border-top-left-radius: var(--radius-sm);
+  border-top-right-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -243,6 +305,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   padding: 10px 16px;
   border-top: 1px solid var(--border-light);
   background: var(--bg-surface-subtle);
+  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -255,31 +319,36 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 7px 14px;
+  padding: 8px 16px;
   font-size: 0.82rem;
   font-weight: 600;
   border-radius: var(--radius-xs);
-  transition: all 0.12s ease;
+  transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .gov-btn-sm {
-  padding: 4px 9px;
+  padding: 4px 10px;
   font-size: 0.76rem;
+  border-radius: 6px;
 }
 
 .gov-btn-lg {
-  padding: 10px 18px;
+  padding: 10px 20px;
   font-size: 0.9rem;
+  border-radius: 8px;
 }
 
 .gov-btn-primary {
   background: var(--gov-primary);
   color: #ffffff;
   border: 1px solid #051629;
+  box-shadow: 0 2px 4px rgba(10, 37, 64, 0.12);
 }
 .gov-btn-primary:hover {
   background: var(--gov-secondary);
+  box-shadow: 0 4px 8px rgba(10, 37, 64, 0.18);
+  transform: translateY(-1px);
 }
 
 .gov-btn-secondary {
@@ -314,9 +383,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .gov-table-container {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--border-main);
-  border-radius: var(--radius-xs);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
   background: var(--bg-surface);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .gov-table {
@@ -327,20 +397,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .gov-table th {
-  background: var(--bg-surface-subtle);
-  color: var(--text-body);
+  background: #f8fafc;
+  color: #475569;
   font-weight: 700;
-  padding: 9px 12px;
-  border-bottom: 2px solid var(--border-main);
-  border-right: 1px solid var(--border-light);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  border-bottom: 1.5px solid #e2e8f0;
+  border-right: none;
   white-space: nowrap;
 }
 
 .gov-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-light);
-  border-right: 1px solid var(--border-light);
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: none;
   color: var(--text-main);
+}
+
+.gov-table tr:last-child td {
+  border-bottom: none;
 }
 
 .gov-table tr:nth-child(even) td {
@@ -356,10 +433,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
+  padding: 3px 10px;
   font-size: 0.72rem;
-  font-weight: 600;
-  border-radius: var(--radius-xs);
+  font-weight: 700;
+  border-radius: var(--radius-full);
   line-height: 1.25;
 }
 
@@ -395,7 +472,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* Government Alert Callouts */
 .gov-alert {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: var(--radius-xs);
   border-left: 4px solid;
   font-size: 0.82rem;
@@ -436,7 +513,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-weight: 600;
   color: var(--text-body);
   background: transparent;
-  border-bottom: 2px solid transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
   transition: all 0.15s ease;
 }
 
@@ -446,31 +525,80 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .gov-tab.active {
-  color: var(--gov-primary);
-  border-bottom: 2px solid var(--gov-primary);
-  background: var(--bg-surface);
+  color: #ffffff;
+  background: var(--gov-primary);
+  border-color: var(--gov-primary);
+  box-shadow: 0 2px 6px rgba(10, 37, 64, 0.2);
 }
 
-/* Modals */
+/* Modals & Dialogs */
+html.modal-open,
+body.modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
 .gov-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 23, 42, 0.75);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 24px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .gov-modal-content {
   background: var(--bg-surface);
   border: 1px solid var(--border-dark);
   border-radius: var(--radius-sm);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   width: 100%;
-  max-height: 90vh;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: auto;
+  overscroll-behavior: contain;
+}
+
+.gov-modal-body {
   overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Modal Custom Scrollbar */
+.gov-modal-body::-webkit-scrollbar,
+.gov-modal-content::-webkit-scrollbar,
+.gov-modal-backdrop::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.gov-modal-body::-webkit-scrollbar-track,
+.gov-modal-content::-webkit-scrollbar-track,
+.gov-modal-backdrop::-webkit-scrollbar-track {
+  background: var(--bg-surface-subtle);
+}
+
+.gov-modal-body::-webkit-scrollbar-thumb,
+.gov-modal-content::-webkit-scrollbar-thumb,
+.gov-modal-backdrop::-webkit-scrollbar-thumb {
+  background: var(--border-dark);
+  border-radius: 4px;
+}
+
+.gov-modal-body::-webkit-scrollbar-thumb:hover,
+.gov-modal-content::-webkit-scrollbar-thumb:hover,
+.gov-modal-backdrop::-webkit-scrollbar-thumb:hover {
+  background: var(--gov-primary);
 }
 
 /* Loading Skeleton & Spinners */
@@ -770,14 +898,54 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 
 
-/* Print Rules */
+/* Print Rules: Isolate Modal / Dossier Print */
 @media print {
   .no-print {
     display: none !important;
   }
   body {
-    background: #ffffff;
+    background: #ffffff !important;
+    color: #000000 !important;
     font-size: 11pt;
+  }
+  /* When a modal is open during print, hide everything else */
+  body:has(.gov-modal-backdrop) * {
+    visibility: hidden;
+  }
+  body:has(.gov-modal-backdrop) .gov-modal-backdrop,
+  body:has(.gov-modal-backdrop) .gov-modal-backdrop * {
+    visibility: visible;
+  }
+  .gov-modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    z-index: 1 !important;
+  }
+  .gov-modal-content {
+    box-shadow: none !important;
+    border: 1px solid #94a3b8 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+  }
+  .gov-modal-body {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+  .gov-modal-content button,
+  .gov-modal-content .no-print {
+    display: none !important;
   }
   .gov-card {
     box-shadow: none;
@@ -785,4 +953,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     page-break-inside: avoid;
   }
 }
+
 

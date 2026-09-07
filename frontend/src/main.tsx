@@ -7,14 +7,16 @@
  * DOMAIN CONTEXT & PURPOSE:
  * -------------------------
  * Root entrypoint of the React application. Integrates PWA Service Worker registration,
- * Network Connection Status banner (ONLINE, OFFLINE, SYNCING), RoleProvider RBAC, and
- * dynamic stakeholder dashboard routing.
+ * Network Connection Status banner, PreferencesProvider (Theme/Font/Lang), RoleProvider RBAC,
+ * ErrorBoundary fault-tolerance, and dynamic stakeholder dashboard routing.
  */
 
 import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
+import { PreferencesProvider } from "./context/PreferencesContext";
 import { RoleProvider, useRole } from "./auth/roleContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { NetworkStatusBanner } from "./components/NetworkStatusBanner";
 import { LoginPage } from "./pages/LoginPage";
 import { CitizenDashboard } from "./dashboards/CitizenDashboard";
@@ -64,10 +66,13 @@ function RootApp() {
   }, []);
 
   return (
-    <RoleProvider>
-      <NetworkStatusBanner />
-      <AppContent />
-    </RoleProvider>
+    <ErrorBoundary>
+      <PreferencesProvider>
+        <RoleProvider>
+          <AppContent />
+        </RoleProvider>
+      </PreferencesProvider>
+    </ErrorBoundary>
   );
 }
 
