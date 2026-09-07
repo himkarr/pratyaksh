@@ -1,21 +1,41 @@
-import React, { useState } from "react";
-import { Camera, MapPin, Upload, Save, Send, AlertCircle, CheckCircle } from "lucide-react";
-import { CitizenIssue, saveOfflineDraft } from "../../data/citizenData";
+import React, { useState, useEffect } from "react";
+import { 
+  Camera, MapPin, Upload, Send, AlertCircle, CheckCircle2, 
+  X, Landmark, AlertTriangle, HelpCircle, FileText
+} from "lucide-react";
+import { CitizenIssue } from "../../data/citizenData";
+import { WorkItem, INITIAL_WORKS } from "../../data/mpladsData";
 import { Modal, Button, Input, Select, Textarea, Alert } from "../ui";
 
 export interface SubmitIssueModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitted: (issue: CitizenIssue) => void;
+  initialWork?: WorkItem | null;
+  worksList?: WorkItem[];
+  currentConstituency?: string;
 }
+
+const PROBLEM_TYPES = [
+  { value: "Work not started", label: "Work not started (delayed start)" },
+  { value: "Work stopped", label: "Work stopped / abandoned" },
+  { value: "Poor quality", label: "Poor quality / substandard work" },
+  { value: "Damaged work", label: "Damaged / broken infrastructure" },
+  { value: "Not completed in reality", label: "Work shown as completed but not actually completed" },
+  { value: "Other", label: "Other local problem" }
+];
 
 export const SubmitIssueModal: React.FC<SubmitIssueModalProps> = ({
   isOpen,
   onClose,
-  onSubmitted
+  onSubmitted,
+  initialWork = null,
+  worksList = INITIAL_WORKS,
+  currentConstituency = "Pune"
 }) => {
+  const [selectedWorkId, setSelectedWorkId] = useState<string>(initialWork?.id || "unlisted");
+  const [problemType, setProblemType] = useState<string>("Work stopped");
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<CitizenIssue["category"]>("Water Supply");
   const [locationName, setLocationName] = useState("");
   const [description, setDescription] = useState("");
   const [lat, setLat] = useState<number | undefined>();
@@ -26,24 +46,47 @@ export const SubmitIssueModal: React.FC<SubmitIssueModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
+  useEffect(() => {
+    if (initialWork) {
+      setSelectedWorkId(initialWork.id);
+      setTitle(`Issue regarding: ${initialWork.title}`);
+      setLocationName(`${initialWork.constituency}, ${initialWork.district}`);
+    } else {
+      setSelectedWorkId("unlisted");
+      setTitle("");
+      setLocationName("");
+    }
+  }, [initialWork, isOpen]);
+
+  const handleWorkSelectionChange = (workId: string) => {
+    setSelectedWorkId(workId);
+    if (workId !== "unlisted") {
+      const found = worksList.find((w) => w.id === workId);
+      if (found) {
+        setTitle(`Problem with ${found.title}`);
+        setLocationName(`${found.constituency} (${found.district})`);
+      }
+    } else {
+      setTitle("");
+    }
+  };
+
   const handleCaptureGPS = () => {
     if (!navigator.geolocation) {
-      setGeoMsg("Geolocation is not supported by your browser.");
+      setGeoMsg("Location services not available on this device.");
       return;
     }
     setIsCapturingGeo(true);
-    setGeoMsg("Acquiring GPS coordinates...");
+    setGeoMsg("Finding your current location...");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLat(pos.coords.latitude);
         setLng(pos.coords.longitude);
-        setGeoMsg(`GPS Locked: ${pos.coords.latitude.toFixed(4)}°, ${pos.coords.longitude.toFixed(4)}°`);
+        setGeoMsg(`Location pinned: ${pos.coords.latitude.toFixed(4)}° N, ${pos.coords.longitude.toFixed(4)}° E`);
         setIsCapturingGeo(false);
       },
       (err) => {
-        setGeoMsg(`GPS error: ${err.message}. Using fallback location.`);
-        setLat(18.5204);
-        setLng(73.8567);
+        setGeoMsg("Could not detect GPS automatically. Please enter landmark manually.");
         setIsCapturingGeo(false);
       },
       { timeout: 8000 }
@@ -53,170 +96,264 @@ export const SubmitIssueModal: React.FC<SubmitIssueModalProps> = ({
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const fakeUrl = URL.createObjectURL(file);
-      setPhotoUrl(fakeUrl);
+      const previewUrl = URL.createObjectURL(file);
+      setPhotoUrl(previewUrl);
     }
-  };
-
-  const handleSaveDraft = () => {
-    const draft = saveOfflineDraft({
-      title: title || "Draft Issue",
-      category,
-      locationName,
-      description,
-      latitude: lat,
-      longitude: lng,
-      photos: photoUrl ? [{ id: "p1", url: photoUrl, timestamp: new Date().toISOString() }] : []
-    });
-    setSuccessMsg("Draft saved locally! It will sync automatically when online.");
-    setTimeout(() => {
-      onSubmitted(draft);
-      onClose();
-    }, 1200);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !description || !locationName) return;
+    if (!description.trim() || !locationName.trim()) return;
 
     setIsSaving(true);
-    const newIssue: CitizenIssue = {
-      id: `ISSUE-MH-2024-${Math.floor(100 + Math.random() * 900)}`,
-      title,
+    const linkedWork = worksList.find((w) => w.id === selectedWorkId);
+    const finalTitle = title.trim() || (linkedWork ? `Report: ${linkedWork.title}` : `${problemType} at ${locationName}`);
+    
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const newReport: CitizenIssue = {
+      id: `REP-2024-${randomNum}`,
+      title: finalTitle,
       description,
-      category,
-      constituency: "Pune",
-      district: "Pune",
-      state: "Maharashtra",
+      category: linkedWork?.category === "Water" ? "Water Supply" : (linkedWork?.category === "Roads" ? "Road Repair" : "Other"),
+      constituency: linkedWork?.constituency || currentConstituency,
+      district: linkedWork?.district || currentConstituency,
+      state: linkedWork?.state || "Maharashtra",
       locationName,
       latitude: lat || 18.5204,
       longitude: lng || 73.8567,
+      problemType,
+      linkedWorkId: linkedWork ? linkedWork.id : undefined,
+      linkedWorkTitle: linkedWork ? linkedWork.title : undefined,
       photos: photoUrl
-        ? [{ id: `photo-${Date.now()}`, url: photoUrl, timestamp: new Date().toLocaleString(), lat, lng }]
+        ? [{ id: `photo-${Date.now()}`, url: photoUrl, timestamp: new Date().toLocaleDateString() }]
         : [],
       documents: [],
       status: "SUBMITTED",
+      stage: "submitted",
       dateSubmitted: new Date().toISOString().split("T")[0],
       lastUpdated: new Date().toISOString().split("T")[0],
-      officialResponse: "Issue registered successfully. Assigned to District Nodal Officer for review."
+      officialResponse: "Report received. Assigned to local development officer for physical verification."
     };
 
     setTimeout(() => {
       setIsSaving(false);
-      onSubmitted(newIssue);
-      onClose();
-    }, 800);
+      setSuccessMsg(`Report #${newReport.id} submitted successfully! You can track its progress in "My Reports".`);
+      setTimeout(() => {
+        setSuccessMsg("");
+        onSubmitted(newReport);
+        onClose();
+      }, 1400);
+    }, 600);
   };
+
+  const workOptions = [
+    { value: "unlisted", label: "General Local Issue (Unlisted / Not in list)" },
+    ...worksList.map((w) => ({
+      value: w.id,
+      label: `[${w.id}] ${w.title.slice(0, 55)}${w.title.length > 55 ? "..." : ""}`
+    }))
+  ];
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Submit New Citizen Issue / Grievance"
-      maxWidth="680px"
+      title="Report a Problem"
+      maxWidth="640px"
     >
-      {successMsg && <Alert type="success">{successMsg}</Alert>}
-
-      <form onSubmit={handleSubmit}>
-        <Input
-          label="Issue Summary / Title"
-          required
-          placeholder="e.g., Incomplete Drinking Water Pipeline in Shivajinagar"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-          <Select
-            label="Category"
-            required
-            value={category}
-            onChange={(e) => setCategory(e.target.value as CitizenIssue["category"])}
-            options={[
-              { value: "Water Supply", label: "Drinking Water & Sanitation" },
-              { value: "Road Repair", label: "Roads & Rural Bridges" },
-              { value: "School Facility", label: "Education & Classrooms" },
-              { value: "Health Center", label: "Healthcare Facilities" },
-              { value: "Street Solar", label: "Street Lights & Solar Assets" },
-              { value: "Other", label: "Other Community Asset" }
-            ]}
-          />
-
-          <Input
-            label="Specific Location / Landmark"
-            required
-            placeholder="e.g., Near Bus Stand, Ward 12"
-            value={locationName}
-            onChange={(e) => setLocationName(e.target.value)}
-          />
+      {successMsg ? (
+        <div style={{ padding: "20px 10px", textAlign: "center" }}>
+          <CheckCircle2 size={48} color="var(--status-success-text)" style={{ margin: "0 auto 12px auto" }} />
+          <h4 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--gov-primary)", marginBottom: "6px" }}>
+            Report Submitted Successfully
+          </h4>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-body)", margin: 0 }}>
+            {successMsg}
+          </p>
         </div>
-
-        {/* GPS Geolocation Capture Box */}
-        <div style={{ marginBottom: "14px", padding: "10px", background: "var(--bg-surface-subtle)", borderRadius: "var(--radius-xs)", border: "1px solid var(--border-main)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--gov-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-              <MapPin size={15} /> Geotagged Location Capture
-            </div>
-            <Button type="button" variant="secondary" size="sm" onClick={handleCaptureGPS} isLoading={isCapturingGeo}>
-              Get GPS Location
-            </Button>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          
+          {/* Step 1: Select Development Work */}
+          <div>
+            <label className="gov-label" style={{ fontWeight: 700, marginBottom: "4px", display: "block" }}>
+              1. Select Associated Work
+            </label>
+            <Select
+              value={selectedWorkId}
+              onChange={(e) => handleWorkSelectionChange(e.target.value)}
+              options={workOptions}
+            />
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px", display: "block" }}>
+              Choose a sanctioned MPLADS project or select general unlisted issue.
+            </span>
           </div>
-          {geoMsg && <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px" }}>{geoMsg}</div>}
-        </div>
 
-        <Textarea
-          label="Detailed Problem Description"
-          required
-          rows={3}
-          placeholder="Provide specific details about the issue, duration of non-completion, or safety impact..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+          {/* Step 2: Problem Type */}
+          <div>
+            <label className="gov-label" style={{ fontWeight: 700, marginBottom: "4px", display: "block" }}>
+              2. What type of problem are you facing? <span style={{ color: "var(--status-danger-text)" }}>*</span>
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "8px" }}>
+              {PROBLEM_TYPES.map((pt) => {
+                const isSelected = problemType === pt.value;
+                return (
+                  <button
+                    key={pt.value}
+                    type="button"
+                    onClick={() => setProblemType(pt.value)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 12px",
+                      borderRadius: "var(--radius-xs)",
+                      border: isSelected ? "2px solid var(--gov-accent)" : "1px solid var(--border-main)",
+                      background: isSelected ? "var(--status-info-bg)" : "var(--bg-surface)",
+                      color: isSelected ? "var(--gov-accent)" : "var(--text-main)",
+                      fontWeight: isSelected ? 700 : 500,
+                      fontSize: "0.80rem",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "all 0.15s ease"
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "14px",
+                        height: "14px",
+                        borderRadius: "50%",
+                        border: isSelected ? "4px solid var(--gov-accent)" : "1.5px solid var(--border-dark)",
+                        background: isSelected ? "#fff" : "transparent"
+                      }}
+                    />
+                    <span>{pt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        {/* Camera / Photo Evidence Upload Box */}
-        <div className="gov-form-group">
-          <label className="gov-label">Upload Site Photograph / Evidence</label>
-          <div style={{ border: "2px dashed var(--border-main)", padding: "14px", borderRadius: "var(--radius-xs)", textAlign: "center", background: "var(--bg-surface-subtle)" }}>
-            {photoUrl ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", justifyContent: "center" }}>
-                <img src={photoUrl} alt="Preview" style={{ width: "80px", height: "60px", objectFit: "cover", borderRadius: "4px" }} />
-                <span style={{ fontSize: "0.78rem", color: "var(--status-success-text)", fontWeight: 600 }}>Photo Attached</span>
-                <Button type="button" variant="danger" size="sm" onClick={() => setPhotoUrl("")}>Remove</Button>
-              </div>
-            ) : (
-              <div>
-                <Camera size={24} color="var(--text-muted)" style={{ marginBottom: "4px" }} />
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                  Click to capture photo using device camera or upload image file
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handlePhotoSelect}
-                  style={{ marginTop: "8px", fontSize: "0.78rem" }}
+          {/* Step 3: Location / Landmark */}
+          <div>
+            <label className="gov-label" style={{ fontWeight: 700, marginBottom: "4px", display: "block" }}>
+              3. Location & Landmark <span style={{ color: "var(--status-danger-text)" }}>*</span>
+            </label>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+                <Input
+                  placeholder="e.g., Near Bus Depot, Ward 12, Shivajinagar"
+                  required
+                  value={locationName}
+                  onChange={(e) => setLocationName(e.target.value)}
                 />
               </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={handleCaptureGPS}
+                isLoading={isCapturingGeo}
+                icon={<MapPin size={14} />}
+                title="Detect GPS coordinates"
+              >
+                {lat ? "GPS Locked" : "Get GPS"}
+              </Button>
+            </div>
+            {geoMsg && (
+              <span style={{ fontSize: "0.72rem", color: "var(--gov-accent)", marginTop: "3px", display: "block" }}>
+                {geoMsg}
+              </span>
             )}
           </div>
-        </div>
 
-        {/* Modal Action Footers */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", paddingTop: "12px", borderTop: "1px solid var(--border-light)" }}>
-          <Button type="button" variant="secondary" onClick={handleSaveDraft} icon={<Save size={14} />}>
-            Save Offline Draft
-          </Button>
+          {/* Step 4: Description */}
+          <div>
+            <label className="gov-label" style={{ fontWeight: 700, marginBottom: "4px", display: "block" }}>
+              4. Short Description of the Problem <span style={{ color: "var(--status-danger-text)" }}>*</span>
+            </label>
+            <Textarea
+              required
+              rows={3}
+              placeholder="Please describe what is wrong, how long this issue has persisted, or any safety concerns..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
 
-          <div style={{ display: "flex", gap: "8px" }}>
-            <Button type="button" variant="secondary" onClick={onClose}>
+          {/* Step 5: Photo Evidence (Optional) */}
+          <div>
+            <label className="gov-label" style={{ fontWeight: 700, marginBottom: "4px", display: "block" }}>
+              5. Add a Photo (Optional)
+            </label>
+            <div
+              style={{
+                border: "2px dashed var(--border-main)",
+                borderRadius: "var(--radius-xs)",
+                padding: "12px",
+                textAlign: "center",
+                background: "var(--bg-surface-subtle)"
+              }}
+            >
+              {photoUrl ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
+                  <img
+                    src={photoUrl}
+                    alt="Upload Preview"
+                    style={{ width: "80px", height: "60px", objectFit: "cover", borderRadius: "4px" }}
+                  />
+                  <span style={{ fontSize: "0.80rem", color: "var(--status-success-text)", fontWeight: 600 }}>
+                    ✓ Photo Attached
+                  </span>
+                  <Button type="button" variant="danger" size="sm" onClick={() => setPhotoUrl("")}>
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <Camera size={22} color="var(--text-muted)" style={{ margin: "0 auto 4px auto" }} />
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                    Upload or take a photo of the site
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoSelect}
+                    style={{ marginTop: "6px", fontSize: "0.75rem" }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: "10px",
+              marginTop: "8px",
+              paddingTop: "12px",
+              borderTop: "1px solid var(--border-light)"
+            }}
+          >
+            <Button type="button" variant="secondary" size="md" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" isLoading={isSaving} icon={<Send size={14} />}>
-              Submit Issue
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              isLoading={isSaving}
+              icon={<Send size={15} />}
+              style={{ minWidth: "140px" }}
+            >
+              Submit Report
             </Button>
           </div>
-        </div>
-      </form>
+        </form>
+      )}
     </Modal>
   );
 };

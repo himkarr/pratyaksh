@@ -33,6 +33,10 @@ export interface CitizenIssue {
   assignedOfficer?: string;
   submittedBy?: string;
   isOfflineDraft?: boolean;
+  linkedWorkId?: string;
+  linkedWorkTitle?: string;
+  problemType?: string;
+  stage?: "submitted" | "received" | "inspection_scheduled" | "action_taken" | "resolved";
 }
 
 export const INITIAL_CITIZEN_ISSUES: CitizenIssue[] = [
