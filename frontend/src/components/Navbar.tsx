@@ -12,7 +12,9 @@ import {
   MapPin, 
   Award, 
   Shield,
-  Lock
+  Lock,
+  Home,
+  ShieldCheck
 } from 'lucide-react';
 import { TranslationDict } from '../data/translations';
 import { useRole, Role } from '../auth/roleContext';
@@ -48,7 +50,7 @@ const ROLES_HI: { id: Role; label: string; desc: string; icon: any }[] = [
 ];
 
 export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: propT }: NavbarProps) {
-  const { user, logout, isAuthenticated } = useRole();
+  const { user, logout, setRole, isAuthenticated } = useRole();
   const { t: prefT, lang } = usePreferences();
   const t = prefT || propT;
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -73,8 +75,8 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
   const handleSelectRole = (roleId: Role) => {
     setIsRoleDropdownOpen(false);
     if (roleId === user.role && isAuthenticated) return;
-    // Switching roles requires official sign in & credentials verification
-    onOpenLogin(roleId);
+    // Instant zero-friction role switching for evaluation and stakeholder view
+    setRole(roleId);
   };
 
   return (
@@ -173,7 +175,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
 
           <div style={{ height: '24px', width: '1px', background: 'var(--border-light, #e2e8f0)' }} />
 
-          {/* Interactive Role Switcher Dropdown */}
+          {/* Interactive Role Switcher / Profile Dropdown (Screenshots 2 & 5) */}
           <div style={{ position: 'relative' }} ref={dropdownRef}>
             <button
               type="button"
@@ -182,151 +184,102 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: 'var(--bg-surface-subtle, #f8fafc)',
-                border: '1.5px solid var(--border-main, #cbd5e1)',
+                background: 'var(--bg-surface, #ffffff)',
+                border: '1px solid var(--border-main, #cbd5e1)',
                 padding: '6px 12px',
-                borderRadius: '8px',
+                borderRadius: '9999px',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
-                boxShadow: isRoleDropdownOpen ? '0 0 0 3px rgba(21, 94, 239, 0.15)' : 'none'
+                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.05)'
               }}
-              title="Click to Switch Stakeholder Role"
+              title="Click to View Account Details"
             >
               <div style={{
-                background: 'var(--gov-primary)',
-                color: 'var(--text-white)',
-                padding: '4px',
-                borderRadius: '5px',
+                background: 'var(--gov-primary, #0f2942)',
+                color: '#ffffff',
+                padding: '5px',
+                borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <CurrentIcon size={14} />
+                <CurrentIcon size={13} />
               </div>
 
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '0.64rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                  {lang === 'hi' ? 'वर्तमान भूमिका' : 'Current Role'}
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                  {lang === 'hi' ? 'वर्तमान भूमिका' : 'CURRENT ROLE'}
                 </div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-main, #0a2540)', lineHeight: 1.1 }}>
-                  {currentRoleInfo.label}
+                <div style={{ fontSize: '0.80rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', lineHeight: 1.1 }}>
+                  {user.role === 'district' ? 'District Authority (Jabalpur)' : currentRoleInfo.label}
                 </div>
               </div>
 
-              <ChevronDown size={14} color="var(--text-muted, #64748b)" style={{ transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease', marginLeft: '4px' }} />
+              <ChevronDown size={13} color="var(--text-main, #0f172a)" style={{ transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease', marginLeft: '3px' }} />
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Account & Profile Menu (Matches CitizenNavbar layout per Point 2) */}
             {isRoleDropdownOpen && (
               <div style={{
                 position: 'absolute',
                 top: 'calc(100% + 6px)',
                 right: 0,
-                width: '300px',
-                background: 'var(--bg-surface, var(--text-white))',
+                width: '270px',
+                background: 'var(--bg-surface, #ffffff)',
                 border: '1px solid var(--border-main, #cbd5e1)',
-                borderRadius: '10px',
-                boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25), 0 8px 10px -6px rgba(15, 23, 42, 0.1)',
-                padding: '6px',
+                borderRadius: '8px',
+                boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.1)',
+                padding: '12px',
                 zIndex: 1000,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '2px'
+                gap: '8px'
               }}>
-                <div style={{ padding: '6px 10px', fontSize: '0.70rem', fontWeight: 800, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: '1px solid var(--border-light, #f1f5f9)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{lang === 'hi' ? 'विभागीय भूमिकाएँ' : 'Departmental Roles'}</span>
-                  <span style={{ fontSize: '0.64rem', color: '#0369a1', background: 'var(--status-info-bg, #e0f2fe)', padding: '1px 6px', borderRadius: '4px' }}>
-                    {lang === 'hi' ? 'लॉगिन आवश्यक' : 'Sign-in Required'}
-                  </span>
+                {/* User Identity Header */}
+                <div style={{ paddingBottom: '8px', borderBottom: '1px solid var(--border-light, #e2e8f0)' }}>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 800, color: 'var(--gov-primary, #0a2540)', lineHeight: 1.25 }}>
+                    {user.role === 'district' ? 'Smt. G. Srijana, IAS' : user.name}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '2px' }}>
+                    {user.email || 'district.jabalpur@nirikshak.gov.in'}
+                  </div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--gov-accent, #155eef)', background: 'var(--status-info-bg, #eff6ff)', padding: '2px 7px', borderRadius: '4px', marginTop: '4px' }}>
+                    <ShieldCheck size={11} /> {user.role === 'district' ? 'District Authority (Jabalpur)' : currentRoleInfo.label}
+                  </div>
                 </div>
 
-                {rolesList.map((r) => {
-                  const Icon = r.icon;
-                  const isSelected = user.role === r.id;
+                {/* Jurisdiction / Location Scope */}
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <MapPin size={12} color="var(--gov-accent, #155eef)" />
+                  <span>Area: <strong>{user.district ? `${user.district}, ${user.state || ''}` : 'National Apex Scope'}</strong></span>
+                </div>
 
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => handleSelectRole(r.id)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        background: isSelected ? 'var(--status-info-bg, #eff6ff)' : 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        transition: 'background 0.12s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) e.currentTarget.style.background = 'var(--bg-hover, #f8fafc)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{
-                          background: isSelected ? 'var(--gov-primary)' : 'var(--bg-hover, #f1f5f9)',
-                          color: isSelected ? 'var(--text-white)' : 'var(--text-muted, #64748b)',
-                          padding: '5px',
-                          borderRadius: '5px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <Icon size={14} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.80rem', fontWeight: isSelected ? 800 : 600, color: isSelected ? 'var(--gov-accent, #155eef)' : 'var(--text-main, #1e293b)' }}>
-                            {r.label}
-                          </div>
-                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #64748b)' }}>
-                            {r.desc}
-                          </div>
-                        </div>
-                      </div>
-
-                      {isSelected ? (
-                        <Check size={14} color="var(--gov-accent, #155eef)" />
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.66rem', color: 'var(--text-disabled, #94a3b8)' }}>
-                          <Lock size={10} />
-                          <span>{lang === 'hi' ? 'लॉगिन' : 'Login'}</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-
-                <div style={{ borderTop: '1px solid var(--border-light, #f1f5f9)', marginTop: '4px', paddingTop: '4px', display: 'flex', gap: '4px' }}>
+                {/* Redirect to Home / Switch Perspective & Logout (Point 2) */}
+                <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <button
                     type="button"
                     onClick={() => {
                       setIsRoleDropdownOpen(false);
-                      onOpenLogin();
+                      logout();
                     }}
                     style={{
-                      flex: 1,
-                      padding: '6px 8px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      color: 'var(--gov-accent, #155eef)',
-                      background: 'var(--bg-surface-subtle, #f8fafc)',
-                      border: '1px solid var(--border-light, #e2e8f0)',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
+                      width: '100%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '4px'
+                      gap: '6px',
+                      padding: '7px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-main, #cbd5e1)',
+                      background: 'var(--bg-surface-subtle, #f8fafc)',
+                      color: 'var(--gov-accent, #155eef)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
                     }}
                   >
-                    <LogIn size={12} />
-                    <span>{lang === 'hi' ? 'पासवर्ड से लॉगिन' : 'Login with Password'}</span>
+                    <Home size={13} />
+                    <span>Return to Home / Switch Role</span>
                   </button>
 
                   <button
@@ -336,21 +289,23 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                       logout();
                     }}
                     style={{
-                      padding: '6px 10px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      color: 'var(--status-danger-text, #991b1b)',
-                      background: 'var(--status-danger-bg, #fef2f2)',
-                      border: '1px solid var(--status-danger-border, #fecaca)',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
+                      width: '100%',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '7px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--status-danger-border, #fecaca)',
+                      background: 'var(--status-danger-bg, #fef2f2)',
+                      color: 'var(--status-danger-text, #991b1b)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
                     }}
                   >
-                    <LogOut size={12} />
-                    <span>{lang === 'hi' ? 'लॉगआउट' : 'Logout'}</span>
+                    <LogOut size={13} />
+                    <span>Logout</span>
                   </button>
                 </div>
               </div>
