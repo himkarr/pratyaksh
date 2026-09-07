@@ -79,7 +79,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 display: "flex",
                 alignItems: "center",
                 gap: "12px",
-                color: "#ffffff"
+                color: "var(--text-white)"
               }}
             >
               <img

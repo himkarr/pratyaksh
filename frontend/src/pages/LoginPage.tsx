@@ -161,7 +161,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                       border: "1px solid",
                       borderColor: selectedRole === item.id ? "#10355c" : "#cbd5e1",
                       backgroundColor: selectedRole === item.id ? "#10355c" : "#f8fafc",
-                      color: selectedRole === item.id ? "#ffffff" : "#475569",
+                      color: selectedRole === item.id ? "var(--text-white)" : "#475569",
                       cursor: "pointer",
                       fontWeight: 600
                     }}

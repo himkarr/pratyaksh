@@ -165,7 +165,7 @@ export const ContractorDashboard: React.FC = () => {
         <div 
           style={{ 
             background: "var(--gov-header)", 
-            color: "#ffffff", 
+            color: "var(--text-white)", 
             padding: "20px 24px", 
             borderRadius: "var(--radius-sm)", 
             border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -177,7 +177,7 @@ export const ContractorDashboard: React.FC = () => {
           }}
         >
           <div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--text-white)", margin: "0 0 6px 0" }}>
               {agencyName} ({district} Circle)
             </h2>
             <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>

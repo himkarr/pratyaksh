@@ -169,7 +169,7 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
                   fontSize: "0.76rem",
                   fontWeight: activeStep === step.id ? 800 : 500,
                   background: activeStep === step.id ? "var(--gov-primary)" : "var(--bg-surface-subtle)",
-                  color: activeStep === step.id ? "#ffffff" : "var(--text-body)",
+                  color: activeStep === step.id ? "var(--text-white)" : "var(--text-body)",
                   border: "1px solid var(--border-main)",
                   cursor: "pointer",
                   whiteSpace: "nowrap"
@@ -209,7 +209,7 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
                 </div>
               </div>
 
-              <div style={{ fontSize: "0.78rem", color: "var(--text-body)", padding: "10px 12px", background: "#ffffff", border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)" }}>
+              <div style={{ fontSize: "0.78rem", color: "var(--text-body)", padding: "10px 12px", background: "var(--text-white)", border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)" }}>
                 Implementing Agency / Contractor: <strong>{work.agency || "Maharashtra State PWD Infrastructure Agency"}</strong>
               </div>
 
@@ -424,7 +424,7 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
               </div>
 
               {/* Field Camera Photo Capture */}
-              <div style={{ border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)", padding: "12px 14px", background: "#ffffff" }}>
+              <div style={{ border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)", padding: "12px 14px", background: "var(--text-white)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                   <div>
                     <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--gov-primary)" }}>

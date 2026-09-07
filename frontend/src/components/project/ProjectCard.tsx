@@ -88,6 +88,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         {showRisk && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "8px" }}>
             <PriorityBadge priority={project.status === "Delayed" ? "PRIORITY_1" : (project.physicalProgress < 50 ? "PRIORITY_2" : "PRIORITY_3")} />
+            <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginLeft: "8px" }}>Risk: {project.riskScore ?? 0}</span>
             <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.74rem", color: "var(--text-muted)" }}>
               <Calendar size={13} />
               <span>Target: {project.targetCompletion}</span>

@@ -282,7 +282,7 @@ export const UpdateProgressModal: React.FC<UpdateProgressModalProps> = ({
           </div>
 
           {/* Photo Upload Section with Camera Capture */}
-          <div style={{ border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)", padding: "12px 14px", background: "#ffffff" }}>
+          <div style={{ border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)", padding: "12px 14px", background: "var(--text-white)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <div>
                 <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--gov-primary)" }}>
@@ -352,7 +352,7 @@ export const UpdateProgressModal: React.FC<UpdateProgressModalProps> = ({
           </div>
 
           {/* Document Attachments */}
-          <div style={{ border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)", padding: "12px 14px", background: "#ffffff" }}>
+          <div style={{ border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)", padding: "12px 14px", background: "var(--text-white)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <div>
                 <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--gov-primary)" }}>

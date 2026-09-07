@@ -237,7 +237,7 @@ export function AttachmentsModal({ work, onClose, onAttachmentAdded }: Attachmen
                     whiteSpace: 'nowrap',
                     border: selectedAttachment?.id === att.id ? '1px solid var(--gov-primary)' : '1px solid var(--border-main)',
                     background: selectedAttachment?.id === att.id ? 'var(--gov-primary)' : 'var(--bg-surface-subtle)',
-                    color: selectedAttachment?.id === att.id ? '#ffffff' : 'var(--text-main)',
+                    color: selectedAttachment?.id === att.id ? 'var(--text-white)' : 'var(--text-main)',
                     cursor: 'pointer'
                   }}
                 >

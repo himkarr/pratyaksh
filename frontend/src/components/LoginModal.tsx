@@ -204,7 +204,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           background: 'var(--gov-header)',
-          color: '#ffffff',
+          color: 'var(--text-white)',
           flexShrink: 0
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -217,7 +217,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
               <div style={{ fontSize: '0.64rem', color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
                 Government of India | MoSPI
               </div>
-              <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px', margin: 0 }}>
+              <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: 'var(--text-white)', letterSpacing: '-0.2px', margin: 0 }}>
                 Departmental Sign In & Role Authorization
               </h3>
               <p style={{ fontSize: '0.70rem', color: '#cbd5e1', margin: 0 }}>
@@ -231,7 +231,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
             style={{
               background: 'rgba(255, 255, 255, 0.1)',
               border: 'none',
-              color: '#ffffff',
+              color: 'var(--text-white)',
               padding: '5px',
               borderRadius: 'var(--radius-xs)',
               cursor: 'pointer',
@@ -326,7 +326,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
                             background: isSelected ? 'var(--gov-primary)' : 'var(--bg-surface-subtle)',
-                            color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                            color: isSelected ? 'var(--text-white)' : 'var(--text-muted)',
                             padding: '6px',
                             borderRadius: 'var(--radius-xs)',
                             display: 'flex',

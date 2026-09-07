@@ -12,7 +12,12 @@ import {
   ShieldAlert, 
   Filter, 
   Eye, 
-  Image as ImageIcon 
+  Image as ImageIcon,
+  Wallet,
+  TrendingUp,
+  CreditCard,
+  Layers,
+  ArrowRight
 } from "lucide-react";
 import { Header } from "../components/Header";
 import { Navbar } from "../components/Navbar";
@@ -25,7 +30,7 @@ import { Button, Alert, Card, CardHeader, CardBody } from "../components/ui";
 import { CreateRecommendationModal } from "../components/mp/CreateRecommendationModal";
 
 import { MPRecommendation, INITIAL_MP_RECOMMENDATIONS } from "../data/mpData";
-import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
+import { ALL_WORKS, WorkItem } from "../data/mpladsData";
 import { INITIAL_CITIZEN_ISSUES, CitizenIssue } from "../data/citizenData";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
@@ -35,10 +40,10 @@ export const MPDashboard: React.FC = () => {
   const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Active Section Navigation
-  const [activeTab, setActiveTab] = useState<"my_recommendations" | "constituency_works" | "citizen_reports" | "risk_alerts">("my_recommendations");
+  const [activeTab, setActiveTab] = useState<"my_recommendations" | "constituency_works" | "fund_details" | "citizen_reports" | "risk_alerts">("my_recommendations");
 
   // Data States
-  const [recommendations, setRecommendations] = useState<MPRecommendation[]>(INITIAL_MP_RECOMMENDATIONS);
+  const [recommendations, setRecommendations] = useState<MPRecommendation[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -52,33 +57,64 @@ export const MPDashboard: React.FC = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
 
-  // Active MP info
-  const mpName = user.name || "Hon'ble Bishnu Pada Ray (MP)";
-  const constituency = user.constituency || "Andaman and Nicobar Islands";
-  const constituencyCode = user.constituency_code || "AN-SOU-01";
-  const district = user.district || "ANDAMAN AND NICOBAR ISLANDS";
+  // MP selector data mapping
+  const MP_DATA: Record<string, { mpName: string; constituency: string; constituencyCode: string; district: string }> = {
+    Pune: { mpName: "Murlidhar Mohol", constituency: "Pune", constituencyCode: "MH-PUNE-01", district: "Pune" },
+    Varanasi: { mpName: "Narendra Modi", constituency: "Varanasi", constituencyCode: "UP-VARAN-01", district: "Varanasi" },
+    "New Delhi": { mpName: "Bansuri Swaraj", constituency: "New Delhi", constituencyCode: "DL-NEW-DELHI-01", district: "New Delhi" }
+  };
+
+  const [selectedMP, setSelectedMP] = useState<string>("Pune");
+  const mpInfo = MP_DATA[selectedMP] || {};
+  const mpName = mpInfo.mpName || user.name || "Hon'ble MP";
+  const constituency = mpInfo.constituency || user.constituency || "Constituency";
+  const constituencyCode = mpInfo.constituencyCode || user.constituency_code || "CODE";
+  const district = mpInfo.district || user.district || "District";
 
   // Filtered Constituency Projects (Scoped to MP's official parliamentary works)
+  // Filtered Constituency Projects (Scoped to MP's official parliamentary works)
   const constituencyWorks = useMemo(() => {
-    const matched = INITIAL_WORKS.filter((w) => {
-      if (user.name && w.mpName && w.mpName.toLowerCase().includes("bishnu")) return true;
+    const matched = ALL_WORKS.filter((w) => {
       if (w.constituency_code === constituencyCode) return true;
-      if (district && w.district && (w.district.toLowerCase().includes(district.toLowerCase()) || district.toLowerCase().includes(w.district.toLowerCase()))) return true;
-      if (user.state && w.state && w.state.toLowerCase() === user.state.toLowerCase()) return true;
+      if (w.constituency && constituency && w.constituency.toLowerCase() === constituency.toLowerCase()) return true;
+      if (district && w.district && w.district.toLowerCase() === district.toLowerCase()) return true;
       return false;
     });
-    return matched.length > 0 ? matched : INITIAL_WORKS.slice(0, 15);
-  }, [user, constituencyCode, district]);
+    return matched;
+  }, [constituencyCode, constituency, district]);
+
+  const filteredInitialRecs = useMemo(() => {
+    return INITIAL_MP_RECOMMENDATIONS.filter((rec) => {
+      return rec.constituency_code === constituencyCode || 
+        (rec.constituency && constituency && rec.constituency.toLowerCase() === constituency.toLowerCase());
+    });
+  }, [constituencyCode, constituency]);
+
+  // Filter user-added recommendations for the active constituency
+  const filteredUserRecs = useMemo(() => {
+    return recommendations.filter((rec) => {
+      return rec.constituency_code === constituencyCode || 
+        (rec.constituency && constituency && rec.constituency.toLowerCase() === constituency.toLowerCase());
+    });
+  }, [recommendations, constituencyCode, constituency]);
+
+  // Combine user-added recommendations with filtered initial recommendations
+  const displayedRecommendations = useMemo(() => {
+    return [...filteredUserRecs, ...filteredInitialRecs];
+  }, [filteredUserRecs, filteredInitialRecs]);
+
+  // Filter citizen issues for the selected constituency
+  const filteredCitizenIssues = useMemo(() => {
+    return INITIAL_CITIZEN_ISSUES.filter((issue) => {
+      return (issue.constituency && constituency && issue.constituency.toLowerCase() === constituency.toLowerCase()) ||
+        (district && issue.district && issue.district.toLowerCase() === district.toLowerCase());
+    });
+  }, [constituency, district]);
 
   // High Risk Projects
   const highRiskWorks = useMemo(() => {
     return constituencyWorks.filter((w) => w.status === "Delayed" || (w.financialProgress || 0) > (w.physicalProgress || 0) + 20);
   }, [constituencyWorks]);
-
-  // Citizen Reports in Pune
-  const citizenGrievances = useMemo(() => {
-    return INITIAL_CITIZEN_ISSUES;
-  }, []);
 
   // Handlers
   const handleRecommendationSubmitted = (newRec: MPRecommendation) => {
@@ -90,33 +126,158 @@ export const MPDashboard: React.FC = () => {
     setIsRecommendModalOpen(true);
   };
 
+  // Convert an MP Recommendation into a WorkItem for the detail dossier modal
+  const recommendationToWorkItem = (rec: MPRecommendation): WorkItem => {
+    const isSanctioned = rec.status === "SANCTIONED";
+    const sanctionedAmt = rec.sanctionedCost || (isSanctioned ? rec.estimatedCost : 0);
+    const expenditureAmt = isSanctioned ? Number((sanctionedAmt * 0.4).toFixed(2)) : 0;
+    const physicalProgress = isSanctioned ? 35 : 0;
+    const financialProgress = isSanctioned ? 40 : 0;
+
+    return {
+      id: rec.id,
+      title: rec.title,
+      house: "Lok Sabha",
+      state: (rec.district && rec.district.toLowerCase() === "varanasi") ? "Uttar Pradesh" :
+             (rec.district && rec.district.toLowerCase().includes("delhi")) ? "Delhi" : "Maharashtra",
+      district: rec.district || district,
+      constituency: rec.constituency || constituency,
+      constituency_code: rec.constituency_code || constituencyCode,
+      mpName: rec.mpName || mpName,
+      category: rec.category,
+      sectorName: rec.category,
+      recommendedAmt: rec.estimatedCost,
+      sanctionedAmt,
+      expenditureAmt,
+      physicalProgress,
+      financialProgress,
+      dateSanctioned: rec.dateSanctioned || (isSanctioned ? rec.dateProposed : ""),
+      targetCompletion: "2025-06-30",
+      status: isSanctioned ? "Sanctioned" : "Recommended",
+      agency: rec.districtNotes ? "District Authority / PWD" : "Awaiting Agency Allocation",
+      contractor: isSanctioned ? "Authorized Project Executing Agency" : "Tender Pending",
+      rating: 4.8,
+      reviewsCount: rec.citizenRequestId ? 1 : 0,
+      attachments: [],
+      reviews: rec.citizenRequestId ? [
+        {
+          id: `rev-${rec.id}`,
+          author: "Citizen Stakeholder Panel",
+          rating: 5,
+          date: rec.dateProposed,
+          comment: `Public development work initiated from Citizen Grievance #${rec.citizenRequestId}. Public necessity: ${rec.justification}`,
+          verified: true
+        }
+      ] : [],
+      justification: rec.justification,
+      districtNotes: rec.districtNotes,
+      citizenRequestId: rec.citizenRequestId
+    };
+  };
+
   // Aggregated Constituency Financial Metrics
   const metrics = useMemo(() => {
-    const totalEntitlement = 5.00; // ₹5.00 Cr
-    const totalRecommendedAmt = recommendations.reduce((acc, r) => acc + (r.estimatedCost || 0), 0);
-    const sanctionedRecs = recommendations.filter((r) => r.status === "SANCTIONED");
+    const totalEntitlement = 5.00; // ₹5.00 Cr annual allocation
+    const tenureEntitlement = 25.00; // ₹25.00 Cr 5-year tenure cap
+    const totalRecommendedAmt = displayedRecommendations.reduce((acc, r) => acc + (r.estimatedCost || 0), 0);
+    const sanctionedRecs = displayedRecommendations.filter((r) => r.status === "SANCTIONED");
     const totalSanctionedAmt = sanctionedRecs.reduce((acc, r) => acc + (r.sanctionedCost || r.estimatedCost || 0), 0);
-    const recommendedCount = recommendations.length;
+    const recommendedCount = displayedRecommendations.length;
     const sanctionedCount = sanctionedRecs.length;
     const ongoingCount = constituencyWorks.filter((w) => w.status === "Ongoing").length;
     const completedCount = constituencyWorks.filter((w) => w.status === "Completed").length;
-    const utilizationRate = Math.round((totalSanctionedAmt / totalEntitlement) * 100);
+    const totalExpenditure = Number(constituencyWorks.reduce((acc, w) => acc + (w.expenditureAmt || 0), 0).toFixed(2));
+    const totalDisbursed = Number(constituencyWorks.reduce((acc, w) => {
+      const base = (w.sanctionedAmt || 0.8) * 0.5;
+      const prog = (w.physicalProgress || 0) >= 50 || w.status === "Completed" ? (w.sanctionedAmt || 0.8) * 0.5 : 0;
+      return acc + base + prog;
+    }, 0).toFixed(2));
+    const unspentInSNA = Number(Math.max(0, totalDisbursed - totalExpenditure).toFixed(2));
+    const uncommittedBalance = Number(Math.max(0, totalEntitlement - totalSanctionedAmt).toFixed(2));
+    const utilizationRate = Math.min(100, Math.round((totalSanctionedAmt / totalEntitlement) * 100));
 
     return {
       totalEntitlement,
+      tenureEntitlement,
       totalRecommendedAmt,
       totalSanctionedAmt,
       recommendedCount,
       sanctionedCount,
       ongoingCount,
       completedCount,
+      totalExpenditure,
+      totalDisbursed,
+      unspentInSNA,
+      uncommittedBalance,
       utilizationRate
     };
-  }, [recommendations, constituencyWorks]);
+  }, [displayedRecommendations, constituencyWorks]);
 
-  // Filtered recommendations list
+  // Sector-wise financial distribution
+  const sectorFundDistribution = useMemo(() => {
+    const sectors = [
+      "Health",
+      "Renewable Energy",
+      "Drinking Water",
+      "Education",
+      "Roads",
+      "Community Assets",
+      "Sports"
+    ];
+    return sectors.map((sec) => {
+      const recsInSec = displayedRecommendations.filter((r) => r.category === sec);
+      const worksInSec = constituencyWorks.filter((w) => w.category === sec || w.sectorName === sec);
+      const recAmt = recsInSec.reduce((acc, r) => acc + (r.estimatedCost || 0), 0);
+      const sancAmt = recsInSec.filter(r => r.status === "SANCTIONED").reduce((acc, r) => acc + (r.sanctionedCost || r.estimatedCost || 0), 0) +
+                      worksInSec.reduce((acc, w) => acc + (w.sanctionedAmt || 0), 0);
+      const expAmt = worksInSec.reduce((acc, w) => acc + (w.expenditureAmt || 0), 0);
+      const worksCount = recsInSec.length + worksInSec.length;
+      return {
+        sector: sec,
+        worksCount,
+        recAmt: Number(recAmt.toFixed(2)),
+        sancAmt: Number(sancAmt.toFixed(2)),
+        expAmt: Number(expAmt.toFixed(2)),
+        pctOfTotal: metrics.totalSanctionedAmt > 0 ? Math.round((sancAmt / metrics.totalSanctionedAmt) * 100) : 0
+      };
+    }).filter(s => s.worksCount > 0 || s.recAmt > 0);
+  }, [displayedRecommendations, constituencyWorks, metrics.totalSanctionedAmt]);
+
+  // Disbursal & Installment Ledger line items
+  const disbursalLedger = useMemo(() => {
+    return constituencyWorks.map((work, idx) => {
+      const tr1Amt = Number(((work.sanctionedAmt || 0.8) * 0.5).toFixed(2));
+      const tr2Amt = work.status === "Completed" || (work.physicalProgress || 0) >= 50
+        ? Number(((work.sanctionedAmt || 0.8) * 0.5).toFixed(2))
+        : 0;
+      const ucStatus = work.status === "Completed" 
+        ? "Audited & Verified (SNA)" 
+        : (work.physicalProgress || 0) >= 60 
+        ? "Submitted Under Review" 
+        : "Pending 80% Milestone";
+
+      return {
+        voucherNo: `AS/SNA/${constituencyCode}/${2024}-${(idx + 1).toString().padStart(3, "0")}`,
+        workId: work.id,
+        workTitle: work.title,
+        agency: work.agency || "Public Works Department",
+        sanctionDate: work.dateSanctioned || "2024-03-15",
+        sanctionedAmt: work.sanctionedAmt,
+        tranche1Amt: tr1Amt,
+        tranche2Amt: tr2Amt,
+        totalDisbursed: Number((tr1Amt + tr2Amt).toFixed(2)),
+        expenditure: work.expenditureAmt,
+        ucStatus,
+        pfmsRef: `PFMS-E-ADV-${constituencyCode.slice(0, 4)}-${98234 + idx * 17}`,
+        status: work.status,
+        originalWork: work
+      };
+    });
+  }, [constituencyWorks, constituencyCode]);
+
+  // Filtered recommendations list (including initial demo data)
   const filteredRecommendations = useMemo(() => {
-    return recommendations.filter((r) => {
+    return displayedRecommendations.filter((r) => {
       if (selectedCategoryFilter !== "all" && r.category !== selectedCategoryFilter) return false;
       if (selectedStatusFilter !== "all" && r.status !== selectedStatusFilter) return false;
       if (searchQuery.trim()) {
@@ -128,7 +289,7 @@ export const MPDashboard: React.FC = () => {
       }
       return true;
     });
-  }, [recommendations, selectedCategoryFilter, selectedStatusFilter, searchQuery]);
+  }, [displayedRecommendations, selectedCategoryFilter, selectedStatusFilter, searchQuery]);
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)" }}>
@@ -161,7 +322,7 @@ export const MPDashboard: React.FC = () => {
         <div 
           style={{ 
             background: "var(--gov-header)", 
-            color: "#ffffff", 
+            color: "var(--text-white)", 
             padding: "20px 24px", 
             borderRadius: "var(--radius-sm)", 
             border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -173,14 +334,18 @@ export const MPDashboard: React.FC = () => {
           }}
         >
           <div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--text-white)", margin: "0 0 6px 0" }}>
               {mpName} — {constituency} Constituency ({constituencyCode})
             </h2>
             <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
               Recommend constituency development projects, track sanction approvals, and monitor work execution.
             </p>
           </div>
-
+          <select className="gov-select" style={{ width: "140px", marginRight: "8px" }} value={selectedMP} onChange={(e) => setSelectedMP(e.target.value)}>
+            <option value="Pune">Pune</option>
+            <option value="Varanasi">Varanasi</option>
+            <option value="New Delhi">New Delhi</option>
+          </select>
           <Button 
             variant="primary" 
             size="lg" 
@@ -266,7 +431,7 @@ export const MPDashboard: React.FC = () => {
             style={{ display: "flex", alignItems: "center", gap: "6px" }}
           >
             <Landmark size={15} />
-            <span>My MP Recommendations ({recommendations.length})</span>
+            <span>My MP Recommendations ({displayedRecommendations.length})</span>
           </button>
 
           <button
@@ -279,12 +444,21 @@ export const MPDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveTab("fund_details")}
+            className={`gov-tab ${activeTab === "fund_details" ? "active" : ""}`}
+            style={{ display: "flex", alignItems: "center", gap: "6px" }}
+          >
+            <Wallet size={15} />
+            <span>Fund Flow & Financial Ledger</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("citizen_reports")}
             className={`gov-tab ${activeTab === "citizen_reports" ? "active" : ""}`}
             style={{ display: "flex", alignItems: "center", gap: "6px" }}
           >
             <UserCheck size={15} />
-            <span>Citizen Public Reports ({citizenGrievances.length})</span>
+            <span>Citizen Public Reports ({filteredCitizenIssues.length})</span>
           </button>
 
           <button
@@ -348,7 +522,7 @@ export const MPDashboard: React.FC = () => {
               </div>
 
               <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                Showing <strong>{filteredRecommendations.length}</strong> of <strong>{recommendations.length}</strong> recommendations
+                Showing <strong>{filteredRecommendations.length}</strong> of <strong>{displayedRecommendations.length}</strong> recommendations
               </div>
             </div>
 
@@ -365,23 +539,32 @@ export const MPDashboard: React.FC = () => {
                     <th style={{ padding: "10px 12px" }}>Date Proposed</th>
                     <th style={{ padding: "10px 12px" }}>Status</th>
                     <th style={{ padding: "10px 12px" }}>District Status & Notes</th>
+                    <th style={{ padding: "10px 12px", textAlign: "center" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRecommendations.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "var(--text-muted)" }}>
+                      <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "var(--text-muted)" }}>
                         No work recommendations found matching your criteria.
                       </td>
                     </tr>
                   ) : (
                     filteredRecommendations.map((rec) => (
-                      <tr key={rec.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                      <tr 
+                        key={rec.id} 
+                        onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))}
+                        style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
+                        title="Click to inspect all project details and dossier"
+                      >
                         <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
                           {rec.id}
                         </td>
                         <td style={{ padding: "10px 12px", maxWidth: "280px" }}>
-                          <div style={{ fontWeight: 700, color: "var(--text-main)" }}>{rec.title}</div>
+                          <div style={{ fontWeight: 700, color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>{rec.title}</span>
+                            <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
+                          </div>
                           <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>{rec.justification}</div>
                           {rec.citizenRequestId && (
                             <span className="gov-badge gov-badge-info" style={{ fontSize: "0.64rem", marginTop: "4px", display: "inline-block" }}>
@@ -409,6 +592,16 @@ export const MPDashboard: React.FC = () => {
                         </td>
                         <td style={{ padding: "10px 12px", fontSize: "0.76rem", color: "var(--text-body)", maxWidth: "220px" }}>
                           {rec.districtNotes || "Under review by District Administration"}
+                        </td>
+                        <td style={{ padding: "10px 12px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))} 
+                            icon={<Eye size={12} />}
+                          >
+                            Inspect
+                          </Button>
                         </td>
                       </tr>
                     ))
@@ -438,12 +631,20 @@ export const MPDashboard: React.FC = () => {
                 </thead>
                 <tbody>
                   {constituencyWorks.map((work) => (
-                    <tr key={work.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                      <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700 }}>
+                    <tr 
+                      key={work.id} 
+                      onClick={() => setSelectedWorkForDetail(work)}
+                      style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
+                      title="Click on project to view full official dossier and details"
+                    >
+                      <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
                         {work.id}
                       </td>
                       <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                        {work.title}
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span>{work.title}</span>
+                          <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
+                        </div>
                         <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 400 }}>
                           {work.district}, {work.state} | Agency: {work.agency}
                         </div>
@@ -471,7 +672,7 @@ export const MPDashboard: React.FC = () => {
                           {work.status.toUpperCase()}
                         </span>
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: "flex", gap: "6px" }}>
                           <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
                             Inspect
@@ -489,7 +690,369 @@ export const MPDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: CITIZEN REPORTS */}
+        {/* TAB 3: DETAILED FUND RELATED INFORMATION & DISBURSAL LEDGER */}
+        {activeTab === "fund_details" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            
+            {/* Header / Context Banner */}
+            <div className="gov-card" style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderLeft: "4px solid var(--gov-primary)" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span className="gov-badge gov-badge-info">e-SAKSHI WEB-FUND FLOW</span>
+                  <span style={{ fontSize: "0.8rem", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
+                    SNA-PFMS: {constituencyCode}
+                  </span>
+                </div>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--gov-primary)", margin: "0 0 4px 0" }}>
+                  Constituency Financial Ledger & Central Fund Flow Analytics
+                </h3>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
+                  Live financial tracking for <strong>{constituency}</strong> | Hon'ble MP: <strong>{mpName}</strong> | District: <strong>{district}</strong>
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <Button variant="secondary" size="sm" onClick={() => window.print()} icon={<FileText size={13} />}>
+                  Print Statement
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setIsPolicyOpen(true)} icon={<Landmark size={13} />}>
+                  e-SAKSHI Guidelines
+                </Button>
+              </div>
+            </div>
+
+            {/* Financial Cap & KPI Breakdown Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+              <div className="gov-card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                  Annual Entitlement (FY 24-25)
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--gov-primary)", marginTop: "2px" }}>
+                  ₹{metrics.totalEntitlement.toFixed(2)} Cr
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  5-Yr Term Cap: <strong>₹{metrics.tenureEntitlement.toFixed(2)} Cr</strong>
+                </div>
+              </div>
+
+              <div className="gov-card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                  Total Proposed Outlay
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--gov-primary)", marginTop: "2px" }}>
+                  ₹{metrics.totalRecommendedAmt.toFixed(2)} Cr
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  {displayedRecommendations.length} Works Recommended by MP
+                </div>
+              </div>
+
+              <div className="gov-card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                  Administratively Sanctioned
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--status-info-text)", marginTop: "2px" }}>
+                  ₹{metrics.totalSanctionedAmt.toFixed(2)} Cr
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Fund Utilization: <strong>{metrics.utilizationRate}%</strong> of annual cap
+                </div>
+              </div>
+
+              <div className="gov-card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                  Disbursed from SNA
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--status-info-text)", marginTop: "2px" }}>
+                  ₹{metrics.totalDisbursed.toFixed(2)} Cr
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  PFMS Transferred to Executing Agencies
+                </div>
+              </div>
+
+              <div className="gov-card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                  Cumulative Ground Spend
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--status-success-text)", marginTop: "2px" }}>
+                  ₹{metrics.totalExpenditure.toFixed(2)} Cr
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Vouched Ground Progress
+                </div>
+              </div>
+
+              <div className="gov-card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                  Committed SNA Balance
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--gov-primary)", marginTop: "2px" }}>
+                  ₹{metrics.unspentInSNA.toFixed(2)} Cr
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Remaining in Tranche Pipeline
+                </div>
+              </div>
+
+              <div className="gov-card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                  Uncommitted Headroom
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: metrics.uncommittedBalance > 0 ? "var(--gov-primary)" : "var(--status-danger-text)", marginTop: "2px" }}>
+                  ₹{metrics.uncommittedBalance.toFixed(2)} Cr
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Available to Sanction in FY 24-25
+                </div>
+              </div>
+
+              <div className="gov-card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                  Accrued Treasury Interest
+                </div>
+                <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--text-muted)", marginTop: "2px" }}>
+                  ₹0.18 Cr
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Remitted to CFI via Bharatkosh
+                </div>
+              </div>
+            </div>
+
+            {/* e-SAKSHI Web-Fund Flow 4-Stage Architecture Diagram */}
+            <div className="gov-card" style={{ padding: "16px 20px" }}>
+              <h4 style={{ fontSize: "0.96rem", fontWeight: 800, color: "var(--gov-primary)", marginBottom: "4px" }}>
+                e-SAKSHI Central-to-District Real-Time Web Fund Architecture
+              </h4>
+              <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "14px" }}>
+                Under revised guidelines effective 1st April 2023, physical checks are eliminated and funds flow electronically through PFMS Zero-Balance Virtual Accounts.
+              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+                
+                <div style={{ background: "var(--bg-surface-subtle)", padding: "12px 14px", borderRadius: "var(--radius-xs)", border: "1px solid var(--border-main)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <span className="gov-badge gov-badge-info" style={{ fontSize: "0.68rem" }}>STAGE 1</span>
+                    <Landmark size={14} color="var(--gov-primary)" />
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "var(--text-main)" }}>Central Ministry (MoSPI)</div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px", lineHeight: "1.35" }}>
+                    Annual entitlement ₹5.00 Cr sanctioned and credited electronically into the State Nodal Account (SNA).
+                  </div>
+                </div>
+
+                <div style={{ background: "var(--bg-surface-subtle)", padding: "12px 14px", borderRadius: "var(--radius-xs)", border: "1px solid var(--border-main)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <span className="gov-badge gov-badge-info" style={{ fontSize: "0.68rem" }}>STAGE 2</span>
+                    <Wallet size={14} color="var(--gov-primary)" />
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "var(--text-main)" }}>State Nodal Account (SNA)</div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px", lineHeight: "1.35" }}>
+                    Virtual PFMS sub-ledger maintained without idle parking; interest earned reconciled semi-annually.
+                  </div>
+                </div>
+
+                <div style={{ background: "var(--bg-surface-subtle)", padding: "12px 14px", borderRadius: "var(--radius-xs)", border: "1px solid var(--border-main)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <span className="gov-badge gov-badge-info" style={{ fontSize: "0.68rem" }}>STAGE 3</span>
+                    <CheckCircle2 size={14} color="#10b981" />
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "var(--text-main)" }}>District Authority / Collector</div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px", lineHeight: "1.35" }}>
+                    Administrative sanction issued; 50% 1st Tranche advance released immediately to implementing agency.
+                  </div>
+                </div>
+
+                <div style={{ background: "var(--bg-surface-subtle)", padding: "12px 14px", borderRadius: "var(--radius-xs)", border: "1px solid var(--border-main)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <span className="gov-badge gov-badge-info" style={{ fontSize: "0.68rem" }}>STAGE 4</span>
+                    <TrendingUp size={14} color="#10b981" />
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "var(--text-main)" }}>Agency & Vendor Settlement</div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px", lineHeight: "1.35" }}>
+                    2nd Tranche (50%) released upon 80% physical progress + verified Utilization Certificate (UC) upload.
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Sector-wise Allocation & Ground Spend Breakdown */}
+            <div className="gov-card" style={{ padding: "16px 20px" }}>
+              <h4 style={{ fontSize: "0.96rem", fontWeight: 800, color: "var(--gov-primary)", marginBottom: "4px" }}>
+                Sector-wise Fund Allocation & Expenditure Trajectory
+              </h4>
+              <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "14px" }}>
+                Analysis of MP priority areas across essential infrastructure sectors in {constituency}.
+              </p>
+
+              <div style={{ overflowX: "auto" }}>
+                <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
+                      <th style={{ padding: "10px 12px" }}>Development Sector</th>
+                      <th style={{ padding: "10px 12px", textAlign: "center" }}>Works Count</th>
+                      <th style={{ padding: "10px 12px" }}>Recommended Outlay</th>
+                      <th style={{ padding: "10px 12px" }}>Sanctioned Cost</th>
+                      <th style={{ padding: "10px 12px" }}>Ground Expenditure</th>
+                      <th style={{ padding: "10px 12px", minWidth: "160px" }}>Budget Utilization</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sectorFundDistribution.map((item) => {
+                      const utilPct = item.sancAmt > 0 ? Math.min(100, Math.round((item.expAmt / item.sancAmt) * 100)) : 0;
+                      return (
+                        <tr key={item.sector} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                          <td style={{ padding: "10px 12px", fontWeight: 700 }}>
+                            <span className="gov-badge gov-badge-neutral">{item.sector}</span>
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 600 }}>
+                            {item.worksCount}
+                          </td>
+                          <td style={{ padding: "10px 12px", fontWeight: 600, color: "var(--gov-primary)" }}>
+                            ₹{item.recAmt.toFixed(2)} Cr
+                          </td>
+                          <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--status-info-text)" }}>
+                            ₹{item.sancAmt.toFixed(2)} Cr
+                          </td>
+                          <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--status-success-text)" }}>
+                            ₹{item.expAmt.toFixed(2)} Cr
+                          </td>
+                          <td style={{ padding: "10px 12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                                <div style={{ width: `${utilPct}%`, height: "100%", background: utilPct >= 80 ? "#10b981" : "#3b82f6" }} />
+                              </div>
+                              <span style={{ fontSize: "0.74rem", fontWeight: 700 }}>{utilPct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Detailed Disbursal & Installment Ledger */}
+            <div className="gov-card" style={{ padding: "16px 20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                <div>
+                  <h4 style={{ fontSize: "0.96rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0 }}>
+                    Constituency Project Disbursal & Installment Ledger
+                  </h4>
+                  <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
+                    Showing {disbursalLedger.length} active project sanction vouchers in {constituency}
+                  </p>
+                </div>
+                <span className="gov-badge gov-badge-info">PFMS Direct Electronic Advice Verified</span>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
+                      <th style={{ padding: "10px 12px" }}>Sanction Voucher No.</th>
+                      <th style={{ padding: "10px 12px" }}>Project Name & Agency</th>
+                      <th style={{ padding: "10px 12px" }}>Sanctioned Cost</th>
+                      <th style={{ padding: "10px 12px" }}>Tranche 1 (50%)</th>
+                      <th style={{ padding: "10px 12px" }}>Tranche 2 (50%)</th>
+                      <th style={{ padding: "10px 12px" }}>Total Released</th>
+                      <th style={{ padding: "10px 12px" }}>UC Compliance</th>
+                      <th style={{ padding: "10px 12px", textAlign: "center" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {disbursalLedger.map((row) => (
+                      <tr 
+                        key={row.voucherNo} 
+                        onClick={() => setSelectedWorkForDetail(row.originalWork)}
+                        style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
+                        title="Click to inspect full project dossier"
+                      >
+                        <td style={{ padding: "10px 12px" }}>
+                          <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.78rem", color: "var(--gov-primary)" }}>
+                            {row.voucherNo}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                            {row.pfmsRef}
+                          </div>
+                        </td>
+                        <td style={{ padding: "10px 12px", maxWidth: "260px" }}>
+                          <div style={{ fontWeight: 700, color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>{row.workTitle}</span>
+                            <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                            Agency: <strong>{row.agency}</strong> | Sanctioned: {row.sanctionDate}
+                          </div>
+                        </td>
+                        <td style={{ padding: "10px 12px", fontWeight: 700 }}>
+                          ₹{row.sanctionedAmt.toFixed(2)} Cr
+                        </td>
+                        <td style={{ padding: "10px 12px", color: "var(--status-info-text)", fontWeight: 600 }}>
+                          ₹{row.tranche1Amt.toFixed(2)} Cr
+                        </td>
+                        <td style={{ padding: "10px 12px", color: row.tranche2Amt > 0 ? "var(--status-success-text)" : "var(--text-muted)", fontWeight: 600 }}>
+                          {row.tranche2Amt > 0 ? `₹${row.tranche2Amt.toFixed(2)} Cr` : "Pending Milestone"}
+                        </td>
+                        <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--gov-primary)" }}>
+                          ₹{row.totalDisbursed.toFixed(2)} Cr
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span className={`gov-badge ${
+                            row.ucStatus.includes("Audited") 
+                              ? "gov-badge-success" 
+                              : row.ucStatus.includes("Review") 
+                              ? "gov-badge-warning" 
+                              : "gov-badge-neutral"
+                          }`}>
+                            {row.ucStatus}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 12px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            onClick={() => setSelectedWorkForDetail(row.originalWork)} 
+                            icon={<Eye size={12} />}
+                          >
+                            Inspect
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Statutory Treasury Guidelines Banner */}
+            <div className="gov-card" style={{ padding: "16px 20px", background: "var(--bg-surface-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <CheckCircle2 size={16} color="#10b981" />
+                <h4 style={{ fontSize: "0.92rem", fontWeight: 800, margin: 0, color: "var(--text-main)" }}>
+                  Statutory e-SAKSHI Treasury & Audit Rules Reference
+                </h4>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px", fontSize: "0.78rem", color: "var(--text-body)", lineHeight: "1.45" }}>
+                <div>
+                  <strong>• Non-Lapsable Fund Nature:</strong> MPLADS funds are non-lapsable. Unspent balances from FY 2024-25 carry over automatically to the subsequent financial year within the MP's tenure.
+                </div>
+                <div>
+                  <strong>• 1-Year Execution Mandate:</strong> Works must be physically executed and completed within 12 calendar months of administrative sanction date as stipulated under Clause 4.2.
+                </div>
+                <div>
+                  <strong>• Zero Balance Accounts (ZBA):</strong> Implementing agencies operate virtual sub-accounts under the State Nodal Account (SNA), ensuring no idle public funds remain unmonitored.
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 4: CITIZEN REPORTS */}
         {activeTab === "citizen_reports" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <div className="gov-card" style={{ padding: "14px 16px" }}>
@@ -501,7 +1064,7 @@ export const MPDashboard: React.FC = () => {
               </p>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {citizenGrievances.map((issue) => (
+                {filteredCitizenIssues.map((issue) => (
                   <div 
                     key={issue.id} 
                     style={{ 
@@ -562,7 +1125,9 @@ export const MPDashboard: React.FC = () => {
               <div 
                 key={work.id} 
                 className="gov-card" 
-                style={{ padding: "14px 16px", borderLeft: "4px solid var(--status-danger-text)" }}
+                onClick={() => setSelectedWorkForDetail(work)}
+                style={{ padding: "14px 16px", borderLeft: "4px solid var(--status-danger-text)", cursor: "pointer" }}
+                title="Click to inspect full AI anomaly dossier"
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
                   <div>

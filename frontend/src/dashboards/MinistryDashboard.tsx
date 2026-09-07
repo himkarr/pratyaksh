@@ -151,7 +151,7 @@ export const MinistryDashboard: React.FC = () => {
         <div 
           style={{ 
             background: "linear-gradient(135deg, #0a2540 0%, #0f2942 60%, #1e3a5f 100%)", 
-            color: "#ffffff", 
+            color: "var(--text-white)", 
             padding: "22px 26px", 
             borderRadius: "var(--radius-sm)", 
             border: "1px solid rgba(255, 255, 255, 0.12)",
@@ -164,7 +164,7 @@ export const MinistryDashboard: React.FC = () => {
           }}
         >
           <div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--text-white)", margin: "0 0 6px 0" }}>
               National MPLADS Decision Support System
             </h2>
             <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "700px", lineHeight: "1.4", margin: 0 }}>

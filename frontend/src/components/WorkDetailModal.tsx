@@ -77,7 +77,7 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
         <div style={{
           padding: '14px 20px',
           background: 'var(--gov-header)',
-          color: '#ffffff',
+          color: 'var(--text-white)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -93,11 +93,11 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <FileText size={18} color="#ffffff" />
+              <FileText size={18} color="var(--text-white)" />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px', margin: 0 }}>
+                <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-white)', letterSpacing: '-0.2px', margin: 0 }}>
                   Official Work Dossier & Inspection Record
                 </h3>
                 <span className="gov-badge gov-badge-info" style={{ fontSize: '0.66rem' }}>
@@ -119,7 +119,7 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
                 fontSize: '0.74rem',
                 padding: '4px 8px',
                 background: 'rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
+                color: 'var(--text-white)',
                 border: '1px solid rgba(255, 255, 255, 0.2)'
               }}
               title="Print Dossier (Prints only this selected document)"
@@ -134,7 +134,7 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
               style={{
                 background: 'rgba(255, 255, 255, 0.15)',
                 border: 'none',
-                color: '#ffffff',
+                color: 'var(--text-white)',
                 padding: '5px',
                 borderRadius: 'var(--radius-xs)',
                 cursor: 'pointer'
@@ -190,6 +190,27 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
                 Status: {(work.status || 'Ongoing').toUpperCase()}
               </span>
             </div>
+
+            {(work.justification || work.districtNotes || work.citizenRequestId) && (
+              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--border-main)', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem' }}>
+                {work.citizenRequestId && (
+                  <div>
+                    <span className="gov-badge gov-badge-info" style={{ marginRight: '6px' }}>Public Representation</span>
+                    Linked Citizen Grievance ID: <b>#{work.citizenRequestId}</b>
+                  </div>
+                )}
+                {work.justification && (
+                  <div style={{ color: 'var(--text-body)' }}>
+                    <b>Public Justification & Need:</b> {work.justification}
+                  </div>
+                )}
+                {work.districtNotes && (
+                  <div style={{ color: 'var(--text-muted)' }}>
+                    <b>Nodal Authority Scrutiny Notes:</b> {work.districtNotes}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Financial Breakdown Section */}
