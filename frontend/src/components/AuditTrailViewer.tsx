@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, CheckCircle2, AlertTriangle, RefreshCw, Lock, Eye, X, FileCode, Check } from 'lucide-react';
 import { useRole } from '../auth/roleContext';
 import { apiClient } from '../api/client';
+import { useBodyScrollLock } from '../utils/scrollLock';
+
+import officialDbExport from '../data/officialDatabaseExport.json';
 
 interface AuditEvent {
   id: string;
@@ -13,44 +16,29 @@ interface AuditEvent {
   hash: string;
 }
 
-const SEEDED_AUDIT_LOG: AuditEvent[] = [
-  {
-    id: "evt-001",
-    timestamp: "2024-03-01T10:15:30Z",
-    actor: "district_pune@gov.in",
-    action: "SANCTION_APPROVED",
-    details: "Administrative sanction granted for Rural Water Supply (MPLAD-2024-001)",
-    prev_hash: "0000000000000000000000000000000000000000000000000000000000000000",
-    hash: "a4f89d31b2c45e6789f0123456789abcdef0123456789abcdef0123456789abc"
-  },
-  {
-    id: "evt-002",
-    timestamp: "2024-03-15T14:22:10Z",
-    actor: "ai-ml-engine@internal",
-    action: "ANOMALY_FLAG_RAISED",
-    details: "Rule spend_spike_after_inactivity triggered for project MPLAD-2024-002",
-    prev_hash: "a4f89d31b2c45e6789f0123456789abcdef0123456789abcdef0123456789abc",
-    hash: "b8c91024e1f3a5b7c9d0123456789abcdef0123456789abcdef0123456789def"
-  },
-  {
-    id: "evt-003",
-    timestamp: "2024-04-02T11:05:44Z",
-    actor: "state_nodal_mh@gov.in",
-    action: "INSPECTION_ORDERED",
-    details: "Physical verification requested for Community Health Centre",
-    prev_hash: "b8c91024e1f3a5b7c9d0123456789abcdef0123456789abcdef0123456789def",
-    hash: "c9d01234e5f6a7b8c9d0123456789abcdef0123456789abcdef0123456789012"
-  },
-  {
-    id: "evt-004",
-    timestamp: "2024-05-18T16:40:00Z",
-    actor: "mospi_audit@gov.in",
-    action: "ANNUAL_AUDIT_VERIFIED",
-    details: "Cryptographic hash chain validated across 142 constituency records",
-    prev_hash: "c9d01234e5f6a7b8c9d0123456789abcdef0123456789abcdef0123456789012",
-    hash: "d0e12345f6a7b8c9d0e123456789abcdef0123456789abcdef0123456789345"
-  }
-];
+const OFFICIAL_DB_LOGS: AuditEvent[] = (officialDbExport.audit_logs && officialDbExport.audit_logs.length > 0)
+  ? officialDbExport.audit_logs.map((item: any, idx: number) => ({
+      id: item.log_id ? `LOG-${item.log_id.slice(0, 8).toUpperCase()}` : `evt-${idx + 1}`,
+      timestamp: item.timestamp,
+      actor: item.user_id ? `admin-${item.user_id.slice(0, 6)}@mospi.gov.in` : "ai-ml-engine@internal.gov.in",
+      action: item.action || "PROJECT_AI_ANALYSIS_EXECUTED",
+      details: `${item.entity_type.toUpperCase()} ID: ${item.entity_id} | Risk Score: ${item.new_value?.data?.risk_score ?? 0} | Priority: ${item.new_value?.data?.priority_level ?? 'Standard'}`,
+      prev_hash: item.new_value?.prev_hash || "0000000000000000000000000000000000000000000000000000000000000000",
+      hash: item.new_value?.this_hash || "5dc8f7f1ba5a99eb3a306bb136e77ae26a2c672f8bbb50961280ed8e910b29ff"
+    }))
+  : [
+      {
+        id: "evt-001",
+        timestamp: "2024-03-01T10:15:30Z",
+        actor: "district_pune@gov.in",
+        action: "SANCTION_APPROVED",
+        details: "Administrative sanction granted for Rural Water Supply (MPLAD-2024-001)",
+        prev_hash: "0000000000000000000000000000000000000000000000000000000000000000",
+        hash: "a4f89d31b2c45e6789f0123456789abcdef0123456789abcdef0123456789abc"
+      }
+    ];
+
+const SEEDED_AUDIT_LOG: AuditEvent[] = OFFICIAL_DB_LOGS;
 
 export function AuditTrailViewer() {
   const { token, user } = useRole();
@@ -60,6 +48,8 @@ export function AuditTrailViewer() {
   );
   const [events, setEvents] = useState<AuditEvent[]>(SEEDED_AUDIT_LOG);
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
+
+  useBodyScrollLock(!!selectedEvent);
 
   // Fetch live audit events if user is Ministry and has a token
   useEffect(() => {
@@ -215,7 +205,15 @@ export function AuditTrailViewer() {
         <div className="gov-modal-backdrop" onClick={() => setSelectedEvent(null)}>
           <div
             className="gov-modal-content"
-            style={{ maxWidth: '580px', padding: '0' }}
+            style={{ 
+              maxWidth: '580px', 
+              maxHeight: 'min(90vh, 640px)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              padding: '0',
+              overscrollBehavior: 'contain'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{
@@ -225,7 +223,8 @@ export function AuditTrailViewer() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
+              borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+              flexShrink: 0
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileCode size={16} color="#fbbf24" />
@@ -241,7 +240,20 @@ export function AuditTrailViewer() {
               </button>
             </div>
 
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-surface)' }}>
+            <div 
+              className="gov-modal-body"
+              style={{ 
+                padding: '16px', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '12px', 
+                background: 'var(--bg-surface)',
+                overflowY: 'auto',
+                flex: '1 1 auto',
+                minHeight: 0,
+                overscrollBehavior: 'contain'
+              }}
+            >
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div style={{ background: 'var(--bg-surface-subtle)', padding: '8px 10px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-light)' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700 }}>Actor ID</div>

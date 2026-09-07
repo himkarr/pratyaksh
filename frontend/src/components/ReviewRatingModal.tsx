@@ -19,6 +19,7 @@
 import React, { useState } from 'react';
 import { X, Star, MessageSquare, Send, CheckCircle, UserCheck } from 'lucide-react';
 import { WorkItem, WorkReview } from '../data/mpladsData';
+import { useBodyScrollLock } from '../utils/scrollLock';
 
 interface ReviewRatingModalProps {
   work: WorkItem | null;
@@ -27,6 +28,8 @@ interface ReviewRatingModalProps {
 }
 
 export function ReviewRatingModal({ work, onClose, onAddReview }: ReviewRatingModalProps) {
+  useBodyScrollLock(!!work);
+
   if (!work) return null;
 
   // Form input state
@@ -44,7 +47,7 @@ export function ReviewRatingModal({ work, onClose, onAddReview }: ReviewRatingMo
       id: `rev-${Date.now()}`,
       author: userName.trim(),
       rating: userRating,
-      date: new Date().toISOString().slice(0, 10),
+      date: new Date().toISOString().split('T')[0],
       comment: comment.trim(),
       verified: true
     };
@@ -59,7 +62,15 @@ export function ReviewRatingModal({ work, onClose, onAddReview }: ReviewRatingMo
     <div className="gov-modal-backdrop" onClick={onClose}>
       <div
         className="gov-modal-content"
-        style={{ maxWidth: '650px', padding: '0' }}
+        style={{ 
+          maxWidth: '680px', 
+          maxHeight: 'min(90vh, 760px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          padding: '0',
+          overscrollBehavior: 'contain'
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -69,7 +80,8 @@ export function ReviewRatingModal({ work, onClose, onAddReview }: ReviewRatingMo
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'var(--bg-surface-subtle)'
+          background: 'var(--bg-surface-subtle)',
+          flexShrink: 0
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
@@ -89,7 +101,19 @@ export function ReviewRatingModal({ work, onClose, onAddReview }: ReviewRatingMo
         </div>
 
         {/* Body */}
-        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div 
+          className="gov-modal-body"
+          style={{ 
+            padding: '16px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '14px',
+            overflowY: 'auto',
+            flex: '1 1 auto',
+            minHeight: 0,
+            overscrollBehavior: 'contain'
+          }}
+        >
           {/* Average Rating Banner */}
           <div style={{
             display: 'flex',

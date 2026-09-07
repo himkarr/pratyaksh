@@ -6,8 +6,8 @@
  * 
  * DOMAIN CONTEXT & PURPOSE:
  * -------------------------
- * Implements the role-based authentication and demo perspective switching gateway
- * conforming to the 4 administrative governance tiers:
+ * Implements the role-based authentication and stakeholder perspective switching gateway
+ * conforming to administrative governance tiers:
  * 
  * 1. Member of Parliament (`mp`):
  *    - Constituency level scope (propose works, inspect execution pace).
@@ -20,20 +20,21 @@
  * 
  * BACKEND INTEGRATION:
  * - Submits credentials to `POST /auth/login` to obtain an authorized JWT bearer token.
- * - Gracefully falls back to local authenticated state if backend is in offline demo mode.
+ * - Gracefully falls back to local authenticated state if backend is offline.
  */
 
 import React, { useState, useEffect } from 'react';
 import { 
   X, Lock, KeyRound, ShieldAlert, CheckCircle2, UserCheck, User,
-  Landmark, Building2, MapPin, Award, ArrowRight 
+  Landmark, Building2, MapPin, Award, ArrowRight, RefreshCw, Shield 
 } from 'lucide-react';
 import { useRole, Role } from '../auth/roleContext';
-
+import { useBodyScrollLock } from '../utils/scrollLock';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialRole?: Role;
 }
 
 const SEEDED_CREDENTIALS: Record<Role, { 
@@ -45,56 +46,56 @@ const SEEDED_CREDENTIALS: Record<Role, {
   icon: any;
 }> = {
   citizen: {
-    email: "citizen.pune@gmail.com",
-    pass: "demo1234",
+    email: "citizen@sapphire.gov.in",
+    pass: "Mplads@2026!",
     label: "Citizen Portal User",
     scopeLabel: "Public Citizen Scope",
     scopeDesc: "Submit local issues, track project status, and view constituency MP works.",
     icon: User
   },
   mp: {
-    email: "mp_demo@aqua.test",
-    pass: "demo1234",
+    email: "mp@sapphire.gov.in",
+    pass: "Mplads@2026!",
     label: "Hon'ble Member of Parliament",
-    scopeLabel: "Constituency Scope (AST-01)",
+    scopeLabel: "Constituency Scope (Andaman / Anantapur / Varanasi)",
     scopeDesc: "Recommend local area works, monitor physical execution & fund burn rate.",
     icon: Landmark
   },
   contractor: {
-    email: "contractor.infra@agency.gov.in",
-    pass: "demo1234",
+    email: "vendor@sapphire.gov.in",
+    pass: "Mplads@2026!",
     label: "Contractor / Implementing Agency",
     scopeLabel: "Project Execution Scope",
     scopeDesc: "Update construction progress, upload evidence photos, and submit completion certificates.",
     icon: Building2
   },
   field_officer: {
-    email: "field.pune@nic.in",
-    pass: "demo1234",
+    email: "fieldofficer@sapphire.gov.in",
+    pass: "Mplads@2026!",
     label: "Field Inspection Officer",
     scopeLabel: "Ground Verification Scope",
     scopeDesc: "Conduct physical verification of high-risk projects, capture geotagged evidence, and submit verification reports.",
     icon: MapPin
   },
   district: {
-    email: "district_demo@aqua.test",
-    pass: "demo1234",
+    email: "district@sapphire.gov.in",
+    pass: "Mplads@2026!",
     label: "District Authority / DM",
     scopeLabel: "District Implementation Scope",
     scopeDesc: "Issue administrative sanctions, verify geotagged milestone photos, release funds.",
     icon: Building2
   },
   state_nodal: {
-    email: "state_demo@aqua.test",
-    pass: "demo1234",
+    email: "statenodal@sapphire.gov.in",
+    pass: "Mplads@2026!",
     label: "State Nodal Department",
     scopeLabel: "Statewide Governance Scope",
     scopeDesc: "Monitor cross-district progress, state fund utilization & 1-year compliance.",
     icon: MapPin
   },
   ministry: {
-    email: "ministry_demo@aqua.test",
-    pass: "demo1234",
+    email: "ministry@sapphire.gov.in",
+    pass: "Mplads@2026!",
     label: "Ministry of Statistics (MoSPI)",
     scopeLabel: "Central Apex Scope & Cryptographic Audit",
     scopeDesc: "National scheme outlay, AI anomaly fraud detection & tamper-evident SHA-256 audit ledger.",
@@ -102,23 +103,49 @@ const SEEDED_CREDENTIALS: Record<Role, {
   }
 };
 
+export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
+  useBodyScrollLock(isOpen);
 
-export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   if (!isOpen) return null;
 
-  const { user, setRole, login } = useRole();
-  const [selectedRole, setSelectedRole] = useState<Role>(user.role);
-  const [email, setEmail] = useState(SEEDED_CREDENTIALS[user.role]?.email || 'mp_demo@aqua.test');
-  const [password, setPassword] = useState('demo1234');
+  const { user, login, setRole } = useRole();
+  const [selectedRole, setSelectedRole] = useState<Role>(initialRole || user.role);
+  const [email, setEmail] = useState(SEEDED_CREDENTIALS[initialRole || user.role]?.email || 'mp@sapphire.gov.in');
+  const [password, setPassword] = useState('Mplads@2026!');
+  const [captchaCode, setCaptchaCode] = useState('k9x3b');
+  const [captchaInput, setCaptchaInput] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const generateCaptcha = () => {
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+    let code = "";
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+    setCaptchaInput("");
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      generateCaptcha();
+      const roleToUse = initialRole || user.role;
+      setSelectedRole(roleToUse);
+      if (SEEDED_CREDENTIALS[roleToUse]) {
+        setEmail(SEEDED_CREDENTIALS[roleToUse].email);
+        setPassword(SEEDED_CREDENTIALS[roleToUse].pass);
+      }
+    }
+  }, [isOpen, initialRole]);
 
   useEffect(() => {
     if (SEEDED_CREDENTIALS[selectedRole]) {
       setEmail(SEEDED_CREDENTIALS[selectedRole].email);
       setPassword(SEEDED_CREDENTIALS[selectedRole].pass);
     }
+    setErrorMsg('');
   }, [selectedRole]);
 
   const handleRoleSelect = (roleId: Role) => {
@@ -128,23 +155,26 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    if (!password || password.trim().length === 0) {
+      setErrorMsg("Password is required. Please enter your departmental password.");
+      return;
+    }
+    if (captchaInput.trim().toLowerCase() !== captchaCode.toLowerCase()) {
+      setErrorMsg("Security CAPTCHA verification failed. Please check the characters and try again.");
+      generateCaptcha();
+      return;
+    }
     setIsLoading(true);
     try {
       await login(email, password);
-      setIsSuccess(true);
-      setTimeout(() => {
-        setIsSuccess(false);
-        setIsLoading(false);
-        onClose();
-      }, 700);
-    } catch {
       setRole(selectedRole);
       setIsSuccess(true);
-      setTimeout(() => {
-        setIsSuccess(false);
-        setIsLoading(false);
-        onClose();
-      }, 700);
+      setIsLoading(false);
+      onClose();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Authentication failed. Invalid password or credentials for the selected role.");
+      generateCaptcha();
+      setIsLoading(false);
     }
   };
 
@@ -153,42 +183,45 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       <div
         className="gov-modal-content"
         style={{
-          maxWidth: '520px',
+          maxWidth: '540px',
+          maxHeight: 'min(90vh, 720px)',
           padding: '0',
           borderRadius: 'var(--radius-sm)',
+          display: 'flex',
+          flexDirection: 'column',
           overflow: 'hidden',
           border: '1px solid var(--border-dark)',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+          overscrollBehavior: 'contain'
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Bar */}
+        {/* Header Bar with Official State Emblem of India */}
         <div style={{
-          padding: '14px 18px',
+          padding: '12px 18px',
           borderBottom: '1px solid var(--border-main)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           background: 'var(--gov-header)',
-          color: '#ffffff'
+          color: '#ffffff',
+          flexShrink: 0
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.15)',
-              padding: '6px',
-              borderRadius: 'var(--radius-xs)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Lock size={16} color="#ffffff" />
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img 
+              src="/assets/emblem_of_india.svg" 
+              alt="State Emblem of India" 
+              style={{ height: '38px', width: 'auto', display: 'block', objectFit: 'contain' }} 
+            />
             <div>
-              <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px' }}>
-                Stakeholder Role & Authentication
+              <div style={{ fontSize: '0.64rem', color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
+                Government of India | MoSPI
+              </div>
+              <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px', margin: 0 }}>
+                Departmental Sign In & Role Authorization
               </h3>
-              <p style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>
-                e-SAKSHI National Decision Support & RBAC Gateway
+              <p style={{ fontSize: '0.70rem', color: '#cbd5e1', margin: 0 }}>
+                e-SAKSHI Decision Support & RBAC Verification Gateway
               </p>
             </div>
           </div>
@@ -212,7 +245,17 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </div>
 
         {/* Modal Body */}
-        <div style={{ padding: '18px', background: 'var(--bg-surface)' }}>
+        <div
+          className="gov-modal-body"
+          style={{
+            padding: '18px',
+            background: 'var(--bg-surface)',
+            overflowY: 'auto',
+            flex: '1 1 auto',
+            minHeight: 0,
+            overscrollBehavior: 'contain'
+          }}
+        >
           {isSuccess ? (
             <div style={{
               padding: '30px 16px',
@@ -378,8 +421,87 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </div>
               </div>
 
+              {/* Security CAPTCHA */}
+              <div style={{
+                background: 'var(--bg-surface-subtle)',
+                border: '1px solid var(--border-main)',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-xs)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <div>
+                  <label style={{ fontSize: '0.70rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: '4px' }}>
+                    Security CAPTCHA Verification
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div 
+                      onClick={() => setCaptchaInput(captchaCode)}
+                      title="Click to auto-fill CAPTCHA code"
+                      style={{
+                        background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+                        color: '#38bdf8',
+                        fontFamily: 'monospace',
+                        fontSize: '1.05rem',
+                        fontWeight: 800,
+                        letterSpacing: '5px',
+                        padding: '5px 12px',
+                        borderRadius: '4px',
+                        userSelect: 'none',
+                        textDecoration: 'line-through',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {captchaCode}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={generateCaptcha}
+                      style={{
+                        background: 'none',
+                        border: '1px solid var(--border-light)',
+                        padding: '5px 7px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)'
+                      }}
+                      title="Refresh CAPTCHA"
+                    >
+                      <RefreshCw size={12} />
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ flex: 1, minWidth: '130px' }}>
+                  <label style={{ fontSize: '0.70rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                    Enter Code
+                  </label>
+                  <input
+                    type="text"
+                    value={captchaInput}
+                    onChange={(e) => setCaptchaInput(e.target.value)}
+                    placeholder="Enter characters"
+                    style={{
+                      width: '100%',
+                      padding: '6px 8px',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-main)',
+                      borderRadius: 'var(--radius-xs)',
+                      fontSize: '0.82rem',
+                      color: 'var(--text-main)',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                </div>
+              </div>
+
               {errorMsg && (
-                <div style={{ color: 'var(--status-danger-text)', fontSize: '0.74rem' }}>{errorMsg}</div>
+                <div style={{ color: 'var(--status-danger-text)', fontSize: '0.74rem', background: '#fef2f2', border: '1px solid #fecaca', padding: '6px 10px', borderRadius: '4px' }}>
+                  {errorMsg}
+                </div>
               )}
 
               {/* Notice */}

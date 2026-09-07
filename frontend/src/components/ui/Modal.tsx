@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
+import { useBodyScrollLock } from "../../utils/scrollLock";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export const Modal: React.FC<ModalProps> = ({
   footerActions,
   maxWidth = "600px"
 }) => {
+  useBodyScrollLock(isOpen);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -34,7 +37,14 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="gov-modal-backdrop" onClick={onClose} aria-modal="true" role="dialog">
       <div
         className="gov-modal-content"
-        style={{ maxWidth }}
+        style={{ 
+          maxWidth,
+          maxHeight: "min(90vh, 820px)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          overscrollBehavior: "contain"
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -44,7 +54,8 @@ export const Modal: React.FC<ModalProps> = ({
             background: "var(--bg-surface-subtle)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between"
+            justifyContent: "space-between",
+            flexShrink: 0
           }}
         >
           <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--gov-primary)", margin: 0 }}>
@@ -69,7 +80,18 @@ export const Modal: React.FC<ModalProps> = ({
           </button>
         </div>
 
-        <div style={{ padding: "18px" }}>{children}</div>
+        <div 
+          className="gov-modal-body"
+          style={{ 
+            padding: "18px",
+            overflowY: "auto",
+            flex: "1 1 auto",
+            minHeight: 0,
+            overscrollBehavior: "contain"
+          }}
+        >
+          {children}
+        </div>
 
         {footerActions && (
           <div
@@ -80,7 +102,8 @@ export const Modal: React.FC<ModalProps> = ({
               display: "flex",
               alignItems: "center",
               justifyContent: "flex-end",
-              gap: "10px"
+              gap: "10px",
+              flexShrink: 0
             }}
           >
             {footerActions}

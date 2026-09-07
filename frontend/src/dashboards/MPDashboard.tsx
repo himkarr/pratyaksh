@@ -20,23 +20,19 @@ import { Footer } from "../components/Footer";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { AttachmentsModal } from "../components/AttachmentsModal";
 import { PolicyModal } from "../components/PolicyModal";
+import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Card, CardHeader, CardBody } from "../components/ui";
 import { CreateRecommendationModal } from "../components/mp/CreateRecommendationModal";
 
 import { MPRecommendation, INITIAL_MP_RECOMMENDATIONS } from "../data/mpData";
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
 import { INITIAL_CITIZEN_ISSUES, CitizenIssue } from "../data/citizenData";
-import { TRANSLATIONS } from "../data/translations";
-import { useRole } from "../auth/roleContext";
+import { usePreferences } from "../context/PreferencesContext";
+import { useRole, Role } from "../auth/roleContext";
 
 export const MPDashboard: React.FC = () => {
   const { user } = useRole();
-
-  // Accessibility & Language Settings
-  const [fontScale, setFontScale] = useState<"sm" | "base" | "lg">("base");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [lang, setLang] = useState<"en" | "hi">("en");
-  const t = TRANSLATIONS[lang];
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Active Section Navigation
   const [activeTab, setActiveTab] = useState<"my_recommendations" | "constituency_works" | "citizen_reports" | "risk_alerts">("my_recommendations");
@@ -53,21 +49,30 @@ export const MPDashboard: React.FC = () => {
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
 
   // Active MP info
-  const mpName = user.name || "Murlidhar Mohol";
-  const constituency = user.constituency || "Pune";
-  const constituencyCode = user.constituency_code || "MH-PUNE-01";
-  const district = user.district || "Pune";
+  const mpName = user.name || "Hon'ble Bishnu Pada Ray (MP)";
+  const constituency = user.constituency || "Andaman and Nicobar Islands";
+  const constituencyCode = user.constituency_code || "AN-SOU-01";
+  const district = user.district || "ANDAMAN AND NICOBAR ISLANDS";
 
-  // Filtered Constituency Projects (Scoped to Pune MH-PUNE-01)
+  // Filtered Constituency Projects (Scoped to MP's official parliamentary works)
   const constituencyWorks = useMemo(() => {
-    return INITIAL_WORKS.filter((w) => w.constituency_code === constituencyCode || w.district === district);
-  }, [constituencyCode, district]);
+    const matched = INITIAL_WORKS.filter((w) => {
+      if (user.name && w.mpName && w.mpName.toLowerCase().includes("bishnu")) return true;
+      if (w.constituency_code === constituencyCode) return true;
+      if (district && w.district && (w.district.toLowerCase().includes(district.toLowerCase()) || district.toLowerCase().includes(w.district.toLowerCase()))) return true;
+      if (user.state && w.state && w.state.toLowerCase() === user.state.toLowerCase()) return true;
+      return false;
+    });
+    return matched.length > 0 ? matched : INITIAL_WORKS.slice(0, 15);
+  }, [user, constituencyCode, district]);
 
   // High Risk Projects
   const highRiskWorks = useMemo(() => {
-    return constituencyWorks.filter((w) => w.status === "Delayed" || w.financialProgress > w.physicalProgress + 20);
+    return constituencyWorks.filter((w) => w.status === "Delayed" || (w.financialProgress || 0) > (w.physicalProgress || 0) + 20);
   }, [constituencyWorks]);
 
   // Citizen Reports in Pune
@@ -88,9 +93,9 @@ export const MPDashboard: React.FC = () => {
   // Aggregated Constituency Financial Metrics
   const metrics = useMemo(() => {
     const totalEntitlement = 5.00; // ₹5.00 Cr
-    const totalRecommendedAmt = recommendations.reduce((acc, r) => acc + r.estimatedCost, 0);
+    const totalRecommendedAmt = recommendations.reduce((acc, r) => acc + (r.estimatedCost || 0), 0);
     const sanctionedRecs = recommendations.filter((r) => r.status === "SANCTIONED");
-    const totalSanctionedAmt = sanctionedRecs.reduce((acc, r) => acc + (r.sanctionedCost || r.estimatedCost), 0);
+    const totalSanctionedAmt = sanctionedRecs.reduce((acc, r) => acc + (r.sanctionedCost || r.estimatedCost || 0), 0);
     const recommendedCount = recommendations.length;
     const sanctionedCount = sanctionedRecs.length;
     const ongoingCount = constituencyWorks.filter((w) => w.status === "Ongoing").length;
@@ -116,9 +121,9 @@ export const MPDashboard: React.FC = () => {
       if (selectedStatusFilter !== "all" && r.status !== selectedStatusFilter) return false;
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchTitle = r.title.toLowerCase().includes(query);
-        const matchLoc = r.location.toLowerCase().includes(query);
-        const matchId = r.id.toLowerCase().includes(query);
+        const matchTitle = (r.title || "").toLowerCase().includes(query);
+        const matchLoc = (r.location || "").toLowerCase().includes(query);
+        const matchId = (r.id || "").toLowerCase().includes(query);
         if (!matchTitle && !matchLoc && !matchId) return false;
       }
       return true;
@@ -139,10 +144,13 @@ export const MPDashboard: React.FC = () => {
       />
 
       <Navbar
-        activeTab="dashboard"
-        setActiveTab={() => {}}
+        activeTab={activeTab === "my_recommendations" ? "dashboard" : "home"}
+        setActiveTab={() => setActiveTab("my_recommendations")}
         onOpenPolicy={() => setIsPolicyOpen(true)}
-        onOpenLogin={() => {}}
+        onOpenLogin={(role) => {
+          setTargetLoginRole(role);
+          setIsLoginOpen(true);
+        }}
         t={t}
         flagCount={highRiskWorks.length}
       />
@@ -165,14 +173,11 @@ export const MPDashboard: React.FC = () => {
           }}
         >
           <div>
-            <div style={{ fontSize: "0.74rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#93c5fd", fontWeight: 700 }}>
-              Hon'ble Member of Parliament Workspace | 18th Lok Sabha
-            </div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "4px 0 6px 0" }}>
-              {mpName} — {constituency} Parliamentary Constituency ({constituencyCode})
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
+              {mpName} — {constituency} Constituency ({constituencyCode})
             </h2>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4" }}>
-              Recommend constituency development works under MPLADS, monitor technical scrutiny by District Authorities, audit implementation velocity, and address public citizen grievances.
+            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
+              Recommend constituency development projects, track sanction approvals, and monitor work execution.
             </p>
           </div>
 
@@ -609,6 +614,15 @@ export const MPDashboard: React.FC = () => {
       <PolicyModal
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => {
+          setIsLoginOpen(false);
+          setTargetLoginRole(undefined);
+        }}
+        initialRole={targetLoginRole}
       />
 
       <Footer t={t} onOpenPolicy={() => setIsPolicyOpen(true)} />

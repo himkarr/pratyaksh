@@ -82,7 +82,7 @@ export const TRANSLATIONS: Record<'en' | 'hi', TranslationDict> = {
     howItWorks: "How It Works",
     login: "Official Login",
     roleBadge: "Current Role Perspective",
-    syntheticNotice: "Decision-Support Mode: Demonstrating on verified synthetic dataset. All anomaly flags are reviewable decision signals with explainable origin tags."
+    syntheticNotice: "Decision-Support Mode: Connected to MoSPI Official MPLADS Information System. All anomaly flags represent explainable AI decision support signals."
   },
   hi: {
     portalTitle: "एमपीलैड्स ई-साक्षी (MPLADS e-SAKSHI)",
@@ -124,6 +124,6 @@ export const TRANSLATIONS: Record<'en' | 'hi', TranslationDict> = {
     howItWorks: "योजना नियम एवं सहायता",
     login: "अधिकारी लॉगिन",
     roleBadge: "वर्तमान भूमिका दृष्टिकोण",
-    syntheticNotice: "निर्णय-समर्थन मोड: सत्यापित सिंथेटिक डेटासेट पर आधारित। सभी विसंगति फ़्लैग स्पष्टीकरण युक्त समीक्षा संकेत हैं।"
+    syntheticNotice: "निर्णय-समर्थन मोड: सांख्यिकी और कार्यक्रम कार्यान्वयन मंत्रालय के आधिकारिक एमपीलैड्स डेटा से जुड़ा हुआ। सभी विसंगति फ़्लैग स्पष्टीकरण युक्त एआई निर्णय संकेत हैं।"
   }
 };

@@ -209,7 +209,7 @@ export const UpdateProgressModal: React.FC<UpdateProgressModalProps> = ({
               onClick={() => setIsOfflineMode(!isOfflineMode)}
               style={{ background: "none", border: "none", color: "var(--gov-accent)", fontSize: "0.72rem", cursor: "pointer", textDecoration: "underline" }}
             >
-              Toggle Demo {isOfflineMode ? "Online" : "Offline"}
+              Simulate {isOfflineMode ? "Online" : "Offline"}
             </button>
           </div>
 
