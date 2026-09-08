@@ -116,13 +116,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
               style={{ height: '54px', width: 'auto', display: 'block', objectFit: 'contain' }} 
             />
             <div>
-              <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#10355c", lineHeight: "1.25" }}>
+              <div style={{ fontSize: "0.78rem", fontWeight: 500, color: "#475569", lineHeight: "1.25" }}>
                 Government of India
               </div>
-              <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#10355c", lineHeight: "1.25" }}>
+              <div style={{ fontSize: "0.90rem", fontWeight: 800, color: "#000000", lineHeight: "1.25" }}>
                 Ministry of Statistics and Programme Implementation
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#10355c", lineHeight: "1.25" }}>
+              <div style={{ fontSize: "0.88rem", fontWeight: 800, color: "#000000", lineHeight: "1.25" }}>
                 Members of Parliament Local Area Development Scheme
               </div>
             </div>

@@ -115,14 +115,14 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
 
           {/* Official 3-Line Text Hierarchy */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #64748b)', fontWeight: 600, lineHeight: 1.2 }}>
+            <div style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 500, lineHeight: 1.25 }}>
               {lang === 'hi' ? 'भारत सरकार' : 'Government of India'}
             </div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-main, #0a2540)', lineHeight: 1.25 }}>
+            <div style={{ fontSize: '0.90rem', fontWeight: 800, color: '#000000', lineHeight: 1.25 }}>
               {lang === 'hi' ? 'सांख्यिकी और कार्यक्रम कार्यान्वयन मंत्रालय' : 'Ministry of Statistics and Programme Implementation'}
             </div>
-            <div style={{ fontSize: '0.80rem', fontWeight: 700, color: 'var(--gov-accent, #1e3a5f)', lineHeight: 1.2 }}>
-              {t?.portalTitle || (lang === 'hi' ? 'एमपीलैड्स ई-साक्षी (MPLADS e-SAKSHI)' : 'Members of Parliament Local Area Development Scheme (MPLADS e-SAKSHI)')}
+            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#000000', lineHeight: 1.25 }}>
+              {t?.portalTitle || (lang === 'hi' ? 'सांसद स्थानीय क्षेत्र विकास योजना' : 'Members of Parliament Local Area Development Scheme')}
             </div>
           </div>
         </div>
@@ -130,6 +130,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
         {/* Center / Right Navigation Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           
+
           {/* Quick Nav Links */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600 }}>
             <button
