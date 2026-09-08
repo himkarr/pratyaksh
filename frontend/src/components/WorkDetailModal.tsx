@@ -11,6 +11,7 @@ import {
   RiskSection, 
   DeadlineSection 
 } from './project';
+import { ContractorInspectionPanel } from './district/ContractorInspectionPanel';
 import { useBodyScrollLock } from '../utils/scrollLock';
 
 interface WorkDetailModalProps {
@@ -237,6 +238,9 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
             ] : ["Rule R-01: Compliant milestone execution velocity"]}
             riskReason={isDelayed ? "Unusual ML anomaly pattern; 1-year ceiling deadline risk require review" : "Standard progress pattern; routine monitoring"}
           />
+
+          {/* Contractor Profile & Stage Submissions Inspection Section */}
+          <ContractorInspectionPanel work={work} />
 
           {/* Geotagged Evidence Section with Direct Upload */}
           <EvidenceSection

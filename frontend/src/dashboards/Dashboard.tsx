@@ -210,6 +210,7 @@ export function Dashboard({ title: _title }: DashboardProps) {
       }
 
       // 2. Interactive UI Filters
+      if (!w) return false;
       if (w.house !== house) return false;
       if (selectedState && w.state !== selectedState) return false;
       if (selectedConstituency && w.constituency !== selectedConstituency) return false;

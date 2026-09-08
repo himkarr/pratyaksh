@@ -22,10 +22,10 @@ interface FooterProps {
 export function Footer({ t: _t, onOpenPolicy }: FooterProps) {
   return (
     <footer style={{
-      background: 'var(--gov-header)',
+      background: '#07335c',
       color: 'var(--text-white)',
       marginTop: '40px',
-      borderTop: '3px solid var(--gov-primary)'
+      borderTop: '3px solid #0a4275'
     }} className="no-print">
       {/* Top Footer Section */}
       <div className="container" style={{
@@ -114,7 +114,7 @@ export function Footer({ t: _t, onOpenPolicy }: FooterProps) {
 
       {/* Bottom Copyright & Gateway Status Strip */}
       <div style={{
-        background: '#070e17',
+        background: '#04203b',
         borderTop: '1px solid rgba(255, 255, 255, 0.08)',
         padding: '10px 0',
         fontSize: '0.72rem',

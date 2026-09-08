@@ -231,7 +231,7 @@ export function WorksTable({
                         {work.title}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        {work.constituency}, {work.state} · <b>MP:</b> {work.mpName} · <b>Agency:</b> {work.agency}
+                        {work.constituency}, {work.state} · <b>MP:</b> {work.mpName} · <b>Agency:</b> {work.agency} {work.contractor ? <>· <b style={{ color: 'var(--gov-primary)' }}>Contractor:</b> {work.contractor}</> : null}
                       </div>
                     </td>
                     <td onClick={() => onInspectWork && onInspectWork(work)}>

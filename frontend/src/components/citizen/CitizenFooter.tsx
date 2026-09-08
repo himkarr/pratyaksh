@@ -9,9 +9,9 @@ export const CitizenFooter: React.FC<CitizenFooterProps> = ({ onOpenPolicy }) =>
   return (
     <footer
       style={{
-        background: "var(--gov-primary)",
+        background: "#07335c",
         color: "var(--text-white)",
-        borderTop: "3px solid var(--gov-accent)",
+        borderTop: "3px solid #0a4275",
         marginTop: "auto",
         padding: "28px 0 20px 0"
       }}

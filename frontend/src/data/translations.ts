@@ -43,7 +43,7 @@ export interface TranslationDict {
 
 export const TRANSLATIONS: Record<'en' | 'hi', TranslationDict> = {
   en: {
-    portalTitle: "MPLADS e-SAKSHI",
+    portalTitle: "Members of Parliament Local Area Development Scheme",
     portalSubtitle: "Ministry of Statistics & Programme Implementation | Government of India",
     dashboard: "Dashboard",
     analytics: "Analytics & Trends",

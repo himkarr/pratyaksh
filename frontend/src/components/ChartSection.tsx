@@ -66,7 +66,7 @@ export function ChartSection({ stats, filteredWorks, flags, t: _t, mode = 'dedic
     });
 
     filteredWorks.forEach(w => {
-      if (counts[w.category]) {
+      if (w && w.category && counts[w.category]) {
         counts[w.category].amount += w.sanctionedAmt || 0;
         counts[w.category].count += 1;
       }

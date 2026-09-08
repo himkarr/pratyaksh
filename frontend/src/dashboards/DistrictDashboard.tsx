@@ -19,7 +19,8 @@ import {
   ExternalLink,
   ShieldCheck,
   Filter,
-  CheckCircle
+  CheckCircle,
+  Plus
 } from "lucide-react";
 import { Header } from "../components/Header";
 import { Navbar } from "../components/Navbar";
@@ -30,16 +31,19 @@ import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Modal } from "../components/ui";
 
-import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
+import { WorkItem } from "../data/mpladsData";
+import { ContractorsManagementTab } from "../components/district/ContractorsManagementTab";
+import { CreateWorkModal } from "../components/district/CreateWorkModal";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
+import { districtContractorSync } from "../api/districtContractorSync";
 
 export const DistrictDashboard: React.FC = () => {
   const { user } = useRole();
   const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Active Section Navigation
-  const [activeTab, setActiveTab] = useState<"district_projects" | "verifications_review" | "anomaly_dossiers" | "district_reports">("district_projects");
+  const [activeTab, setActiveTab] = useState<"district_projects" | "verifications_review" | "anomaly_dossiers" | "contractors_management">("district_projects");
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -47,9 +51,10 @@ export const DistrictDashboard: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
   // Local Projects State
-  const [projects, setProjects] = useState<WorkItem[]>(INITIAL_WORKS);
+  const [projects, setProjects] = useState<WorkItem[]>(() => districtContractorSync.getWorks());
 
   // Modals State
+  const [isCreateWorkOpen, setIsCreateWorkOpen] = useState(false);
   const [selectedWorkForDossier, setSelectedWorkForDossier] = useState<WorkItem | null>(null);
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
@@ -111,9 +116,14 @@ export const DistrictDashboard: React.FC = () => {
     return "Routine quarterly statutory audit";
   };
 
-  // Filtered District Projects
+  // All Projects strictly in Jabalpur District Jurisdiction
+  const projectsInDistrict = useMemo(() => {
+    return projects.filter((w) => w.district && w.district.toLowerCase() === districtName.toLowerCase());
+  }, [projects, districtName]);
+
+  // Filtered District Projects matching active tab filters & search
   const districtProjects = useMemo(() => {
-    return projects.filter((w) => {
+    return projectsInDistrict.filter((w) => {
       if (statusFilter !== "all" && w.status !== statusFilter) return false;
       const priority = getWorkPriority(w);
       if (priorityFilter !== "all" && priority !== priorityFilter) return false;
@@ -128,23 +138,23 @@ export const DistrictDashboard: React.FC = () => {
       }
       return true;
     });
-  }, [projects, statusFilter, priorityFilter, searchQuery]);
+  }, [projectsInDistrict, statusFilter, priorityFilter, searchQuery]);
 
   // High Priority Flagged Projects in District
   const highRiskProjects = useMemo(() => {
-    return projects.filter((w) => getWorkPriority(w) === "High" || w.status === "Delayed");
-  }, [projects]);
+    return projectsInDistrict.filter((w) => getWorkPriority(w) === "High" || w.status === "Delayed");
+  }, [projectsInDistrict]);
 
-  // Real numeric figures for Jabalpur District Authority
+  // Real numeric figures dynamically computed for Jabalpur District Authority
   const kpiData = useMemo(() => {
-    const totalWorksCount = 1000;
-    const totalSanctionedCr = 13.54;
-    const totalDisbursedCr = 9.37;
-    const unspentBalanceCr = 4.17;
-    const completedCount = 720;
-    const ongoingCount = 268;
-    const delayedCount = 12;
-    const flaggedInquiriesCount = 2;
+    const totalWorksCount = projectsInDistrict.length;
+    const totalSanctionedCr = Number(projectsInDistrict.reduce((acc, w) => acc + (w.sanctionedAmt || 0), 0).toFixed(2));
+    const totalDisbursedCr = Number(projectsInDistrict.reduce((acc, w) => acc + (w.expenditureAmt || 0), 0).toFixed(2));
+    const unspentBalanceCr = Number(Math.max(0, totalSanctionedCr - totalDisbursedCr).toFixed(2));
+    const completedCount = projectsInDistrict.filter(w => w.status === 'Completed').length;
+    const ongoingCount = projectsInDistrict.filter(w => w.status === 'Ongoing' || w.status === 'Sanctioned').length;
+    const delayedCount = projectsInDistrict.filter(w => w.status === 'Delayed').length;
+    const flaggedInquiriesCount = projectsInDistrict.filter(w => getWorkPriority(w) === 'High').length;
 
     return {
       totalWorksCount,
@@ -156,7 +166,7 @@ export const DistrictDashboard: React.FC = () => {
       delayedCount,
       flaggedInquiriesCount
     };
-  }, []);
+  }, [projectsInDistrict]);
 
   // Action Handlers
   const handleApproveSanction = (workId: string) => {
@@ -451,7 +461,7 @@ export const DistrictDashboard: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setActiveTab("district_reports")}
+            onClick={() => setActiveTab("contractors_management")}
             style={{
               padding: "11px 18px",
               borderRadius: "6px 6px 0 0",
@@ -462,17 +472,26 @@ export const DistrictDashboard: React.FC = () => {
               alignItems: "center",
               gap: "8px",
               border: "none",
-              borderBottom: activeTab === "district_reports" ? "3px solid var(--gov-primary, #0a2540)" : "3px solid transparent",
-              background: activeTab === "district_reports" ? "var(--bg-surface, #ffffff)" : "transparent",
-              color: activeTab === "district_reports" ? "var(--gov-primary, #0a2540)" : "var(--text-muted, #64748b)",
+              borderBottom: activeTab === "contractors_management" ? "3px solid var(--gov-primary, #0a2540)" : "3px solid transparent",
+              background: activeTab === "contractors_management" ? "var(--bg-surface, #ffffff)" : "transparent",
+              color: activeTab === "contractors_management" ? "var(--gov-primary, #0a2540)" : "var(--text-muted, #64748b)",
               transition: "all 0.15s ease"
             }}
           >
-            <FileText size={15} />
-            <span>Statutory Compliance & State Log</span>
+            <Building2 size={15} />
+            <span>Contractors & Vendors</span>
           </button>
 
         </div>
+
+        {/* TAB: CONTRACTORS & VENDORS MANAGEMENT */}
+        {activeTab === "contractors_management" && (
+          <ContractorsManagementTab
+            works={districtProjects}
+            onSelectWork={(w) => setSelectedWorkForDetail(w)}
+            onUpdateWorks={(updatedWorks) => setProjects(updatedWorks)}
+          />
+        )}
 
         {/* TAB 1: DISTRICT WORKS REGISTER (Spacious table padding, evidence button, and clean actions) */}
         {activeTab === "district_projects" && (
@@ -488,13 +507,25 @@ export const DistrictDashboard: React.FC = () => {
               borderBottom: "1px solid var(--border-light, #e2e8f0)",
               paddingBottom: "16px"
             }}>
-              <div>
-                <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "var(--text-main, #0f172a)", margin: "0 0 4px 0" }}>
-                  District Works Register — {districtName}
-                </h3>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)" }}>
-                  Showing <strong>{districtProjects.length}</strong> of <strong>{projects.length}</strong> works in district jurisdiction
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "var(--text-main, #0f172a)", margin: "0 0 4px 0" }}>
+                    District Works Register — {districtName}
+                  </h3>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)" }}>
+                    Showing <strong>{districtProjects.length}</strong> of <strong>{projectsInDistrict.length}</strong> sanctioned works in {districtName} District Jurisdiction
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  className="gov-btn gov-btn-primary"
+                  onClick={() => setIsCreateWorkOpen(true)}
+                  style={{ fontSize: "0.82rem", padding: "8px 16px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Plus size={16} />
+                  <span>+ Issue New Work Order / Sanction</span>
+                </button>
               </div>
 
               {/* Simplified Search & Filters */}
@@ -857,57 +888,7 @@ export const DistrictDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 4: STATUTORY COMPLIANCE & STATE ESCALATION LOG */}
-        {activeTab === "district_reports" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div className="gov-card" style={{ padding: "20px 24px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
-                <div>
-                  <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "var(--text-main)", margin: "0 0 4px 0" }}>
-                    District Statutory Compliance & State Escalation Log
-                  </h3>
-                  <p style={{ fontSize: "0.80rem", color: "var(--text-muted)", margin: 0 }}>
-                    Official transmittal log submitted from {districtName} Collectorate to the State Nodal Department and MoSPI.
-                  </p>
-                </div>
-                <Button variant="primary" size="sm" onClick={handleExportPDF} icon={<Download size={14} />}>
-                  Download Statutory Report
-                </Button>
-              </div>
 
-              <div style={{ padding: "16px 20px", background: "var(--bg-surface-subtle, #f8fafc)", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", fontSize: "0.82rem" }}>
-                <div style={{ fontWeight: 800, color: "var(--gov-primary)", marginBottom: "8px" }}>
-                  Executive Compliance Summary:
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginTop: "10px" }}>
-                  <div style={{ padding: "12px", background: "#ffffff", border: "1px solid var(--border-light)", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Total Sanctioned Projects</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--text-main)" }}>1,000 Works</div>
-                  </div>
-                  <div style={{ padding: "12px", background: "#ffffff", border: "1px solid var(--border-light)", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Completed & Handed Over</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#15803d" }}>720 Works</div>
-                  </div>
-                  <div style={{ padding: "12px", background: "#ffffff", border: "1px solid var(--border-light)", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Active Construction</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0284c7" }}>268 Works</div>
-                  </div>
-                  <div style={{ padding: "12px", background: "#ffffff", border: "1px solid var(--border-light)", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Delayed / Overdue</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#c2410c" }}>12 Works</div>
-                  </div>
-                </div>
-                
-                <div style={{ marginTop: "16px", color: "var(--text-body)", lineHeight: 1.6 }}>
-                  • 100% Geotagged Milestone Verification Enforced (PWD & CPWD Standards)<br />
-                  • Total Sanctioned Outlay: <strong>₹13.54 Crores</strong> | Total Disbursed: <strong>₹9.37 Crores</strong><br />
-                  • Remaining SNA Liquid Balance: <strong>₹4.17 Crores</strong> (Maintained at SBI Jabalpur Collectorate Branch)<br />
-                  • Statutory Non-Repudiation Audit: <strong>SHA-256 Verified Official Government Ledger</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
       </main>
 
@@ -1005,6 +986,23 @@ export const DistrictDashboard: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Create New Work Modal */}
+      {isCreateWorkOpen && (
+        <CreateWorkModal
+          districtName={districtName}
+          stateName={stateName}
+          onClose={() => setIsCreateWorkOpen(false)}
+          onWorkCreated={(newWork) => {
+            setProjects(prev => [newWork, ...prev]);
+            setStatusFilter("all");
+            setPriorityFilter("all");
+            setSearchQuery("");
+            setActionNotice(`New Work Order #${newWork.id} created successfully and assigned to ${newWork.contractor}. Timeline-based monitoring schedule computed.`);
+            setTimeout(() => setActionNotice(null), 6000);
+          }}
+        />
       )}
 
       {/* Work Details Modal */}
