@@ -136,53 +136,55 @@ export const ContractorDashboard: React.FC = () => {
       />
 
       {/* 2. Main Portal Container */}
-      <main className="container" style={{ flex: 1, padding: "20px 0", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
+        <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         
-        {/* Contractor Header Banner with Active Vendor Switcher */}
-        <ContractorHeaderBanner
-          profile={profile}
-          notifications={notifications}
-          onOpenNotifications={() => setIsNotificationsOpen(true)}
-          selectedVendorId={selectedVendorId}
-          onSelectVendorId={handleVendorIdChange}
-          assignedProjectCount={projects.length}
-        />
-
-        {isLoading ? (
-          <div className="gov-card" style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
-            <RefreshCw size={36} color="var(--gov-primary)" className="spin" style={{ margin: "0 auto 12px auto" }} />
-            <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>Loading Contractor Portal Workspace for {profile.agencyName}...</div>
-          </div>
-        ) : selectedProject ? (
-          /* CONTRACTOR PROJECT DETAIL VIEW */
-          <ContractorProjectDetail
-            project={selectedProject}
-            onBack={() => setSelectedProject(null)}
-            onSubmitStageEvidence={handleSubmitStageEvidence}
+          {/* Contractor Header Banner with Active Vendor Switcher */}
+          <ContractorHeaderBanner
+            profile={profile}
+            notifications={notifications}
+            onOpenNotifications={() => setIsNotificationsOpen(true)}
+            selectedVendorId={selectedVendorId}
+            onSelectVendorId={handleVendorIdChange}
+            assignedProjectCount={projects.length}
           />
-        ) : (
-          /* CONTRACTOR DASHBOARD MAIN VIEW */
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {/* KPI Summary Cards */}
-            <ContractorSummaryCards projects={projects} />
 
-            {/* My Assigned Works Table */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid var(--border-light)", paddingBottom: "6px" }}>
-                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Building2 size={18} />
-                  My Assigned Works & Monitoring Portal — {profile.agencyName} ({projects.length})
-                </h3>
-              </div>
-
-              <ContractorProjectTable
-                projects={projects}
-                onSelectProject={(proj) => setSelectedProject(proj)}
-              />
+          {isLoading ? (
+            <div className="civic-card" style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
+              <RefreshCw size={36} color="var(--gov-primary)" className="spin" style={{ margin: "0 auto 12px auto" }} />
+              <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>Loading Contractor Portal Workspace for {profile.agencyName}...</div>
             </div>
-          </div>
-        )}
+          ) : selectedProject ? (
+            /* CONTRACTOR PROJECT DETAIL VIEW */
+            <ContractorProjectDetail
+              project={selectedProject}
+              onBack={() => setSelectedProject(null)}
+              onSubmitStageEvidence={handleSubmitStageEvidence}
+            />
+          ) : (
+            /* CONTRACTOR DASHBOARD MAIN VIEW */
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* KPI Summary Cards */}
+              <ContractorSummaryCards projects={projects} />
 
+              {/* My Assigned Works Table */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid var(--border-light)", paddingBottom: "8px" }}>
+                  <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Building2 size={18} />
+                    My Assigned Works & Monitoring Portal — {profile.agencyName} ({projects.length})
+                  </h3>
+                </div>
+
+                <ContractorProjectTable
+                  projects={projects}
+                  onSelectProject={(proj) => setSelectedProject(proj)}
+                />
+              </div>
+            </div>
+          )}
+
+        </div>
       </main>
 
       {/* Notifications Modal */}

@@ -21,6 +21,9 @@ import {
   FileText,
   Share2,
   Check,
+  LayoutGrid,
+  List,
+  ArrowRight,
 } from "lucide-react";
 import { MPSummary } from "../../../api/adminDataService";
 import { CivicUtilizationGauge } from "../../common/CivicUtilizationGauge";
@@ -44,6 +47,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
   // Project search and filter
   const [projectSearch, setProjectSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("grid");
   const [copied, setCopied] = useState(false);
 
   // Format currency helpers
@@ -227,7 +231,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
           </div>
         </div>
 
-        {/* 4 Summary Stat Cards */}
+        {/* 4 Summary Stat Cards (Plain English) */}
         <div className="mp-summary-stats">
           <div className="summary-stat-card allocated">
             <div className="stat-icon-wrapper">
@@ -235,8 +239,8 @@ export const MPDetail: React.FC<MPDetailProps> = ({
             </div>
             <div className="stat-content">
               <div className="stat-value">{formatINRCompact(totalSanctioned)}</div>
-              <div className="stat-label">Total Allocated</div>
-              <div className="stat-subtitle">Constituency budget cap</div>
+              <div className="stat-label">Total Budget Allocated</div>
+              <div className="stat-subtitle">Constituency 5-year budget</div>
             </div>
           </div>
 
@@ -248,9 +252,9 @@ export const MPDetail: React.FC<MPDetailProps> = ({
               <div className={`stat-value utilization-${getUtilizationClass(mp.utilizationPercentage)}`}>
                 {mp.utilizationPercentage}%
               </div>
-              <div className="stat-label">Fund Utilization</div>
+              <div className="stat-label">Fund Used</div>
               <div className="stat-subtitle">
-                {formatINRCompact(totalUtilized)} certified ground expenditure
+                {formatINRCompact(totalUtilized)} spent on local projects
               </div>
             </div>
             <div className="utilization-bar">
@@ -269,7 +273,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
               <div className="stat-value">{projectStats.completed}</div>
               <div className="stat-label">Works Completed</div>
               <div className="stat-subtitle">
-                Out of {mp.worksRecommendedCount} recommendations
+                {projectStats.completed} done out of {mp.worksRecommendedCount} recommended
               </div>
             </div>
           </div>
@@ -282,8 +286,8 @@ export const MPDetail: React.FC<MPDetailProps> = ({
               <div className="stat-value" style={{ color: "#7c3aed" }}>
                 100% Compliant
               </div>
-              <div className="stat-label">Statutory Mandate</div>
-              <div className="stat-subtitle">SC (15%) & ST (7.5%) verified</div>
+              <div className="stat-label">Community Fair Share</div>
+              <div className="stat-subtitle">Full SC (15%) & ST (7.5%) quota met</div>
             </div>
           </div>
         </div>
@@ -327,9 +331,44 @@ export const MPDetail: React.FC<MPDetailProps> = ({
               <div className="chart-container">
                 <CivicUtilizationGauge
                   utilization={mp.utilizationPercentage}
-                  title={`${mp.name} Fund Absorption`}
+                  title={`${mp.name} Fund Usage & Spending`}
                   size="md"
                 />
+
+                {/* Status Benchmark & Summary Chips (Fills empty space with clear info) */}
+                <div style={{ marginTop: "16px", padding: "14px 16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#64748b" }}>
+                      National Goal
+                    </span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: mp.utilizationPercentage >= 70 ? "#059669" : mp.utilizationPercentage >= 40 ? "#d97706" : "#dc2626" }}>
+                      {mp.utilizationPercentage >= 70 ? "● Target Met (≥70%)" : mp.utilizationPercentage >= 40 ? "● Steady Spending (40-69%)" : "● Early Stage (<40%)"}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: "0.82rem", color: "#334155", margin: "0 0 12px", lineHeight: "1.4" }}>
+                    {mp.utilizationPercentage >= 70
+                      ? `${mp.name} has spent ${mp.utilizationPercentage}% of constituency funds, successfully surpassing the national target of 70%.`
+                      : mp.utilizationPercentage >= 40
+                      ? `${mp.name} has utilized ${mp.utilizationPercentage}%. Works are actively ongoing across local wards and villages.`
+                      : `${mp.name} has utilized ${mp.utilizationPercentage}%. Most recommended works are in initial execution or awaiting final billing.`}
+                  </p>
+                  
+                  {/* 3 mini summary chips */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", paddingTop: "10px", borderTop: "1px solid #e2e8f0" }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Total Budget</div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>{formatINRCompact(totalSanctioned)}</div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Money Spent</div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#059669" }}>{formatINRCompact(totalUtilized)}</div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Balance Left</div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#d97706" }}>{formatINRCompact(remainingBalance)}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Projects Overview */}
@@ -379,19 +418,19 @@ export const MPDetail: React.FC<MPDetailProps> = ({
               </div>
             </div>
 
-            {/* Performance Summary Cards */}
+            {/* Performance Summary Cards (Plain English) */}
             <div className="performance-summary">
-              <h3>Parliamentary Performance Evaluation</h3>
+              <h3>Constituency Performance Summary</h3>
               <div className="performance-cards">
                 <div className="performance-card">
-                  <h4>Financial Accountability</h4>
+                  <h4>Budget & Spending</h4>
                   <div className="performance-details">
                     <div className="detail-row">
-                      <span>Total Allocated Outlay:</span>
+                      <span>Total Approved Budget:</span>
                       <span style={{ fontWeight: 700 }}>{formatCurrency(totalSanctioned)}</span>
                     </div>
                     <div className="detail-row">
-                      <span>Recorded Expenditure:</span>
+                      <span>Actual Money Spent:</span>
                       <span style={{ fontWeight: 700, color: "#059669" }}>{formatCurrency(totalUtilized)}</span>
                     </div>
                     <div className="detail-row">
@@ -399,7 +438,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                       <span style={{ fontWeight: 700, color: "#d97706" }}>{formatCurrency(remainingBalance)}</span>
                     </div>
                     <div className="detail-row highlight">
-                      <span>Ground Absorption Rate:</span>
+                      <span>Overall Fund Usage:</span>
                       <span className={`stat-value utilization-${getUtilizationClass(mp.utilizationPercentage)}`} style={{ fontSize: "1.2rem" }}>
                         {mp.utilizationPercentage}%
                       </span>
@@ -408,22 +447,22 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                 </div>
 
                 <div className="performance-card">
-                  <h4>Project Delivery & Milestones</h4>
+                  <h4>Project Delivery on Ground</h4>
                   <div className="performance-details">
                     <div className="detail-row">
-                      <span>Total Works Proposed:</span>
+                      <span>Projects Recommended:</span>
                       <span style={{ fontWeight: 700 }}>{mp.worksRecommendedCount}</span>
                     </div>
                     <div className="detail-row">
-                      <span>Completed & Handed Over:</span>
+                      <span>Completed Projects:</span>
                       <span style={{ fontWeight: 700, color: "#059669" }}>{projectStats.completed}</span>
                     </div>
                     <div className="detail-row">
-                      <span>Active Ground Execution:</span>
+                      <span>Under Construction:</span>
                       <span style={{ fontWeight: 700, color: "#d97706" }}>{projectStats.ongoing}</span>
                     </div>
                     <div className="detail-row highlight">
-                      <span>Project Completion Ratio:</span>
+                      <span>Completion Rate:</span>
                       <span style={{ fontSize: "1.2rem", fontWeight: 800, color: projectStats.completionRate >= 60 ? "#059669" : "#d97706" }}>
                         {projectStats.completionRate}%
                       </span>
@@ -446,7 +485,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                 </p>
               </div>
 
-              {/* Filters */}
+              {/* Filters & View Mode Toggle */}
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
                 <div style={{ position: "relative", minWidth: "220px" }}>
                   <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
@@ -485,6 +524,50 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                   <option value="sanctioned">Sanctioned</option>
                   <option value="delayed">Delayed</option>
                 </select>
+
+                {/* View Mode Toggle: Grid Cards vs Table */}
+                <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                  <button
+                    onClick={() => setProjectViewMode("grid")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: projectViewMode === "grid" ? "#2563eb" : "transparent",
+                      color: projectViewMode === "grid" ? "#ffffff" : "#475569",
+                      fontWeight: projectViewMode === "grid" ? 700 : 500,
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <LayoutGrid size={14} />
+                    <span>Grid</span>
+                  </button>
+                  <button
+                    onClick={() => setProjectViewMode("table")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: projectViewMode === "table" ? "#2563eb" : "transparent",
+                      color: projectViewMode === "table" ? "#ffffff" : "#475569",
+                      fontWeight: projectViewMode === "table" ? 700 : 500,
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <List size={14} />
+                    <span>Table</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -492,14 +575,167 @@ export const MPDetail: React.FC<MPDetailProps> = ({
               <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
                 No projects found matching the criteria.
               </div>
+            ) : projectViewMode === "grid" ? (
+              /* GRID VIEW */
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                  gap: "18px",
+                }}
+              >
+                {filteredProjects.map((p) => {
+                  const cost = p.sanctioned_amount || p.cost || 0;
+                  const status = (p.status || "In Progress").toLowerCase();
+                  const progress = p.physical_progress ?? p.physicalProgress ?? 60;
+
+                  return (
+                    <div
+                      key={p.project_id || p.id}
+                      onClick={() => onSelectProject(p)}
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        border: "1px solid #e2e8f0",
+                        padding: "18px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = "0 8px 20px -4px rgba(0,0,0,0.1)";
+                        e.currentTarget.style.borderColor = "#93c5fd";
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
+                        e.currentTarget.style.borderColor = "#e2e8f0";
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }}
+                    >
+                      <div>
+                        {/* Badges */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                          <span
+                            style={{
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              fontSize: "0.72rem",
+                              fontWeight: 600,
+                              background: "#f1f5f9",
+                              color: "#475569",
+                            }}
+                          >
+                            {p.category || "Development"}
+                          </span>
+                          <span
+                            style={{
+                              padding: "3px 10px",
+                              borderRadius: "9999px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              textTransform: "capitalize",
+                              background: status === "completed" ? "#dcfce7" : status === "delayed" ? "#fee2e2" : "#eff6ff",
+                              color: status === "completed" ? "#15803d" : status === "delayed" ? "#b91c1c" : "#1d4ed8",
+                              border: `1px solid ${status === "completed" ? "#bbf7d0" : status === "delayed" ? "#fecaca" : "#bfdbfe"}`,
+                            }}
+                          >
+                            {p.status || "In Progress"}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h4
+                          style={{
+                            margin: "0 0 6px",
+                            fontSize: "0.95rem",
+                            fontWeight: 700,
+                            color: "#1e293b",
+                            lineHeight: "1.4",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {p.project_name || p.title || "MPLADS Community Project"}
+                        </h4>
+
+                        {/* ID */}
+                        <div style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "#64748b", marginBottom: "14px" }}>
+                          ID: {p.project_id || p.id}
+                        </div>
+                      </div>
+
+                      <div>
+                        {/* Budget & Progress */}
+                        <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "10px 12px", border: "1px solid #f1f5f9", marginBottom: "12px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
+                            <span style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>
+                              Approved Budget
+                            </span>
+                            <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
+                              {formatINRCompact(cost)}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#64748b", marginBottom: "4px" }}>
+                            <span>Ground Completion</span>
+                            <span style={{ fontWeight: 700 }}>{progress}%</span>
+                          </div>
+                          <div style={{ width: "100%", height: "5px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
+                            <div
+                              style={{
+                                width: `${progress}%`,
+                                height: "100%",
+                                background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
+                                borderRadius: "9999px",
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Action button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectProject(p);
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            background: "#f1f5f9",
+                            border: "1px solid #cbd5e1",
+                            color: "#1e40af",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <span>Inspect Project</span>
+                          <ArrowRight size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
+              /* TABLE VIEW */
               <div className="mps-table">
                 <table>
                   <thead>
                     <tr>
                       <th>Work ID & Title</th>
                       <th>Category</th>
-                      <th>Sanctioned Outlay</th>
+                      <th>Approved Budget</th>
                       <th>Physical Progress</th>
                       <th>Status</th>
                       <th style={{ textAlign: "right" }}>Inspect</th>
@@ -596,16 +832,16 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                                 gap: "6px",
                                 padding: "6px 12px",
                                 borderRadius: "6px",
-                                background: "#2563eb",
-                                border: "none",
-                                color: "white",
+                                background: "#f1f5f9",
+                                border: "1px solid #cbd5e1",
+                                color: "#2c5282",
                                 fontSize: "0.8rem",
                                 fontWeight: 600,
                                 cursor: "pointer",
                                 transition: "all 0.15s ease",
                               }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "#1d4ed8")}
-                              onMouseLeave={(e) => (e.currentTarget.style.background = "#2563eb")}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
                             >
                               <Eye size={13} />
                               <span>Inspect</span>

@@ -48,6 +48,10 @@ import {
   FileText,
   TrendingDown,
   Minus,
+  LayoutGrid,
+  List,
+  Lightbulb,
+  CheckCircle,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -105,7 +109,8 @@ export const MinistryDashboard: React.FC = () => {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<string>("all");
   const [projectsPage, setProjectsPage] = useState<number>(1);
-  const PROJECTS_PER_PAGE = 25;
+  const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("grid");
+  const PROJECTS_PER_PAGE = 24;
 
   // AI Governance & ML calibration
   const [isRetraining, setIsRetraining] = useState<boolean>(false);
@@ -407,29 +412,6 @@ export const MinistryDashboard: React.FC = () => {
                 />
                 <span>{nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"} Works Live</span>
               </div>
-
-              <button
-                onClick={loadData}
-                disabled={loading}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  background: "#ffffff",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  color: "#334155",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-                title="Sync live records with Supabase"
-              >
-                <RefreshCw size={14} className={loading ? "animate-spin text-blue-600" : "text-slate-600"} />
-                <span>Sync</span>
-              </button>
             </div>
           </div>
           {/* ----------------------------------------------------------------
@@ -440,9 +422,9 @@ export const MinistryDashboard: React.FC = () => {
               {/* Header Title Section */}
               <div className="dashboard-header">
                 <div className="dashboard-title-section">
-                  <h1>MPLADS National Executive Overview</h1>
+                  <h1>MPLADS National Development Dashboard</h1>
                   <p>
-                    Supervisory intelligence, state-wise fund absorption benchmarks, MP performance index, and tamper-evident audit control
+                    Live tracking of approved government funds, local community projects, and public works across India in simple, easy-to-understand terms
                   </p>
                 </div>
               </div>
@@ -452,7 +434,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="metric-card metric-blue">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Total Sanctioned Outlay
+                      Total Budget Approved
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                       <DollarSign size={18} />
@@ -463,7 +445,7 @@ export const MinistryDashboard: React.FC = () => {
                       {nationalStats ? formatCurrency(nationalStats.totalSanctioned) : "₹641.87 Cr"}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Total financial outlay approved across works
+                      Total funding allocated for community projects
                     </div>
                   </div>
                 </div>
@@ -471,7 +453,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="metric-card metric-green">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Certified Ground Expenditure
+                      Money Spent on Ground
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
                       <CheckCircle2 size={18} />
@@ -482,7 +464,7 @@ export const MinistryDashboard: React.FC = () => {
                       {nationalStats ? formatCurrency(nationalStats.totalUtilized) : "₹412.30 Cr"}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Disbursed to implementing agencies & verified
+                      Actual funds disbursed & verified on ground
                     </div>
                   </div>
                 </div>
@@ -490,7 +472,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="metric-card metric-indigo">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      National Fund Absorption
+                      Overall Fund Usage
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
                       <TrendingUp size={18} />
@@ -501,7 +483,7 @@ export const MinistryDashboard: React.FC = () => {
                       {nationalStats ? `${nationalStats.nationalUtilization}%` : "64%"}
                     </div>
                     <div className="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
-                      <span>Utilization progress</span>
+                      <span>Percentage of funds spent</span>
                       <span className="font-semibold text-indigo-600">{nationalStats?.nationalUtilization || 64}%</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
@@ -516,7 +498,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="metric-card metric-amber">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Active Parliamentarians
+                      Members of Parliament
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
                       <Users size={18} />
@@ -527,7 +509,7 @@ export const MinistryDashboard: React.FC = () => {
                       {mps.length || 160} MPs
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Lok Sabha & Rajya Sabha members tracked
+                      Lok Sabha & Rajya Sabha MPs tracking works
                     </div>
                   </div>
                 </div>
@@ -535,7 +517,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="metric-card metric-purple">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Total Sanctioned Works
+                      Total Local Works
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
                       <Layers size={18} />
@@ -546,7 +528,7 @@ export const MinistryDashboard: React.FC = () => {
                       {nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Across 36 States and Union Territories
+                      Approved projects across 36 States & UTs
                     </div>
                   </div>
                 </div>
@@ -554,7 +536,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="metric-card metric-emerald">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Completed Assets
+                      Finished Projects
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
                       <Award size={18} />
@@ -565,7 +547,7 @@ export const MinistryDashboard: React.FC = () => {
                       {nationalStats?.statusBreakdown.Completed || 13} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Utilization certificates certified on ground
+                      Completed and handed over to the public
                     </div>
                   </div>
                 </div>
@@ -573,7 +555,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="metric-card metric-sky">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      In Execution Pipeline
+                      Under Construction
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100">
                       <Briefcase size={18} />
@@ -584,7 +566,7 @@ export const MinistryDashboard: React.FC = () => {
                       {nationalStats?.statusBreakdown.InProgress || 118} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Under active physical construction
+                      Works actively being built on the ground
                     </div>
                   </div>
                 </div>
@@ -592,7 +574,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="metric-card metric-rose">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      AI Risk / Flagged Works
+                      Flagged for Review
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
                       <ShieldAlert size={18} />
@@ -603,78 +585,72 @@ export const MinistryDashboard: React.FC = () => {
                       {nationalStats?.flaggedWorksCount || 120} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Isolation Forest anomalies detected
+                      Flagged by automated cost & delay checks
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Performance Insights Banner */}
+              {/* Performance Insights Banner (Simple Tiers) */}
               <div className="performance-insights" style={{ marginBottom: "28px" }}>
                 <div className="insights-grid">
                   <div
                     className="insight-card cursor-pointer"
-                    onClick={() => {
-                      setActiveModule("states");
-                    }}
+                    onClick={() => setActiveModule("states")}
                   >
                     <div className="insight-icon high">
                       <TrendingUp size={24} />
                     </div>
                     <div className="insight-content">
-                      <h3>High Absorption Tier (&ge; 70%)</h3>
+                      <h3>High Fund Usage (70% or more)</h3>
                       <p className="insight-count">
                         {states.filter((s) => s.utilizationPercentage >= 70).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage >= 70).length} MPs achieving statutory benchmark
+                        {mps.filter((m) => m.utilizationPercentage >= 70).length} MPs achieving the national target
                       </p>
                     </div>
                   </div>
 
                   <div
                     className="insight-card cursor-pointer"
-                    onClick={() => {
-                      setActiveModule("states");
-                    }}
+                    onClick={() => setActiveModule("states")}
                   >
                     <div className="insight-icon medium">
                       <Minus size={24} />
                     </div>
                     <div className="insight-content">
-                      <h3>Moderate Absorption Tier (40-69%)</h3>
+                      <h3>Steady Progress (40% to 69%)</h3>
                       <p className="insight-count">
                         {states.filter((s) => s.utilizationPercentage >= 40 && s.utilizationPercentage < 70).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage >= 40 && m.utilizationPercentage < 70).length} MPs with ongoing tranche disbursements
+                        {mps.filter((m) => m.utilizationPercentage >= 40 && m.utilizationPercentage < 70).length} MPs with active ongoing projects
                       </p>
                     </div>
                   </div>
 
                   <div
                     className="insight-card cursor-pointer"
-                    onClick={() => {
-                      setActiveModule("states");
-                    }}
+                    onClick={() => setActiveModule("states")}
                   >
                     <div className="insight-icon low">
                       <TrendingDown size={24} />
                     </div>
                     <div className="insight-content">
-                      <h3>Needs Administrative Scrutiny (&lt; 40%)</h3>
+                      <h3>Needs Faster Action (Under 40%)</h3>
                       <p className="insight-count">
                         {states.filter((s) => s.utilizationPercentage < 40).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage < 40).length} MPs requiring expedited sanctioning
+                        {mps.filter((m) => m.utilizationPercentage < 40).length} MPs where project execution needs speed up
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Interactive State-wise Outlay vs Expenditure Chart */}
+              {/* Interactive State-wise Budget vs Money Spent Chart */}
               <div
                 style={{
                   background: "#ffffff",
@@ -688,10 +664,10 @@ export const MinistryDashboard: React.FC = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                   <div>
                     <h2 style={{ fontSize: "1.35rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-                      State Absorption Benchmarks (Top 10 States)
+                      State-wise Budget vs Money Spent (Top 10 States)
                     </h2>
                     <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: "4px 0 0" }}>
-                      Comparative Outlay vs Certified Disbursed Expenditure (in ₹ Crores)
+                      Comparing total approved funds against money spent on ground (in ₹ Crores)
                     </p>
                   </div>
                   <button
@@ -723,66 +699,14 @@ export const MinistryDashboard: React.FC = () => {
                       <Tooltip
                         formatter={(val: any, name: any) => [
                           `₹${val} Cr`,
-                          name === "allocated" ? "Sanctioned Outlay" : "Certified Spent",
+                          name === "allocated" ? "Approved Budget" : "Money Spent",
                         ]}
                       />
                       <Legend />
-                      <Bar dataKey="allocated" name="Sanctioned Outlay" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="utilized" name="Certified Spent" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="allocated" name="Approved Budget" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="utilized" name="Money Spent" fill="#10b981" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Priority Sector Allocation Grid */}
-              <div
-                style={{
-                  background: "#ffffff",
-                  borderRadius: "16px",
-                  padding: "24px 28px",
-                  border: "1px solid var(--border-color)",
-                  boxShadow: "var(--shadow-card)",
-                  marginBottom: "28px",
-                }}
-              >
-                <h2 style={{ fontSize: "1.35rem", fontWeight: 700, margin: "0 0 4px", color: "var(--text-primary)" }}>
-                  Priority Sector Fund Distribution
-                </h2>
-                <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: "0 0 20px" }}>
-                  Statutory asset category allocation under MPLADS 2023 Guidelines
-                </p>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-                  {[
-                    { cat: "Roads & Bridges", pct: 38, count: 4384, color: "#2563eb" },
-                    { cat: "Drinking Water Supply", pct: 22, count: 2538, color: "#059669" },
-                    { cat: "Education Infrastructure", pct: 18, count: 2076, color: "#7c3aed" },
-                    { cat: "Healthcare & Sanitation", pct: 14, count: 1615, color: "#d97706" },
-                    { cat: "Community Halls & Assets", pct: 8, count: 925, color: "#0891b2" },
-                  ].map((s) => (
-                    <div
-                      key={s.cat}
-                      style={{
-                        padding: "16px",
-                        borderRadius: "12px",
-                        border: "1px solid #e2e8f0",
-                        background: "#f8fafc",
-                      }}
-                    >
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
-                        {s.cat}
-                      </div>
-                      <div style={{ fontSize: "1.5rem", fontWeight: 800, color: s.color }}>
-                        {s.pct}%
-                      </div>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "4px" }}>
-                        {s.count.toLocaleString("en-IN")} Approved Works
-                      </div>
-                      <div style={{ width: "100%", height: "4px", background: "#e2e8f0", borderRadius: "9999px", marginTop: "10px", overflow: "hidden" }}>
-                        <div style={{ width: `${s.pct}%`, height: "100%", background: s.color }} />
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -962,14 +886,14 @@ export const MinistryDashboard: React.FC = () => {
                       background: "#ffffff",
                     }}
                   >
-                    <option value="all">All Risk Levels</option>
-                    <option value="HIGH">AI High Risk Only</option>
-                    <option value="LOW">Low Risk Only</option>
+                    <option value="all">All Projects</option>
+                    <option value="HIGH">Flagged for Review Only</option>
+                    <option value="LOW">Normal Only</option>
                   </select>
                 </div>
               </div>
 
-              {/* Projects Table */}
+              {/* Projects Container (Grid or Table View) */}
               <div
                 style={{
                   background: "#ffffff",
@@ -979,125 +903,375 @@ export const MinistryDashboard: React.FC = () => {
                   overflow: "hidden",
                 }}
               >
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#1e293b" }}>
-                    Showing {pagedProjects.length} of {filteredProjects.length.toLocaleString("en-IN")} matching works
+                {/* Header Toolbar with View Mode Toggle */}
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                  <div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1e293b" }}>
+                      Showing {pagedProjects.length} of {filteredProjects.length.toLocaleString("en-IN")} matching projects
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "2px" }}>
+                      Page {projectsPage} of {Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE) || 1}
+                    </div>
                   </div>
-                  <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                    Page {projectsPage} of {Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE) || 1}
+
+                  {/* View Mode Toggle: Grid Cards vs Table View */}
+                  <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                    <button
+                      onClick={() => setProjectViewMode("grid")}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: projectViewMode === "grid" ? "#2563eb" : "transparent",
+                        color: projectViewMode === "grid" ? "#ffffff" : "#475569",
+                        fontWeight: projectViewMode === "grid" ? 700 : 500,
+                        fontSize: "0.8rem",
+                        boxShadow: projectViewMode === "grid" ? "0 1px 3px rgba(0,0,0,0.15)" : "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <LayoutGrid size={15} />
+                      <span>Grid View</span>
+                    </button>
+                    <button
+                      onClick={() => setProjectViewMode("table")}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: projectViewMode === "table" ? "#2563eb" : "transparent",
+                        color: projectViewMode === "table" ? "#ffffff" : "#475569",
+                        fontWeight: projectViewMode === "table" ? 700 : 500,
+                        fontSize: "0.8rem",
+                        boxShadow: projectViewMode === "table" ? "0 1px 3px rgba(0,0,0,0.15)" : "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <List size={15} />
+                      <span>Table View</span>
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
-                    <thead>
-                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>
-                        <th style={{ padding: "12px 16px", fontWeight: 700 }}>Project ID & Title</th>
-                        <th style={{ padding: "12px 16px", fontWeight: 700 }}>Jurisdiction</th>
-                        <th style={{ padding: "12px 16px", fontWeight: 700 }}>Category</th>
-                        <th style={{ padding: "12px 16px", fontWeight: 700 }}>Outlay</th>
-                        <th style={{ padding: "12px 16px", fontWeight: 700 }}>Status</th>
-                        <th style={{ padding: "12px 16px", fontWeight: 700 }}>AI Risk</th>
-                        <th style={{ padding: "12px 16px", fontWeight: 700, textAlign: "right" }}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pagedProjects.map((p, idx) => {
-                        const isHighRisk = p.is_flagged || (p.latest_risk_score || 0) > 50;
-                        return (
-                          <tr
-                            key={p.project_id || p.id || idx}
-                            style={{
-                              borderBottom: "1px solid #f1f5f9",
-                              background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd",
-                              cursor: "pointer",
-                            }}
-                            onClick={() => setSelectedWorkForDetail(p)}
-                          >
-                            <td style={{ padding: "12px 16px", maxWidth: "320px" }}>
-                              <div style={{ fontWeight: 700, color: "#1e293b" }}>
-                                {p.project_name || p.title || "MPLADS Community Work"}
-                              </div>
-                              <div style={{ fontSize: "0.72rem", color: "#64748b", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
-                                {p.project_id || p.id}
-                              </div>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <div style={{ fontWeight: 600, color: "#334155" }}>{p.state || "National"}</div>
-                              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{p.district || "All Districts"}</div>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <span style={{ padding: "3px 8px", borderRadius: "6px", background: "#f1f5f9", fontSize: "0.72rem", fontWeight: 600, color: "#475569" }}>
-                                {p.category || "Community Asset"}
-                              </span>
-                            </td>
-                            <td style={{ padding: "12px 16px", fontWeight: 700, color: "#0f172a" }}>
-                              {formatCurrency(Number(p.sanctioned_amount || p.cost || 500000))}
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
+                {/* View Mode 1: GRID CARDS VIEW */}
+                {projectViewMode === "grid" ? (
+                  <div
+                    style={{
+                      padding: "20px",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                      gap: "18px",
+                      background: "#f8fafc",
+                    }}
+                  >
+                    {pagedProjects.map((p, idx) => {
+                      const isHighRisk = p.is_flagged || (p.latest_risk_score || 0) > 50;
+                      const progress = p.physical_progress ?? (p.status === "Completed" ? 100 : p.status === "In Progress" ? 65 : 20);
+                      const cost = Number(p.sanctioned_amount || p.cost || 500000);
+
+                      return (
+                        <div
+                          key={p.project_id || p.id || idx}
+                          onClick={() => setSelectedWorkForDetail(p)}
+                          style={{
+                            background: "#ffffff",
+                            borderRadius: "14px",
+                            border: "1px solid #e2e8f0",
+                            padding: "20px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                            transition: "all 0.2s ease",
+                            cursor: "pointer",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.boxShadow = "0 10px 24px -4px rgba(0,0,0,0.1)";
+                            e.currentTarget.style.borderColor = "#93c5fd";
+                            e.currentTarget.style.transform = "translateY(-2px)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
+                            e.currentTarget.style.borderColor = "#e2e8f0";
+                            e.currentTarget.style.transform = "translateY(0)";
+                          }}
+                        >
+                          <div>
+                            {/* Category + Status Badges */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
                               <span
                                 style={{
                                   padding: "3px 10px",
-                                  borderRadius: "9999px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  background:
-                                    p.status === "Completed"
-                                      ? "#ecfdf5"
-                                      : p.status === "In Progress"
-                                      ? "#eff6ff"
-                                      : "#fef3c7",
-                                  color:
-                                    p.status === "Completed"
-                                      ? "#065f46"
-                                      : p.status === "In Progress"
-                                      ? "#1e40af"
-                                      : "#92400e",
-                                }}
-                              >
-                                {p.status || "Sanctioned"}
-                              </span>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <span
-                                style={{
-                                  padding: "3px 8px",
                                   borderRadius: "6px",
-                                  fontSize: "0.72rem",
+                                  background: "#eff6ff",
+                                  color: "#1d4ed8",
+                                  fontSize: "0.74rem",
                                   fontWeight: 700,
-                                  background: isHighRisk ? "#fef2f2" : "#f0fdf4",
-                                  color: isHighRisk ? "#b91c1c" : "#166534",
                                 }}
                               >
-                                {isHighRisk ? "ANOMALY" : "NORMAL"}
+                                {p.category || "Community Work"}
                               </span>
-                            </td>
-                            <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedWorkForDetail(p);
-                                }}
-                                style={{
-                                  padding: "5px 10px",
-                                  borderRadius: "6px",
-                                  border: "1px solid #cbd5e1",
-                                  background: "#ffffff",
-                                  color: "#2563eb",
-                                  fontSize: "0.75rem",
-                                  fontWeight: 600,
-                                  cursor: "pointer",
-                                }}
-                              >
-                                Inspect
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                {isHighRisk && (
+                                  <span
+                                    style={{
+                                      padding: "2px 8px",
+                                      borderRadius: "6px",
+                                      background: "#fef2f2",
+                                      color: "#b91c1c",
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    Review
+                                  </span>
+                                )}
+                                <span
+                                  style={{
+                                    padding: "3px 10px",
+                                    borderRadius: "9999px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    background:
+                                      p.status === "Completed"
+                                        ? "#ecfdf5"
+                                        : p.status === "In Progress"
+                                        ? "#eff6ff"
+                                        : "#fef3c7",
+                                    color:
+                                      p.status === "Completed"
+                                        ? "#065f46"
+                                        : p.status === "In Progress"
+                                        ? "#1e40af"
+                                        : "#92400e",
+                                  }}
+                                >
+                                  {p.status || "Sanctioned"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Project Name */}
+                            <h3
+                              style={{
+                                fontSize: "0.98rem",
+                                fontWeight: 700,
+                                color: "#0f172a",
+                                margin: "0 0 6px",
+                                lineHeight: "1.4",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {p.project_name || p.title || "MPLADS Community Project"}
+                            </h3>
+
+                            {/* Project ID */}
+                            <div style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono, monospace)", color: "#64748b", marginBottom: "12px" }}>
+                              ID: {p.project_id || p.id}
+                            </div>
+
+                            {/* Location */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#475569", marginBottom: "16px" }}>
+                              <MapPin size={14} style={{ color: "#2563eb", flexShrink: 0 }} />
+                              <span style={{ fontWeight: 600 }}>{p.district || "District"}</span>
+                              <span style={{ color: "#94a3b8" }}>•</span>
+                              <span>{p.state || "State"}</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            {/* Budget & Progress Box */}
+                            <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "12px", border: "1px solid #f1f5f9", marginBottom: "14px" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+                                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>
+                                  Approved Budget
+                                </span>
+                                <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                                  {formatCurrency(cost)}
+                                </span>
+                              </div>
+
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.72rem", color: "#64748b", marginBottom: "4px" }}>
+                                <span>Ground Completion</span>
+                                <span style={{ fontWeight: 700, color: "#334155" }}>{progress}%</span>
+                              </div>
+                              <div style={{ width: "100%", height: "6px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
+                                <div
+                                  style={{
+                                    width: `${progress}%`,
+                                    height: "100%",
+                                    background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
+                                    borderRadius: "9999px",
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Inspect Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedWorkForDetail(p);
+                              }}
+                              style={{
+                                width: "100%",
+                                padding: "8px 12px",
+                                borderRadius: "8px",
+                                background: "#f1f5f9",
+                                border: "1px solid #cbd5e1",
+                                color: "#1e40af",
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "6px",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "#2563eb";
+                                e.currentTarget.style.color = "#ffffff";
+                                e.currentTarget.style.borderColor = "#2563eb";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "#f1f5f9";
+                                e.currentTarget.style.color = "#1e40af";
+                                e.currentTarget.style.borderColor = "#cbd5e1";
+                              }}
+                            >
+                              <span>Inspect Project Details</span>
+                              <ArrowRight size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* View Mode 2: TABLE VIEW */
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
+                      <thead>
+                        <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>
+                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Project Name & ID</th>
+                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Location</th>
+                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Category</th>
+                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Approved Budget</th>
+                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Status</th>
+                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Review Status</th>
+                          <th style={{ padding: "12px 16px", fontWeight: 700, textAlign: "right" }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pagedProjects.map((p, idx) => {
+                          const isHighRisk = p.is_flagged || (p.latest_risk_score || 0) > 50;
+                          return (
+                            <tr
+                              key={p.project_id || p.id || idx}
+                              style={{
+                                borderBottom: "1px solid #f1f5f9",
+                                background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => setSelectedWorkForDetail(p)}
+                            >
+                              <td style={{ padding: "12px 16px", maxWidth: "320px" }}>
+                                <div style={{ fontWeight: 700, color: "#1e293b" }}>
+                                  {p.project_name || p.title || "MPLADS Community Work"}
+                                </div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748b", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
+                                  {p.project_id || p.id}
+                                </div>
+                              </td>
+                              <td style={{ padding: "12px 16px" }}>
+                                <div style={{ fontWeight: 600, color: "#334155" }}>{p.state || "National"}</div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{p.district || "All Districts"}</div>
+                              </td>
+                              <td style={{ padding: "12px 16px" }}>
+                                <span style={{ padding: "3px 8px", borderRadius: "6px", background: "#f1f5f9", fontSize: "0.72rem", fontWeight: 600, color: "#475569" }}>
+                                  {p.category || "Community Asset"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px 16px", fontWeight: 700, color: "#0f172a" }}>
+                                {formatCurrency(Number(p.sanctioned_amount || p.cost || 500000))}
+                              </td>
+                              <td style={{ padding: "12px 16px" }}>
+                                <span
+                                  style={{
+                                    padding: "3px 10px",
+                                    borderRadius: "9999px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    background:
+                                      p.status === "Completed"
+                                        ? "#ecfdf5"
+                                        : p.status === "In Progress"
+                                        ? "#eff6ff"
+                                        : "#fef3c7",
+                                    color:
+                                      p.status === "Completed"
+                                        ? "#065f46"
+                                        : p.status === "In Progress"
+                                        ? "#1e40af"
+                                        : "#92400e",
+                                  }}
+                                >
+                                  {p.status || "Sanctioned"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px 16px" }}>
+                                <span
+                                  style={{
+                                    padding: "3px 8px",
+                                    borderRadius: "6px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    background: isHighRisk ? "#fef2f2" : "#f0fdf4",
+                                    color: isHighRisk ? "#b91c1c" : "#166534",
+                                  }}
+                                >
+                                  {isHighRisk ? "Review Needed" : "Normal"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedWorkForDetail(p);
+                                  }}
+                                  style={{
+                                    padding: "5px 10px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #cbd5e1",
+                                    background: "#ffffff",
+                                    color: "#2563eb",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Inspect
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
                 {/* Pagination Controls */}
                 <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #e2e8f0" }}>

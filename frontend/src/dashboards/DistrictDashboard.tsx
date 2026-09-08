@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Building2, 
   Search, 
@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   Filter,
   CheckCircle,
-  Plus
+  Plus,
+  Database
 } from "lucide-react";
 import { Header } from "../components/Header";
 import { Navbar } from "../components/Navbar";
@@ -37,6 +38,7 @@ import { CreateWorkModal } from "../components/district/CreateWorkModal";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { districtContractorSync } from "../api/districtContractorSync";
+import { adminDataService } from "../api/adminDataService";
 
 export const DistrictDashboard: React.FC = () => {
   const { user } = useRole();
@@ -50,8 +52,9 @@ export const DistrictDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
-  // Local Projects State
+  // Local Projects State (Hydrated from live Supabase projects)
   const [projects, setProjects] = useState<WorkItem[]>(() => districtContractorSync.getWorks());
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
 
   // Modals State
   const [isCreateWorkOpen, setIsCreateWorkOpen] = useState(false);
@@ -70,6 +73,59 @@ export const DistrictDashboard: React.FC = () => {
   const collectorDesignation = "District Magistrate & Collector";
   const districtName = user.district || "Jabalpur";
   const stateName = user.state || "Madhya Pradesh";
+
+  useEffect(() => {
+    async function loadLiveDistrictProjects() {
+      try {
+        const liveProjs = await adminDataService.getRawProjects();
+        if (liveProjs && liveProjs.length > 0) {
+          const districtFiltered = liveProjs.filter((p) => {
+            const pDist = (p.district || "").toLowerCase();
+            const pState = (p.state || "").toLowerCase();
+            return pDist.includes(districtName.toLowerCase()) || 
+                   pState.includes(stateName.toLowerCase());
+          });
+
+          const datasetToUse = districtFiltered.length >= 5 ? districtFiltered : liveProjs.slice(0, 80);
+
+          const mapped: WorkItem[] = datasetToUse.map((p, idx) => ({
+            id: p.project_id || p.id || `LIVE-DIST-${idx}`,
+            title: p.project_name || p.title || "MPLADS Infrastructure Work",
+            house: "Lok Sabha",
+            state: p.state || stateName,
+            district: p.district || districtName,
+            constituency: p.district || districtName,
+            constituency_code: "DIST-01",
+            mpName: "District Parliamentary MP",
+            category: p.category || "Community Asset",
+            sectorName: p.category || "Infrastructure",
+            recommendedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+            sanctionedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+            expenditureAmt: Number(p.utilized_amount || 400000) / 10000000,
+            physicalProgress: p.progress_percentage || (p.status === "Completed" ? 100 : 45),
+            financialProgress: Math.round(
+              ((Number(p.utilized_amount || 0)) / Math.max(1, Number(p.sanctioned_amount || 1))) * 100
+            ) || 40,
+            dateSanctioned: p.start_date || "2024-04-01",
+            targetCompletion: p.expected_completion_date || "2025-06-30",
+            status: (p.status || "Sanctioned") as any,
+            agency: "District Public Works & Rural Engineering",
+            contractor: "Empaneled Implementing Agency",
+            rating: 4.8,
+            reviewsCount: 1,
+            attachments: [],
+            reviews: []
+          }));
+
+          setProjects(mapped);
+          setIsLiveConnected(true);
+        }
+      } catch (err) {
+        console.warn("Using local fallback projects for District Authority:", err);
+      }
+    }
+    loadLiveDistrictProjects();
+  }, [districtName, stateName]);
 
   // Helper to compute priority level
   const getWorkPriority = (w: WorkItem): "High" | "Medium" | "Routine" => {
@@ -116,10 +172,24 @@ export const DistrictDashboard: React.FC = () => {
     return "Routine quarterly statutory audit";
   };
 
-  // All Projects strictly in Jabalpur District Jurisdiction
+  // Available districts dynamically discovered from Supabase datasets
+  const availableDistricts = useMemo(() => {
+    const dists = new Set<string>();
+    if (user.district) dists.add(user.district);
+    projects.forEach((p) => {
+      if (p.district && p.district.trim()) dists.add(p.district.trim());
+    });
+    if (dists.size === 0) dists.add("Jabalpur");
+    return Array.from(dists).sort();
+  }, [projects, user.district]);
+
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => user.district || "Jabalpur");
+
+  // All Projects in Selected District Jurisdiction (falls back gracefully to all if none in specific district)
   const projectsInDistrict = useMemo(() => {
-    return projects.filter((w) => w.district && w.district.toLowerCase() === districtName.toLowerCase());
-  }, [projects, districtName]);
+    const inDist = projects.filter((w) => w.district && w.district.toLowerCase() === selectedDistrict.toLowerCase());
+    return inDist.length > 0 ? inDist : projects;
+  }, [projects, selectedDistrict]);
 
   // Filtered District Projects matching active tab filters & search
   const districtProjects = useMemo(() => {
@@ -145,7 +215,7 @@ export const DistrictDashboard: React.FC = () => {
     return projectsInDistrict.filter((w) => getWorkPriority(w) === "High" || w.status === "Delayed");
   }, [projectsInDistrict]);
 
-  // Real numeric figures dynamically computed for Jabalpur District Authority
+  // Real numeric figures dynamically computed for District Authority
   const kpiData = useMemo(() => {
     const totalWorksCount = projectsInDistrict.length;
     const totalSanctionedCr = Number(projectsInDistrict.reduce((acc, w) => acc + (w.sanctionedAmt || 0), 0).toFixed(2));
@@ -214,46 +284,77 @@ export const DistrictDashboard: React.FC = () => {
         flagCount={highRiskProjects.length}
       />
 
-      <main className="container" style={{ flex: 1, padding: "24px 0", display: "flex", flexDirection: "column", gap: "20px" }}>
+      <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
+        <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         
         {/* District Collectorate Official Banner */}
         <div 
+          className="civic-card"
           style={{ 
-            background: "var(--gov-header, #0f2942)", 
-            color: "var(--text-white, #ffffff)", 
-            padding: "22px 26px", 
-            borderRadius: "var(--radius-sm, 10px)", 
+            background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)", 
+            color: "#ffffff", 
+            padding: "24px 28px", 
+            borderRadius: "14px", 
             border: "1px solid rgba(255, 255, 255, 0.12)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
             gap: "18px",
-            boxShadow: "0 2px 8px rgba(15, 23, 42, 0.08)"
+            boxShadow: "0 4px 20px rgba(15, 23, 42, 0.12)"
           }}
         >
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#93c5fd", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Office of the District Magistrate & District Collector
+                Office of the District Magistrate & Collector
               </span>
               <span style={{ color: "rgba(255, 255, 255, 0.4)" }}>•</span>
               <span style={{ fontSize: "0.72rem", color: "#e2e8f0" }}>
                 Government of {stateName}
               </span>
+              {isLiveConnected && (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#34d399", fontWeight: 600 }}>
+                  <Database size={11} />
+                  <span>Live Supabase Connected</span>
+                </div>
+              )}
             </div>
-            <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0", lineHeight: 1.25 }}>
-              District Authority Workspace — {districtName}
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0", lineHeight: 1.25, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              District Authority Workspace — {selectedDistrict}
             </h1>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "720px", lineHeight: 1.45, margin: 0 }}>
+            <p style={{ fontSize: "0.84rem", color: "#cbd5e1", maxWidth: "760px", lineHeight: 1.45, margin: 0 }}>
               {collectorName} ({collectorDesignation}) • Single Nodal Agency (SNA) Fund Administration & Field Inspection Sign-off
             </p>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <div style={{ padding: "6px 12px", background: "rgba(255, 255, 255, 0.08)", borderRadius: "6px", border: "1px solid rgba(255, 255, 255, 0.15)", fontSize: "0.76rem", color: "#e2e8f0", display: "flex", alignItems: "center", gap: "6px" }}>
-              <ShieldCheck size={14} color="#34d399" />
-              <span>SNA Account: SBI Jabalpur Collectorate</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            {/* District Selector */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.70rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>
+                Select District Jurisdiction:
+              </label>
+              <select
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.12)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  borderRadius: "8px",
+                  padding: "7px 14px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  outline: "none",
+                  cursor: "pointer"
+                }}
+              >
+                {availableDistricts.map((d) => (
+                  <option key={d} value={d} style={{ color: "#0f172a", background: "#ffffff" }}>
+                    {d} District
+                  </option>
+                ))}
+              </select>
             </div>
 
             <Button
@@ -261,9 +362,9 @@ export const DistrictDashboard: React.FC = () => {
               size="sm"
               onClick={handleExportPDF}
               icon={<Download size={14} />}
-              style={{ background: "#ffffff", color: "var(--gov-primary, #0a2540)", borderColor: "#ffffff", fontWeight: 700 }}
+              style={{ background: "#ffffff", color: "var(--gov-primary, #0a2540)", borderColor: "#ffffff", fontWeight: 700, borderRadius: "8px" }}
             >
-              Export Official District Audit (PDF)
+              Export District Audit (PDF)
             </Button>
           </div>
         </div>
@@ -274,214 +375,159 @@ export const DistrictDashboard: React.FC = () => {
           </Alert>
         )}
 
-        {/* 6 Executive Metric Cards (Clean Gov theme, actual numbers, zero confidence badges) */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "14px" }}>
+        {/* 6 Executive Metric Cards with Civic Theme */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px" }}>
           
           {/* 1. Total Works Sanctioned */}
-          <div className="gov-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #d97706" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ background: "#fef3c7", padding: "6px", borderRadius: "8px", display: "flex" }}>
                 <Building2 size={16} color="#d97706" />
               </div>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                Total Works Sanctioned
+                Total Sanctioned
               </span>
             </div>
-            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "var(--gov-primary)", lineHeight: 1.1 }}>
-              {kpiData.totalWorksCount.toLocaleString()} Works
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--text-main, #0f172a)", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpiData.totalWorksCount.toLocaleString()}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              Sanctioned Outlay: <strong>₹{kpiData.totalSanctionedCr} Cr</strong>
+              Outlay: <strong>₹{kpiData.totalSanctionedCr} Cr</strong>
             </div>
           </div>
 
           {/* 2. Funds Disbursed */}
-          <div className="gov-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #0284c7" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ background: "#e0f2fe", padding: "6px", borderRadius: "8px", display: "flex" }}>
                 <IndianRupee size={16} color="#0284c7" />
               </div>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                Funds Disbursed (PFMS)
+                Disbursed (PFMS)
               </span>
             </div>
-            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#0369a1", lineHeight: 1.1 }}>
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0284c7", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
               ₹{kpiData.totalDisbursedCr} Cr
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              Remaining SNA Balance: <strong>₹{kpiData.unspentBalanceCr} Cr</strong>
+              SNA Balance: <strong>₹{kpiData.unspentBalanceCr} Cr</strong>
             </div>
           </div>
 
           {/* 3. Completed & Certified */}
-          <div className="gov-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #16a34a" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ background: "#dcfce7", padding: "6px", borderRadius: "8px", display: "flex" }}>
                 <CheckCircle2 size={16} color="#16a34a" />
               </div>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                Completed & Handed Over
+                Completed
               </span>
             </div>
-            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#15803d", lineHeight: 1.1 }}>
-              {kpiData.completedCount} Works
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#16a34a", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpiData.completedCount}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              Physically certified by Field Engineers
+              Certified by Field Engineers
             </div>
           </div>
 
           {/* 4. Active Ongoing Works */}
-          <div className="gov-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #0d9488" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ background: "#ccfbf1", padding: "6px", borderRadius: "8px", display: "flex" }}>
                 <Clock size={16} color="#0d9488" />
               </div>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                Active Ongoing Works
+                In Progress
               </span>
             </div>
-            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "var(--gov-primary)", lineHeight: 1.1 }}>
-              {kpiData.ongoingCount} Works
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0d9488", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpiData.ongoingCount}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              Active construction in progress
+              Active on-site construction
             </div>
           </div>
 
           {/* 5. Delayed Works */}
-          <div className="gov-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #ea580c" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ background: "#ffedd5", padding: "6px", borderRadius: "8px", display: "flex" }}>
                 <AlertCircle size={16} color="#ea580c" />
               </div>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                Delayed / Overdue Works
+                Delayed Works
               </span>
             </div>
-            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#c2410c", lineHeight: 1.1 }}>
-              {kpiData.delayedCount} Works
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#ea580c", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpiData.delayedCount}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              Pending 1-Year statutory timeline
+              Exceeds milestone timeline
             </div>
           </div>
 
           {/* 6. Active Inquiries */}
-          <div className="gov-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #dc2626" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ background: "#fee2e2", padding: "6px", borderRadius: "8px", display: "flex" }}>
                 <AlertTriangle size={16} color="#dc2626" />
               </div>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                Flagged for Inquiry
+                Audit Flags
               </span>
             </div>
-            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#b91c1c", lineHeight: 1.1 }}>
-              {kpiData.flaggedInquiriesCount} Works
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#dc2626", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpiData.flaggedInquiriesCount}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              Requires Collectorate review
+              Action inquiries required
             </div>
           </div>
 
         </div>
 
-        {/* Simplified Section Tabs (Clean, dignified layout for Government Officers) */}
-        <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--border-light, #e2e8f0)", paddingBottom: "2px", overflowX: "auto" }}>
-          
+        {/* Civic Navigation Tabs */}
+        <div className="civic-nav-tabs">
           <button
             type="button"
             onClick={() => setActiveTab("district_projects")}
-            style={{
-              padding: "11px 18px",
-              borderRadius: "6px 6px 0 0",
-              fontSize: "0.84rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              border: "none",
-              borderBottom: activeTab === "district_projects" ? "3px solid var(--gov-primary, #0a2540)" : "3px solid transparent",
-              background: activeTab === "district_projects" ? "var(--bg-surface, #ffffff)" : "transparent",
-              color: activeTab === "district_projects" ? "var(--gov-primary, #0a2540)" : "var(--text-muted, #64748b)",
-              transition: "all 0.15s ease"
-            }}
+            className={`civic-tab-btn ${activeTab === "district_projects" ? "active" : ""}`}
           >
             <Layers size={15} />
-            <span>District Works Directory ({districtProjects.length})</span>
+            <span>District Works Directory</span>
+            <span className="civic-tab-badge">{districtProjects.length}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("verifications_review")}
-            style={{
-              padding: "11px 18px",
-              borderRadius: "6px 6px 0 0",
-              fontSize: "0.84rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              border: "none",
-              borderBottom: activeTab === "verifications_review" ? "3px solid var(--gov-primary, #0a2540)" : "3px solid transparent",
-              background: activeTab === "verifications_review" ? "var(--bg-surface, #ffffff)" : "transparent",
-              color: activeTab === "verifications_review" ? "var(--gov-primary, #0a2540)" : "var(--text-muted, #64748b)",
-              transition: "all 0.15s ease"
-            }}
+            className={`civic-tab-btn ${activeTab === "verifications_review" ? "active" : ""}`}
           >
             <FileCheck size={15} />
-            <span>Pending Inspection Approvals (3)</span>
+            <span>Inspection Approvals</span>
+            <span className="civic-tab-badge">3</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("anomaly_dossiers")}
-            style={{
-              padding: "11px 18px",
-              borderRadius: "6px 6px 0 0",
-              fontSize: "0.84rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              border: "none",
-              borderBottom: activeTab === "anomaly_dossiers" ? "3px solid var(--gov-primary, #0a2540)" : "3px solid transparent",
-              background: activeTab === "anomaly_dossiers" ? "var(--bg-surface, #ffffff)" : "transparent",
-              color: activeTab === "anomaly_dossiers" ? "var(--gov-primary, #0a2540)" : "var(--text-muted, #64748b)",
-              transition: "all 0.15s ease"
-            }}
+            className={`civic-tab-btn ${activeTab === "anomaly_dossiers" ? "active" : ""}`}
           >
             <ShieldAlert size={15} />
-            <span>Collectorate Inquiries & Dossiers ({highRiskProjects.length})</span>
+            <span>Inquiries & Dossiers</span>
+            <span className="civic-tab-badge">{highRiskProjects.length}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("contractors_management")}
-            style={{
-              padding: "11px 18px",
-              borderRadius: "6px 6px 0 0",
-              fontSize: "0.84rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              border: "none",
-              borderBottom: activeTab === "contractors_management" ? "3px solid var(--gov-primary, #0a2540)" : "3px solid transparent",
-              background: activeTab === "contractors_management" ? "var(--bg-surface, #ffffff)" : "transparent",
-              color: activeTab === "contractors_management" ? "var(--gov-primary, #0a2540)" : "var(--text-muted, #64748b)",
-              transition: "all 0.15s ease"
-            }}
+            className={`civic-tab-btn ${activeTab === "contractors_management" ? "active" : ""}`}
           >
             <Building2 size={15} />
             <span>Contractors & Vendors</span>
           </button>
-
         </div>
 
         {/* TAB: CONTRACTORS & VENDORS MANAGEMENT */}
@@ -495,7 +541,7 @@ export const DistrictDashboard: React.FC = () => {
 
         {/* TAB 1: DISTRICT WORKS REGISTER (Spacious table padding, evidence button, and clean actions) */}
         {activeTab === "district_projects" && (
-          <div className="gov-card" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "18px" }}>
+          <div className="civic-card" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "18px" }}>
             
             {/* Header & Filter Controls */}
             <div style={{ 
@@ -735,7 +781,7 @@ export const DistrictDashboard: React.FC = () => {
               Review physical milestone inspection submissions from division field engineers. Inspect attached geotagged evidence, verify measurement book records, and issue administrative sanction approvals or show-cause notices.
             </Alert>
 
-            <div className="gov-card" style={{ padding: "20px" }}>
+            <div className="civic-card" style={{ padding: "20px" }}>
               <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--text-main)", marginBottom: "14px" }}>
                 Field Inspection Submissions Awaiting Collectorate Approval
               </h3>
@@ -842,7 +888,7 @@ export const DistrictDashboard: React.FC = () => {
             {highRiskProjects.map((work) => (
               <div 
                 key={work.id} 
-                className="gov-card"
+                className="civic-card"
                 style={{
                   borderLeft: "4px solid #dc2626",
                   padding: "18px 22px"
@@ -887,9 +933,7 @@ export const DistrictDashboard: React.FC = () => {
             ))}
           </div>
         )}
-
-
-
+        </div>
       </main>
 
       {/* COLLECTORATE REVIEW DOSSIER MODAL (Simplified, zero confidence badges, actual numbers) */}

@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Home, Search, FileText, Bell, MapPin, Landmark, 
   Plus, AlertTriangle, ArrowRight, CheckCircle2, Clock, 
-  ChevronRight, Sparkles, Building2
+  ChevronRight, Sparkles, Building2, Database
 } from "lucide-react";
 import { Header } from "../components/Header";
 import { PolicyModal } from "../components/PolicyModal";
@@ -26,6 +26,7 @@ import {
   CitizenFooter,
   CitizenNavbar
 } from "../components/citizen";
+import { adminDataService } from "../api/adminDataService";
 
 export const CitizenDashboard: React.FC = () => {
   const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
@@ -37,6 +38,8 @@ export const CitizenDashboard: React.FC = () => {
   const [currentConstituency, setCurrentConstituency] = useState<string>("Pune");
   const [currentState, setCurrentState] = useState<string>("Maharashtra");
   const [issues, setIssues] = useState<CitizenIssue[]>(INITIAL_CITIZEN_ISSUES);
+  const [works, setWorks] = useState<WorkItem[]>(ALL_WORKS);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   
   // Modals State
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
@@ -49,11 +52,73 @@ export const CitizenDashboard: React.FC = () => {
   // Search query on Home hero
   const [homeSearchQuery, setHomeSearchQuery] = useState("");
 
+  // Hydrate projects from live Supabase
+  useEffect(() => {
+    async function loadCitizenProjects() {
+      try {
+        const liveProjs = await adminDataService.getRawProjects();
+        if (liveProjs && liveProjs.length > 0) {
+          const mapped: WorkItem[] = liveProjs.map((p, idx) => ({
+            id: p.project_id || p.id || `CW-${idx}`,
+            title: p.project_name || p.title || "Public Community Infrastructure Work",
+            house: "Lok Sabha",
+            state: p.state || "Maharashtra",
+            district: p.district || "Pune",
+            constituency: p.district || "Pune",
+            constituency_code: "PC-01",
+            mpName: "Local Member of Parliament",
+            category: p.category || "Community Asset",
+            sectorName: p.category || "Public Works",
+            recommendedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+            sanctionedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+            expenditureAmt: Number(p.utilized_amount || 500000) / 10000000,
+            physicalProgress: p.progress_percentage || (p.status === "Completed" ? 100 : 50),
+            financialProgress: Math.round(
+              ((Number(p.utilized_amount || 0)) / Math.max(1, Number(p.sanctioned_amount || 1))) * 100
+            ) || 45,
+            dateSanctioned: p.start_date || "2024-04-01",
+            targetCompletion: p.expected_completion_date || "2025-06-30",
+            status: (p.status || "Ongoing") as any,
+            agency: "Local Municipal Corporation / Rural Engineering",
+            contractor: "Authorized Implementing Contractor",
+            rating: 4.8,
+            reviewsCount: 1,
+            attachments: [],
+            reviews: []
+          }));
+
+          setWorks(mapped);
+          setIsLiveConnected(true);
+        }
+      } catch (err) {
+        console.warn("CitizenDashboard live fetch fallback:", err);
+      }
+    }
+    loadCitizenProjects();
+  }, []);
+
+  // Available constituencies extracted dynamically
+  const availableAreas = useMemo(() => {
+    const list = new Set<string>();
+    ["Pune", "Varanasi", "New Delhi", "Bangalore South", "Chennai South", "Jabalpur", "Kurukshetra"].forEach(a => list.add(a));
+    works.forEach(w => {
+      if (w.constituency) list.add(w.constituency);
+      else if (w.district) list.add(w.district);
+    });
+    return Array.from(list).sort();
+  }, [works]);
+
   // Filter works by current constituency or show all
-  const constituencyWorks = ALL_WORKS.filter(
-    (w) => !currentConstituency || w.constituency.toLowerCase() === currentConstituency.toLowerCase()
-  );
-  const displayWorks = constituencyWorks.length > 0 ? constituencyWorks : ALL_WORKS;
+  const constituencyWorks = useMemo(() => {
+    if (!currentConstituency) return works;
+    const filtered = works.filter(
+      (w) => (w.constituency && w.constituency.toLowerCase().includes(currentConstituency.toLowerCase())) ||
+             (w.district && w.district.toLowerCase().includes(currentConstituency.toLowerCase()))
+    );
+    return filtered.length > 0 ? filtered : works;
+  }, [works, currentConstituency]);
+
+  const displayWorks = constituencyWorks;
 
   // Local works statistics (compact citizen counts)
   const totalWorksCount = displayWorks.length;
@@ -86,11 +151,18 @@ export const CitizenDashboard: React.FC = () => {
 
   const handleConstituencyChange = (constituencyName: string) => {
     setCurrentConstituency(constituencyName);
-    if (constituencyName === "Pune") setCurrentState("Maharashtra");
-    else if (constituencyName === "Varanasi") setCurrentState("Uttar Pradesh");
-    else if (constituencyName === "New Delhi") setCurrentState("Delhi");
-    else if (constituencyName.includes("Bangalore")) setCurrentState("Karnataka");
-    else if (constituencyName.includes("Chennai")) setCurrentState("Tamil Nadu");
+    const matched = works.find(w => w.constituency === constituencyName || w.district === constituencyName);
+    if (matched && matched.state) {
+      setCurrentState(matched.state);
+    } else {
+      if (constituencyName === "Pune") setCurrentState("Maharashtra");
+      else if (constituencyName === "Varanasi") setCurrentState("Uttar Pradesh");
+      else if (constituencyName === "New Delhi") setCurrentState("Delhi");
+      else if (constituencyName.includes("Bangalore")) setCurrentState("Karnataka");
+      else if (constituencyName.includes("Chennai")) setCurrentState("Tamil Nadu");
+      else if (constituencyName === "Jabalpur") setCurrentState("Madhya Pradesh");
+      else if (constituencyName === "Kurukshetra") setCurrentState("Haryana");
+    }
   };
 
   const getReportStageBadge = (issue: CitizenIssue) => {
@@ -383,88 +455,77 @@ export const CitizenDashboard: React.FC = () => {
         onOpenLogin={() => setIsLoginOpen(true)}
       />
 
-      {/* Centered Main Content Container (max-width: 1200px) */}
-      <main className="citizen-main-container">
+      {/* Centered Main Content Container */}
+      <main className="mplads-main" style={{ flex: 1, padding: "1.5rem 0 3.5rem" }}>
+        <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {/* Compact Location Header & Area Switcher */}
-        <div className="citizen-location-bar">
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-            <MapPin size={16} color="var(--gov-accent)" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: "0.84rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              Constituency: <strong style={{ color: "var(--gov-primary)" }}>{currentConstituency}</strong> ({currentState})
+        <div className="civic-card" style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flexWrap: "wrap" }}>
+            <MapPin size={18} color="#d97706" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: "0.88rem", color: "var(--text-main, #0f172a)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Constituency: <strong style={{ color: "var(--gov-primary, #0a2540)" }}>{currentConstituency}</strong> ({currentState})
             </span>
+            {isLiveConnected && (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#059669", fontWeight: 600 }}>
+                <Database size={11} />
+                <span>Live Supabase Connected</span>
+              </div>
+            )}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "0.76rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>Change Area:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", whiteSpace: "nowrap", fontWeight: 600 }}>Change Constituency:</span>
             <select
               value={currentConstituency}
               onChange={(e) => handleConstituencyChange(e.target.value)}
               style={{
-                padding: "4px 8px",
-                borderRadius: "var(--radius-xs)",
-                border: "1px solid var(--border-main)",
-                background: "var(--bg-surface)",
-                color: "var(--text-main)",
-                fontSize: "0.78rem",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--border-main, #cbd5e1)",
+                background: "var(--bg-surface, #ffffff)",
+                color: "var(--text-main, #0f172a)",
+                fontSize: "0.82rem",
                 fontWeight: 600,
                 cursor: "pointer",
-                maxWidth: "180px"
+                maxWidth: "220px"
               }}
             >
-              <option value="Pune">Pune (Maharashtra)</option>
-              <option value="Varanasi">Varanasi (Uttar Pradesh)</option>
-              <option value="New Delhi">New Delhi (Delhi)</option>
-              <option value="Bangalore South">Bangalore South (Karnataka)</option>
-              <option value="Chennai South">Chennai South (Tamil Nadu)</option>
+              {availableAreas.map((area) => (
+                <option key={area} value={area}>{area}</option>
+              ))}
             </select>
           </div>
         </div>
 
-        {/* Compact 3-Action Primary Tab Navigation */}
-        <div className="citizen-tab-bar">
-          {/* Tab 1: Home */}
+        {/* Civic Navigation Tabs */}
+        <div className="civic-nav-tabs">
           <button
             type="button"
             onClick={() => setActiveTab("home")}
-            className={`citizen-tab-btn gov-tab ${activeTab === "home" ? "active" : ""}`}
-            style={{ fontWeight: activeTab === "home" ? 700 : 500 }}
+            className={`civic-tab-btn ${activeTab === "home" ? "active" : ""}`}
           >
             <Home size={15} />
-            <span>Home</span>
+            <span>Citizen Portal Home</span>
           </button>
 
-          {/* Tab 2: Find Works */}
           <button
             type="button"
             onClick={() => setActiveTab("find_works")}
-            className={`citizen-tab-btn gov-tab ${activeTab === "find_works" ? "active" : ""}`}
-            style={{ fontWeight: activeTab === "find_works" ? 700 : 500 }}
+            className={`civic-tab-btn ${activeTab === "find_works" ? "active" : ""}`}
           >
             <Search size={15} />
             <span>Find Works</span>
+            <span className="civic-tab-badge">{displayWorks.length}</span>
           </button>
 
-          {/* Tab 3: My Reports */}
           <button
             type="button"
             onClick={() => setActiveTab("my_reports")}
-            className={`citizen-tab-btn gov-tab ${activeTab === "my_reports" ? "active" : ""}`}
-            style={{ fontWeight: activeTab === "my_reports" ? 700 : 500 }}
+            className={`civic-tab-btn ${activeTab === "my_reports" ? "active" : ""}`}
           >
             <FileText size={15} />
             <span>My Reports</span>
-            <span
-              style={{
-                fontSize: "0.68rem",
-                padding: "1px 6px",
-                borderRadius: "var(--radius-full)",
-                background: activeTab === "my_reports" ? "var(--gov-accent)" : "var(--border-light)",
-                color: activeTab === "my_reports" ? "#ffffff" : "var(--text-muted)",
-                fontWeight: 700
-              }}
-            >
-              {issues.length}
-            </span>
+            <span className="civic-tab-badge">{issues.length}</span>
           </button>
         </div>
 
@@ -474,14 +535,27 @@ export const CitizenDashboard: React.FC = () => {
         {activeTab === "home" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             
-            {/* Simplified Hero: "Find development works near you" with single search & quick buttons */}
-            <div className="citizen-hero-box">
+            {/* Hero Card */}
+            <div 
+              className="civic-card"
+              style={{ 
+                background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)", 
+                color: "#ffffff", 
+                padding: "26px 30px", 
+                borderRadius: "14px", 
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                boxShadow: "0 4px 20px rgba(15, 23, 42, 0.12)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px"
+              }}
+            >
               <div>
-                <h2 style={{ fontSize: "1.30rem", fontWeight: 800, color: "var(--text-white)", margin: "0 0 4px 0", letterSpacing: "-0.2px" }}>
+                <h2 style={{ fontSize: "1.45rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
                   Find development works near you
                 </h2>
-                <p style={{ fontSize: "0.84rem", color: "#cbd5e1", maxWidth: "620px", lineHeight: 1.4, margin: 0 }}>
-                  Search approved MPLADS community projects in your area, check execution progress, or report an issue with local infrastructure.
+                <p style={{ fontSize: "0.86rem", color: "#cbd5e1", maxWidth: "660px", lineHeight: 1.45, margin: 0 }}>
+                  Search approved MPLADS community projects in your area, track execution progress, or submit an inquiry for local infrastructure.
                 </p>
               </div>
 
@@ -497,10 +571,10 @@ export const CitizenDashboard: React.FC = () => {
                     style={{
                       width: "100%",
                       padding: "10px 14px 10px 36px",
-                      borderRadius: "var(--radius-xs)",
+                      borderRadius: "8px",
                       border: "none",
                       background: "#ffffff",
-                      color: "var(--text-main)",
+                      color: "#0f172a",
                       fontSize: "0.86rem",
                       outline: "none",
                       boxSizing: "border-box"
@@ -514,7 +588,7 @@ export const CitizenDashboard: React.FC = () => {
                     variant="primary"
                     size="md"
                     icon={<Search size={14} />}
-                    style={{ background: "var(--gov-accent)", borderColor: "var(--gov-accent)" }}
+                    style={{ background: "#d97706", borderColor: "#d97706", borderRadius: "8px", fontWeight: 700 }}
                   >
                     Find Works
                   </Button>
@@ -525,39 +599,39 @@ export const CitizenDashboard: React.FC = () => {
                     size="md"
                     onClick={handleOpenGeneralReport}
                     icon={<AlertTriangle size={14} />}
-                    style={{ background: "#ea580c", borderColor: "#c2410c" }}
+                    style={{ background: "#ea580c", borderColor: "#c2410c", borderRadius: "8px", fontWeight: 700 }}
                   >
-                    Report a Problem
+                    Report an Issue
                   </Button>
                 </div>
               </form>
             </div>
 
             {/* Combined Section: "Development works near you" with compact stats + max 3 cards */}
-            <div className="citizen-works-section">
+            <div className="civic-card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "18px" }}>
               {/* Section Header & Compact Inline Statistics */}
               <div className="citizen-works-header">
                 <div>
-                  <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0 }}>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main, #0f172a)", margin: 0, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
                     Development works near you
                   </h3>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
                     Sanctioned public projects in {currentConstituency}
                   </span>
                 </div>
 
-                {/* Compact Statistics (Inline Chips / 2x2 grid on mobile) */}
+                {/* Compact Statistics */}
                 <div className="citizen-stats-group">
-                  <div style={{ background: "var(--bg-surface-subtle)", border: "1px solid var(--border-light)", padding: "4px 10px", borderRadius: "var(--radius-xs)", fontSize: "0.74rem" }}>
+                  <div style={{ background: "var(--bg-surface-subtle)", border: "1px solid var(--border-light)", padding: "5px 12px", borderRadius: "8px", fontSize: "0.76rem" }}>
                     Total: <strong style={{ color: "var(--gov-primary)" }}>{totalWorksCount}</strong>
                   </div>
-                  <div style={{ background: "var(--status-info-bg)", border: "1px solid var(--status-info-border)", padding: "4px 10px", borderRadius: "var(--radius-xs)", fontSize: "0.74rem" }}>
+                  <div style={{ background: "var(--status-info-bg)", border: "1px solid var(--status-info-border)", padding: "5px 12px", borderRadius: "8px", fontSize: "0.76rem" }}>
                     Ongoing: <strong style={{ color: "var(--gov-accent)" }}>{ongoingWorksCount}</strong>
                   </div>
-                  <div style={{ background: "var(--status-success-bg)", border: "1px solid var(--status-success-border)", padding: "4px 10px", borderRadius: "var(--radius-xs)", fontSize: "0.74rem" }}>
+                  <div style={{ background: "var(--status-success-bg)", border: "1px solid var(--status-success-border)", padding: "5px 12px", borderRadius: "8px", fontSize: "0.76rem" }}>
                     Completed: <strong style={{ color: "var(--status-success-text)" }}>{completedWorksCount}</strong>
                   </div>
-                  <div style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)", padding: "4px 10px", borderRadius: "var(--radius-xs)", fontSize: "0.74rem" }}>
+                  <div style={{ background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)", padding: "5px 12px", borderRadius: "8px", fontSize: "0.76rem" }}>
                     Delayed: <strong style={{ color: "var(--status-danger-text)" }}>{delayedWorksCount}</strong>
                   </div>
                 </div>
@@ -573,15 +647,14 @@ export const CitizenDashboard: React.FC = () => {
                   return (
                     <div
                       key={work.id}
+                      className="civic-card"
                       style={{
-                        background: "var(--bg-surface-subtle)",
-                        borderRadius: "var(--radius-xs)",
-                        border: "1px solid var(--border-light)",
-                        padding: "16px",
+                        padding: "18px 20px",
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
-                        boxSizing: "border-box"
+                        boxSizing: "border-box",
+                        borderTop: "3.5px solid #d97706"
                       }}
                     >
                       <div>
@@ -594,7 +667,7 @@ export const CitizenDashboard: React.FC = () => {
                         </div>
 
                         {/* Title */}
-                        <h4 style={{ fontSize: "0.94rem", fontWeight: 700, color: "var(--gov-primary)", margin: "0 0 6px 0", lineHeight: 1.35, wordBreak: "break-word" }}>
+                        <h4 style={{ fontSize: "0.96rem", fontWeight: 700, color: "var(--text-main, #0f172a)", margin: "0 0 6px 0", lineHeight: 1.35, wordBreak: "break-word", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
                           {work.title}
                         </h4>
 
@@ -663,7 +736,7 @@ export const CitizenDashboard: React.FC = () => {
             </div>
 
             {/* Compact Recent Reports Section */}
-            <div className="citizen-recent-reports-section">
+            <div className="civic-card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                 <div>
                   <h3 style={{ fontSize: "1.02rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0 }}>
@@ -766,6 +839,7 @@ export const CitizenDashboard: React.FC = () => {
           <CitizenNotifications />
         )}
 
+        </div>
       </main>
 
       {/* ========================================================================= */}
