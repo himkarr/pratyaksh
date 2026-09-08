@@ -60,6 +60,8 @@ import {
   Cell,
 } from "recharts";
 
+import { Header } from "../components/Header";
+import { Navbar } from "../components/Navbar";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
@@ -77,18 +79,9 @@ import { CompareView } from "../components/admin/compare/CompareView";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 
-const AVAILABLE_ROLES: { id: Role; label: string; roleDesc: string; icon: any }[] = [
-  { id: "ministry", label: "Apex Ministry (MoSPI)", roleDesc: "Executive decision support & AI audit", icon: Award },
-  { id: "mp", label: "Hon'ble MP", roleDesc: "Constituency works & fund burn rate", icon: Landmark },
-  { id: "district", label: "District Authority (DM)", roleDesc: "Sanction works & release tranches", icon: Building2 },
-  { id: "field_officer", label: "Field Inspection Officer", roleDesc: "Ground geotagged verification", icon: MapPin },
-  { id: "contractor", label: "Contractor Agency", roleDesc: "Update progress & milestone photos", icon: Briefcase },
-  { id: "citizen", label: "Citizen Portal", roleDesc: "Public accountability & project tracking", icon: Users },
-];
-
 export const MinistryDashboard: React.FC = () => {
   const { user, setRole } = useRole();
-  const { theme, setTheme, lang, setLang } = usePreferences();
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Active module navigation
   const [activeModule, setActiveModule] = useState<
@@ -122,19 +115,8 @@ export const MinistryDashboard: React.FC = () => {
   // Modals
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<any | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState<boolean>(false);
-  const [isRoleMenuOpen, setIsRoleMenuOpen] = useState<boolean>(false);
-  const roleDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close role dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
-        setIsRoleMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
+  const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
 
   // Fetch live Supabase data
   const loadData = async () => {
@@ -236,358 +218,220 @@ export const MinistryDashboard: React.FC = () => {
     }
   };
 
-  const currentRoleObj =
-    AVAILABLE_ROLES.find((r) => r.id === user.role) || AVAILABLE_ROLES[0];
-  const CurrentRoleIcon = currentRoleObj.icon;
-
   return (
-    <div className="mplads-layout">
-      {/* ====================================================================
-          1. SINGLE STUNNING UNIFIED NAVIGATION BAR
-          ==================================================================== */}
-      <nav className="navigation">
-        <div className="nav-container">
-          {/* Brand Logo */}
-          <div
-            className="nav-logo cursor-pointer"
-            onClick={() => {
-              setActiveModule("overview");
-              setSelectedStateName(null);
-              setSelectedMP(null);
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page, #f8fafc)" }}>
+      {/* 1. Official Government Header (Top Accessibility Bar) */}
+      <Header
+        fontScale={fontScale}
+        setFontScale={setFontScale}
+        theme={theme}
+        setTheme={setTheme}
+        lang={lang}
+        setLang={setLang}
+        t={t}
+      />
+
+      {/* 2. Official MPLADS Top Navigation Bar (Emblem of India, MoSPI, Role Switcher) */}
+      <Navbar
+        activeTab="dashboard"
+        setActiveTab={() => {
+          setActiveModule("overview");
+          setSelectedStateName(null);
+          setSelectedMP(null);
+        }}
+        onOpenPolicy={() => setIsPolicyOpen(true)}
+        onOpenLogin={(role) => {
+          setTargetLoginRole(role);
+          setIsLoginOpen(true);
+        }}
+        t={t}
+        flagCount={nationalStats?.flaggedWorksCount || 120}
+      />
+      {/* 3. Main Content Area */}
+      <main className="mplads-main" style={{ flex: 1, padding: "1.5rem 0 3.5rem" }}>
+        <div className="mplads-container">
+          {/* Module Tabs Navigation Bar (Clean & Un-conflicted) */}
+          <div 
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "space-between",
+              gap: "12px", 
+              borderBottom: "2px solid #e2e8f0", 
+              paddingBottom: "10px", 
+              marginBottom: "1.75rem",
+              flexWrap: "wrap" 
             }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-500 flex items-center justify-center text-white shadow-md">
-                <Landmark size={22} />
-              </div>
-              <div>
-                <h2>e-SAKSHI MPLADS</h2>
-                <span className="nav-tagline">
-                  Decision Support Portal • MoSPI
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Desktop Navigation Links */}
-          <div className="nav-menu">
-            <button
-              onClick={() => {
-                setActiveModule("overview");
-                setSelectedStateName(null);
-                setSelectedMP(null);
-              }}
-              className={`nav-item ${
-                activeModule === "overview" && !selectedStateName && !selectedMP
-                  ? "nav-item-active"
-                  : ""
-              }`}
-            >
-              <Activity className="nav-icon" />
-              <div className="nav-text">
-                <span className="nav-title">Overview</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveModule("states");
-                setSelectedStateName(null);
-                setSelectedMP(null);
-              }}
-              className={`nav-item ${activeModule === "states" ? "nav-item-active" : ""}`}
-            >
-              <Building2 className="nav-icon" />
-              <div className="nav-text">
-                <span className="nav-title">Browse States</span>
-              </div>
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  padding: "2px 8px",
-                  borderRadius: "9999px",
-                  background: activeModule === "states" ? "#2563eb" : "#e2e8f0",
-                  color: activeModule === "states" ? "#ffffff" : "#475569",
-                  marginLeft: "4px",
-                }}
-              >
-                {states.length || 36}
-              </span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveModule("mps");
-                setSelectedStateName(null);
-                setSelectedMP(null);
-              }}
-              className={`nav-item ${activeModule === "mps" ? "nav-item-active" : ""}`}
-            >
-              <Users className="nav-icon" />
-              <div className="nav-text">
-                <span className="nav-title">Browse MPs</span>
-              </div>
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  padding: "2px 8px",
-                  borderRadius: "9999px",
-                  background: activeModule === "mps" ? "#d97706" : "#fef3c7",
-                  color: activeModule === "mps" ? "#ffffff" : "#92400e",
-                  marginLeft: "4px",
-                }}
-              >
-                {mps.length || 160}
-              </span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveModule("compare");
-                setSelectedStateName(null);
-                setSelectedMP(null);
-              }}
-              className={`nav-item ${activeModule === "compare" ? "nav-item-active" : ""}`}
-            >
-              <BarChart2 className="nav-icon" />
-              <div className="nav-text">
-                <span className="nav-title">Compare</span>
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveModule("projects");
-                setSelectedStateName(null);
-                setSelectedMP(null);
-              }}
-              className={`nav-item ${activeModule === "projects" ? "nav-item-active" : ""}`}
-            >
-              <Layers className="nav-icon" />
-              <div className="nav-text">
-                <span className="nav-title">Find Works</span>
-              </div>
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  padding: "2px 8px",
-                  borderRadius: "9999px",
-                  background: activeModule === "projects" ? "#059669" : "#d1fae5",
-                  color: activeModule === "projects" ? "#ffffff" : "#065f46",
-                  marginLeft: "4px",
-                }}
-              >
-                11.5k
-              </span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveModule("governance");
-                setSelectedStateName(null);
-                setSelectedMP(null);
-              }}
-              className={`nav-item ${activeModule === "governance" ? "nav-item-active" : ""}`}
-            >
-              <ShieldCheck className="nav-icon" />
-              <div className="nav-text">
-                <span className="nav-title">AI Governance</span>
-              </div>
-            </button>
-          </div>
-
-          {/* Right Header Controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {/* Live Database Badge */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "6px 12px",
-                borderRadius: "9999px",
-                background: "#ecfdf5",
-                border: "1px solid #a7f3d0",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                color: "#065f46",
-              }}
-              className="hidden xl:flex"
-            >
-              <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  background: "#10b981",
-                  boxShadow: "0 0 6px #10b981",
-                }}
-              />
-              <span>{nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"} Works Live</span>
-            </div>
-
-            {/* Sync Database Button */}
-            <button
-              onClick={loadData}
-              disabled={loading}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: "1px solid #cbd5e1",
-                background: "#ffffff",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "#334155",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
-              title="Sync live records with Supabase"
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin text-blue-600" : "text-slate-600"} />
-              <span className="hidden sm:inline">Sync</span>
-            </button>
-
-            {/* Role Switcher Dropdown */}
-            <div style={{ position: "relative" }} ref={roleDropdownRef}>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
               <button
-                onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
+                type="button"
+                onClick={() => {
+                  setActiveModule("overview");
+                  setSelectedStateName(null);
+                  setSelectedMP(null);
+                }}
+                className={`gov-tab ${activeModule === "overview" && !selectedStateName && !selectedMP ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <Activity size={16} />
+                <span>Executive Overview</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModule("states");
+                  setSelectedStateName(null);
+                  setSelectedMP(null);
+                }}
+                className={`gov-tab ${activeModule === "states" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <Building2 size={16} />
+                <span>States & UTs</span>
+                <span style={{ 
+                  fontSize: "0.72rem", 
+                  padding: "2px 8px", 
+                  borderRadius: "9999px", 
+                  background: activeModule === "states" ? "rgba(255,255,255,0.25)" : "#e2e8f0", 
+                  color: activeModule === "states" ? "#ffffff" : "#475569",
+                  fontWeight: 700
+                }}>
+                  {states.length || 36}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModule("mps");
+                  setSelectedStateName(null);
+                  setSelectedMP(null);
+                }}
+                className={`gov-tab ${activeModule === "mps" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <Users size={16} />
+                <span>Parliamentarians</span>
+                <span style={{ 
+                  fontSize: "0.72rem", 
+                  padding: "2px 8px", 
+                  borderRadius: "9999px", 
+                  background: activeModule === "mps" ? "rgba(255,255,255,0.25)" : "#e2e8f0", 
+                  color: activeModule === "mps" ? "#ffffff" : "#92400e",
+                  fontWeight: 700
+                }}>
+                  {mps.length || 160}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModule("compare");
+                  setSelectedStateName(null);
+                  setSelectedMP(null);
+                }}
+                className={`gov-tab ${activeModule === "compare" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <BarChart2 size={16} />
+                <span>Comparative Analytics</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModule("projects");
+                  setSelectedStateName(null);
+                  setSelectedMP(null);
+                }}
+                className={`gov-tab ${activeModule === "projects" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <Layers size={16} />
+                <span>Project Registry</span>
+                <span style={{ 
+                  fontSize: "0.72rem", 
+                  padding: "2px 8px", 
+                  borderRadius: "9999px", 
+                  background: activeModule === "projects" ? "rgba(255,255,255,0.25)" : "#d1fae5", 
+                  color: activeModule === "projects" ? "#ffffff" : "#065f46",
+                  fontWeight: 700
+                }}>
+                  11.5k
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModule("governance");
+                  setSelectedStateName(null);
+                  setSelectedMP(null);
+                }}
+                className={`gov-tab ${activeModule === "governance" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <ShieldCheck size={16} />
+                <span>AI Governance</span>
+              </button>
+            </div>
+
+            {/* Right Status Badges */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 14px",
+                  borderRadius: "9999px",
+                  background: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  color: "#065f46",
+                }}
+                className="hidden sm:flex"
+              >
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: "#10b981",
+                    boxShadow: "0 0 6px #10b981",
+                  }}
+                />
+                <span>{nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"} Works Live</span>
+              </div>
+
+              <button
+                onClick={loadData}
+                disabled={loading}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  padding: "6px 12px",
+                  padding: "6px 14px",
                   borderRadius: "8px",
-                  border: "1px solid #bfdbfe",
-                  background: "#eff6ff",
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  color: "#1e40af",
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  color: "#334155",
                   cursor: "pointer",
+                  transition: "all 0.15s ease",
                 }}
+                title="Sync live records with Supabase"
               >
-                <CurrentRoleIcon size={14} className="text-blue-700" />
-                <span>{currentRoleObj.label.split(" (")[0]}</span>
-                <ChevronDown size={12} className="text-blue-600" />
+                <RefreshCw size={14} className={loading ? "animate-spin text-blue-600" : "text-slate-600"} />
+                <span>Sync</span>
               </button>
-
-              {isRoleMenuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    right: 0,
-                    top: "calc(100% + 6px)",
-                    width: "280px",
-                    background: "#ffffff",
-                    borderRadius: "12px",
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15)",
-                    zIndex: 1000,
-                    overflow: "hidden",
-                    padding: "6px",
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "8px 12px",
-                      fontSize: "0.7rem",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      color: "#64748b",
-                      borderBottom: "1px solid #f1f5f9",
-                    }}
-                  >
-                    Switch Stakeholder Role
-                  </div>
-                  {AVAILABLE_ROLES.map((r) => {
-                    const RoleIcon = r.icon;
-                    const isCurrent = r.id === user.role;
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => {
-                          setRole(r.id);
-                          setIsRoleMenuOpen(false);
-                        }}
-                        style={{
-                          width: "100%",
-                          textAlign: "left",
-                          padding: "10px 12px",
-                          borderRadius: "8px",
-                          border: "none",
-                          background: isCurrent ? "#eff6ff" : "transparent",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: "10px",
-                          transition: "background 0.15s ease",
-                        }}
-                      >
-                        <RoleIcon
-                          size={16}
-                          style={{
-                            marginTop: "2px",
-                            color: isCurrent ? "#2563eb" : "#64748b",
-                          }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div
-                            style={{
-                              fontSize: "0.82rem",
-                              fontWeight: isCurrent ? 700 : 600,
-                              color: isCurrent ? "#1e40af" : "#1e293b",
-                            }}
-                          >
-                            {r.label}
-                          </div>
-                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                            {r.roleDesc}
-                          </div>
-                        </div>
-                        {isCurrent && <Check size={14} className="text-blue-600 mt-1" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-
-            {/* Policy Guidelines Button */}
-            <button
-              onClick={() => setIsPolicyOpen(true)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: "1px solid #e2e8f0",
-                background: "#ffffff",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "#475569",
-                cursor: "pointer",
-              }}
-              title="MPLADS 2023 Statutory Guidelines"
-            >
-              <Lock size={13} className="text-amber-600" />
-              <span className="hidden md:inline">Rules</span>
-            </button>
           </div>
-        </div>
-      </nav>
-
-      {/* ====================================================================
-          2. MAIN CONTENT AREA (CLEAN CONTAINER, NO STACKED HEADERS)
-          ==================================================================== */}
-      <main className="mplads-main">
-        <div className="mplads-container">
           {/* ----------------------------------------------------------------
               TAB 1: EXECUTIVE OVERVIEW (.dashboard)
               ---------------------------------------------------------------- */}
@@ -1498,6 +1342,15 @@ export const MinistryDashboard: React.FC = () => {
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
       />
+
+      {/* Login / Perspective Switcher Modal */}
+      {isLoginOpen && (
+        <LoginModal
+          isOpen={isLoginOpen}
+          onClose={() => setIsLoginOpen(false)}
+          initialRole={targetLoginRole}
+        />
+      )}
     </div>
   );
 };

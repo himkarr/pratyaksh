@@ -19,6 +19,7 @@
   padding: 2rem 0 4rem;
 }
 
+.container,
 .mplads-container {
   max-width: 1440px;
   margin: 0 auto;
@@ -28,6 +29,7 @@
 }
 
 @media (max-width: 1024px) {
+  .container,
   .mplads-container {
     padding: 0 1.5rem;
   }
@@ -37,6 +39,7 @@
 }
 
 @media (max-width: 640px) {
+  .container,
   .mplads-container {
     padding: 0 1rem;
   }
