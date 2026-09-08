@@ -91,56 +91,67 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
   };
 
   return (
-    <div className="gov-modal-backdrop" onClick={onClose}>
+    <div className="gov-modal-backdrop" onClick={onClose} style={{ backdropFilter: 'blur(6px)', background: 'rgba(15, 23, 42, 0.65)' }}>
       <div
         className="gov-modal-content"
         style={{
-          maxWidth: '840px',
+          maxWidth: '880px',
           maxHeight: 'min(92vh, 880px)',
           padding: '0',
-          borderRadius: 'var(--radius-sm)',
+          borderRadius: '16px',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          border: '1px solid var(--border-dark)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-          overscrollBehavior: 'contain'
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          overscrollBehavior: 'contain',
+          background: '#ffffff'
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div style={{
-          padding: '14px 20px',
-          background: 'var(--gov-header)',
-          color: 'var(--text-white)',
+          padding: '16px 24px',
+          background: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
           flexShrink: 0
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              background: 'rgba(255, 255, 255, 0.12)',
-              padding: '6px',
-              borderRadius: 'var(--radius-xs)',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <FileText size={18} color="var(--text-white)" />
+              <FileText size={20} color="#2563eb" />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-white)', letterSpacing: '-0.2px', margin: 0 }}>
-                  Official Work Dossier & Inspection Record
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Work Dossier & Project Inspection
                 </h3>
-                <span className="gov-badge gov-badge-info" style={{ fontSize: '0.66rem' }}>
+                <span style={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid #cbd5e1'
+                }}>
                   {work.id}
                 </span>
               </div>
-              <p style={{ fontSize: '0.72rem', color: '#cbd5e1', margin: '2px 0 0 0' }}>
-                e-SAKSHI Sanction Reference: AS/DRDA/{(work.state || "IN").slice(0, 2).toUpperCase()}/2024/{(work.id || "000").replace('MPLAD-', '')}
+              <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '2px 0 0 0' }}>
+                e-SAKSHI Sanction Ref: AS/DRDA/{(work.state || "IN").slice(0, 2).toUpperCase()}/2024/{(work.id || "000").replace('MPLAD-', '')}
               </p>
             </div>
           </div>
@@ -149,34 +160,42 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
             <button
               type="button"
               onClick={handlePrintDossier}
-              className="gov-btn gov-btn-secondary no-print"
               style={{
-                fontSize: '0.74rem',
-                padding: '4px 8px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                color: 'var(--text-white)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                padding: '6px 12px',
+                borderRadius: '8px',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
+                cursor: 'pointer'
               }}
-              title="Print Dossier (Prints only this selected document)"
+              title="Print Dossier"
             >
-              <Printer size={12} />
+              <Printer size={14} />
               <span>Print</span>
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="no-print"
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: '#f1f5f9',
                 border: 'none',
-                color: 'var(--text-white)',
-                padding: '5px',
-                borderRadius: 'var(--radius-xs)',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: 'pointer'
               }}
               title="Close Dossier"
             >
-              <X size={15} />
+              <X size={18} />
             </button>
           </div>
         </div>
