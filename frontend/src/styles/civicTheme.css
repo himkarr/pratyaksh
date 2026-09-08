@@ -1,0 +1,212 @@
+/* ==========================================================================
+   CIVIC EDITORIAL DESIGN SYSTEM
+   Inspired by reference architecture: Empowered Indian & MoSPI Governance
+   ========================================================================== */
+
+:root {
+  /* Primary Civic Blues */
+  --civic-blue-50: #eff6ff;
+  --civic-blue-100: #dbeafe;
+  --civic-blue-200: #bfdbfe;
+  --civic-blue-300: #93c5fd;
+  --civic-blue-400: #60a5fa;
+  --civic-blue-500: #2563eb;
+  --civic-blue-600: #1d4ed8;
+  --civic-blue-700: #1e40af;
+  --civic-blue-800: #1e3a8a;
+  --civic-blue-900: #1e293b;
+
+  /* Civic Gold Accents (Warning / Pending) */
+  --civic-gold-50: #fefce8;
+  --civic-gold-100: #fef3c7;
+  --civic-gold-200: #fde68a;
+  --civic-gold-300: #fcd34d;
+  --civic-gold-500: #f59e0b;
+  --civic-gold-600: #d97706;
+  --civic-gold-700: #b45309;
+  --civic-gold-800: #92400e;
+  --civic-gold-900: #78350f;
+
+  /* Civic Green (Success / Approved / High Performance) */
+  --civic-green-50: #ecfdf5;
+  --civic-green-100: #d1fae5;
+  --civic-green-200: #a7f3d0;
+  --civic-green-300: #6ee7b7;
+  --civic-green-500: #059669;
+  --civic-green-600: #047857;
+  --civic-green-700: #065f46;
+  --civic-green-800: #064e3b;
+  --civic-green-900: #022c22;
+
+  /* Civic Red (Critical / Delayed / Anomaly / High Risk) */
+  --civic-red-50: #fef2f2;
+  --civic-red-100: #fee2e2;
+  --civic-red-200: #fecaca;
+  --civic-red-300: #fca5a5;
+  --civic-red-500: #dc2626;
+  --civic-red-600: #b91c1c;
+  --civic-red-700: #991b1b;
+  --civic-red-800: #7f1d1d;
+  --civic-red-900: #450a0a;
+
+  /* Refined Slate Neutrals */
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  /* Shadows */
+  --civic-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --civic-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --civic-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --civic-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  --civic-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* Radii */
+  --civic-radius-sm: 0.375rem;
+  --civic-radius-md: 0.5rem;
+  --civic-radius-lg: 0.75rem;
+  --civic-radius-xl: 1rem;
+  --civic-radius-2xl: 1.5rem;
+  --civic-radius-full: 9999px;
+
+  /* Typography */
+  --font-family-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-heading: 'Outfit', Georgia, serif;
+}
+
+/* Base Civic Utility Classes */
+.civic-card {
+  background: #ffffff;
+  border-radius: var(--civic-radius-lg);
+  border: 1px solid var(--slate-200);
+  box-shadow: var(--civic-shadow-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.civic-card:hover {
+  box-shadow: var(--civic-shadow-md);
+  border-color: var(--civic-blue-200);
+}
+
+.civic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--civic-radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.civic-badge-high {
+  background: var(--civic-green-50);
+  color: var(--civic-green-700);
+  border: 1px solid var(--civic-green-200);
+}
+
+.civic-badge-medium {
+  background: var(--civic-gold-50);
+  color: var(--civic-gold-700);
+  border: 1px solid var(--civic-gold-200);
+}
+
+.civic-badge-low {
+  background: var(--civic-red-50);
+  color: var(--civic-red-700);
+  border: 1px solid var(--civic-red-200);
+}
+
+.civic-badge-info {
+  background: var(--civic-blue-50);
+  color: var(--civic-blue-700);
+  border: 1px solid var(--civic-blue-200);
+}
+
+/* Civic Progress Bars */
+.civic-progress-track {
+  height: 8px;
+  background: var(--slate-100);
+  border-radius: var(--civic-radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.civic-progress-fill {
+  height: 100%;
+  border-radius: var(--civic-radius-full);
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.civic-progress-fill.high {
+  background: linear-gradient(90deg, var(--civic-green-500), var(--civic-green-600));
+}
+
+.civic-progress-fill.medium {
+  background: linear-gradient(90deg, var(--civic-gold-500), var(--civic-gold-600));
+}
+
+.civic-progress-fill.low {
+  background: linear-gradient(90deg, var(--civic-red-500), var(--civic-red-600));
+}
+
+.civic-progress-fill.primary {
+  background: linear-gradient(90deg, var(--civic-blue-500), var(--civic-blue-600));
+}
+
+/* Navigation Tabs Header */
+.civic-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--slate-100);
+  padding: 0.375rem;
+  border-radius: var(--civic-radius-xl);
+  overflow-x: auto;
+}
+
+.civic-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--slate-600);
+  border-radius: var(--civic-radius-lg);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.civic-tab-btn:hover {
+  color: var(--slate-900);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.civic-tab-btn.active {
+  color: var(--civic-blue-700);
+  background: #ffffff;
+  font-weight: 600;
+  box-shadow: var(--civic-shadow-sm);
+}
+
+/* Animations */
+@keyframes civicFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-civic-fade {
+  animation: civicFadeIn 0.25s ease-out forwards;
+}

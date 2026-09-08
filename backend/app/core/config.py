@@ -4,6 +4,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
+
 # The default is only for the local Docker stack. Production must set DATABASE_URL.
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://mplad:mplad@db:5432/mplad")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
