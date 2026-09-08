@@ -13,6 +13,18 @@
 
 import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
+import "./styles/reference-app.css";
+import "./styles/Navigation.css";
+import "./styles/StateCard.css";
+import "./styles/StateCardList.css";
+import "./styles/MPCard.css";
+import "./styles/StateList.css";
+import "./styles/StateDetail.css";
+import "./styles/MPList.css";
+import "./styles/MPDetail.css";
+import "./styles/Compare.css";
+import "./styles/Dashboard.css";
+import "./styles/civicTheme.css";
 import "./style.css";
 import { PreferencesProvider } from "./context/PreferencesContext";
 import { RoleProvider, useRole } from "./auth/roleContext";

@@ -92,153 +92,204 @@ export const StateList: React.FC<StateListProps> = ({
   }, [states, searchQuery, sortBy, sortOrder, filterRange]);
 
   return (
-    <div className="space-y-6">
-      {/* 1. National Performance Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="civic-card p-5 bg-gradient-to-br from-white to-blue-50/40">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span>States & UTs</span>
-            <Building className="w-4 h-4 text-blue-600" />
+    <div className="states-page">
+      {/* 1. Header & National Statistics */}
+      <div className="states-header">
+        <div className="header-content">
+          <div className="title-row">
+            <h1>State-wise MPLADS Performance</h1>
           </div>
-          <div className="text-2xl font-black text-slate-900">
-            {nationalStats.totalStates}
-          </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Covering {nationalStats.totalWorks.toLocaleString("en-IN")} total works
-          </div>
+          <p>Comprehensive overview of fund utilization across all Indian states and union territories</p>
         </div>
 
-        <div className="civic-card p-5 bg-gradient-to-br from-white to-slate-50">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span>Total Outlay</span>
-            <DollarSign className="w-4 h-4 text-slate-600" />
+        <div className="national-stats">
+          <div className="stat-box">
+            <span className="stat-label">Total States / UTs</span>
+            <span className="stat-value">{nationalStats.totalStates}</span>
+            <span className="stat-period">36 Jurisdictions</span>
           </div>
-          <div className="text-2xl font-black text-slate-900">
-            {formatCurrency(nationalStats.totalAllocated)}
+          <div className="stat-box">
+            <span className="stat-label">Total Outlay</span>
+            <span className="stat-value">{formatCurrency(nationalStats.totalAllocated)}</span>
+            <span className="stat-period">Sanctioned Outlay</span>
           </div>
-          <div className="text-xs text-slate-500 mt-1">Sanctioned MPLADS funds</div>
-        </div>
-
-        <div className="civic-card p-5 bg-gradient-to-br from-white to-emerald-50/40">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span>Total Expenditure</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <div className="stat-box">
+            <span className="stat-label">Recorded Expenditure</span>
+            <span className="stat-value" style={{ color: "#059669" }}>
+              {formatCurrency(nationalStats.totalExpenditure)}
+            </span>
+            <span className="stat-period">Certified Spent</span>
           </div>
-          <div className="text-2xl font-black text-emerald-700">
-            {formatCurrency(nationalStats.totalExpenditure)}
+          <div className="stat-box">
+            <span className="stat-label">National Utilization</span>
+            <span className="stat-value">{nationalStats.avgUtilization}%</span>
+            <span className="stat-period">Weighted Average</span>
           </div>
-          <div className="text-xs text-slate-500 mt-1">Disbursed on ground</div>
-        </div>
-
-        <div className="civic-card p-5 bg-gradient-to-br from-white to-indigo-50/40">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span>National Utilization</span>
-            <TrendingUp className="w-4 h-4 text-indigo-600" />
-          </div>
-          <div className="text-2xl font-black text-indigo-700">
-            {nationalStats.avgUtilization}%
-          </div>
-          <div className="text-xs text-slate-500 mt-1">Weighted average efficiency</div>
         </div>
       </div>
 
-      {/* 2. Control Toolbar (Search, Filter, Sort, View Mode Toggle) */}
-      <div className="civic-card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search states or territories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-          />
+      {/* 2. Performance Insights Banner */}
+      <div className="performance-insights">
+        <div className="insights-grid">
+          <div
+            className={`insight-card cursor-pointer ${filterRange === "high" ? "active ring-2 ring-emerald-500" : ""}`}
+            onClick={() => setFilterRange(filterRange === "high" ? "all" : "high")}
+          >
+            <div className="insight-icon high">
+              <TrendingUp size={22} />
+            </div>
+            <div className="insight-content">
+              <h3>High Performers</h3>
+              <p className="insight-count">
+                {states.filter((s) => s.utilizationPercentage >= 80).length}
+              </p>
+              <p className="insight-desc">States with &gt;= 80% utilization</p>
+            </div>
+          </div>
+
+          <div
+            className={`insight-card cursor-pointer ${filterRange === "medium" ? "active ring-2 ring-amber-500" : ""}`}
+            onClick={() => setFilterRange(filterRange === "medium" ? "all" : "medium")}
+          >
+            <div className="insight-icon medium">
+              <PieChart size={22} />
+            </div>
+            <div className="insight-content">
+              <h3>Average Performers</h3>
+              <p className="insight-count">
+                {states.filter((s) => s.utilizationPercentage >= 50 && s.utilizationPercentage < 80).length}
+              </p>
+              <p className="insight-desc">States with 50% - 79% utilization</p>
+            </div>
+          </div>
+
+          <div
+            className={`insight-card cursor-pointer ${filterRange === "low" ? "active ring-2 ring-rose-500" : ""}`}
+            onClick={() => setFilterRange(filterRange === "low" ? "all" : "low")}
+          >
+            <div className="insight-icon low">
+              <Building size={22} />
+            </div>
+            <div className="insight-content">
+              <h3>Needs Attention</h3>
+              <p className="insight-count">
+                {states.filter((s) => s.utilizationPercentage < 50).length}
+              </p>
+              <p className="insight-desc">States with &lt; 50% utilization</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Search, Sort & View Mode Controls */}
+      <div className="states-controls">
+        <div className="search-section">
+          <div className="search-box">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Search state or union territory..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
-        {/* Filters & Sorting */}
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-          {/* Utilization Range Filter */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
+        <div className="control-buttons">
+          {/* Performance Tier Select */}
+          <div className="sort-controls">
+            <label>Filter:</label>
             <select
               value={filterRange}
               onChange={(e: any) => setFilterRange(e.target.value)}
-              className="py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none"
+              className="sort-select"
             >
-              <option value="all">All Efficiency Tiers</option>
-              <option value="high">High (&gt;= 70%)</option>
-              <option value="medium">Moderate (40% - 69%)</option>
-              <option value="low">Low (&lt; 40%)</option>
+              <option value="all">All Tiers (36)</option>
+              <option value="high">High (&gt;= 80%)</option>
+              <option value="medium">Average (50% - 79%)</option>
+              <option value="low">Needs Attention (&lt; 50%)</option>
             </select>
           </div>
 
-          {/* Sort By */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="text-slate-400">Sort:</span>
+          {/* Sort By Select */}
+          <div className="sort-controls">
+            <label>Sort:</label>
             <select
               value={sortBy}
               onChange={(e: any) => setSortBy(e.target.value)}
-              className="py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none"
+              className="sort-select"
             >
-              <option value="utilizationPercentage">Utilization Rate</option>
-              <option value="totalAllocated">Allocated Funds</option>
-              <option value="totalExpenditure">Expenditure</option>
+              <option value="utilizationPercentage">Fund Utilization</option>
+              <option value="totalAllocated">Total Outlay</option>
+              <option value="totalExpenditure">Recorded Spent</option>
               <option value="projectCount">Total Works</option>
             </select>
-            <button
-              onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-              title={`Sort ${sortOrder === "desc" ? "Ascending" : "Descending"}`}
-              className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-700"
-            >
-              <ArrowUpDown className="w-3.5 h-3.5" />
-            </button>
           </div>
 
+          <button
+            onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
+            className="sort-controls cursor-pointer hover:bg-slate-50 transition-colors"
+            title={`Sort ${sortOrder === "desc" ? "Ascending" : "Descending"}`}
+            style={{ padding: "0.5rem 0.85rem" }}
+          >
+            <ArrowUpDown size={15} />
+            <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>{sortOrder.toUpperCase()}</span>
+          </button>
+
           {/* View Mode Toggle */}
-          <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50 p-0.5">
+          <div className="view-controls">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded ${
-                viewMode === "grid"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-              title="Grid View"
+              className={`view-btn ${viewMode === "grid" ? "active" : ""}`}
+              style={{
+                padding: "8px 14px",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+              }}
             >
-              <LayoutGrid className="w-4 h-4" />
+              <LayoutGrid size={15} /> Grid
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded ${
-                viewMode === "list"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-              title="List View"
+              className={`view-btn ${viewMode === "list" ? "active" : ""}`}
+              style={{
+                padding: "8px 14px",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+              }}
             >
-              <List className="w-4 h-4" />
+              <List size={15} /> Table
             </button>
           </div>
         </div>
       </div>
 
-      {/* 3. States Content Rendering */}
+      {/* 4. State Cards / Table View */}
       {isLoading ? (
-        <div className="py-16 text-center text-slate-500">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          Loading state governance data from Supabase...
+        <div className="states-loading">
+          <div className="loading-spinner" />
+          <p>Loading live state governance data from Supabase...</p>
         </div>
       ) : filteredStates.length === 0 ? (
-        <div className="civic-card p-12 text-center text-slate-500">
-          <Building className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-          <h4 className="text-base font-bold text-slate-700">No states found</h4>
-          <p className="text-xs text-slate-400 mt-1">
-            Try adjusting your search criteria or filter options.
+        <div style={{ background: "white", padding: "48px", textAlign: "center", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+          <Building size={36} style={{ color: "var(--text-tertiary)", margin: "0 auto 12px" }} />
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>No states match your filter</h3>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+            Try resetting your search query or choosing "All Performance Tiers".
           </p>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-civic-fade">
+        <div className="states-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>
           {filteredStates.map((st) => (
             <StateCard
               key={st.state}
@@ -248,18 +299,18 @@ export const StateList: React.FC<StateListProps> = ({
           ))}
         </div>
       ) : (
-        <div className="civic-card overflow-hidden animate-civic-fade">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="state-table-container">
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4 w-16">Rank</th>
-                  <th className="py-3 px-4">State & Constituencies</th>
-                  <th className="py-3 px-4">Projects</th>
-                  <th className="py-3 px-4">Sanctioned</th>
-                  <th className="py-3 px-4">Utilized</th>
-                  <th className="py-3 px-4 w-44">Utilization Rate</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)" }}>
+                  <th style={{ padding: "12px 16px", width: "70px" }}>Rank</th>
+                  <th style={{ padding: "12px 16px" }}>State / Union Territory</th>
+                  <th style={{ padding: "12px 16px" }}>Works Portfolio</th>
+                  <th style={{ padding: "12px 16px" }}>Sanctioned Outlay</th>
+                  <th style={{ padding: "12px 16px" }}>Expenditure</th>
+                  <th style={{ padding: "12px 16px", width: "180px" }}>Utilization Rate</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Action</th>
                 </tr>
               </thead>
               <tbody>

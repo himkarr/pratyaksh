@@ -77,160 +77,245 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
   }, [mps, searchQuery, houseFilter, stateFilter, sortBy, sortOrder]);
 
   return (
-    <div className="space-y-6">
-      {/* Header Summary Banner */}
-      <div className="civic-card p-5 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-black flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-300" />
-            Members of Parliament Directory & Performance Index
-          </h2>
-          <p className="text-xs text-blue-200 mt-1 max-w-2xl">
-            Ranked parliamentary oversight of recommended works, certified ground expenditure, and statutory SC/ST quota allocations.
+    <div className="mps-page">
+      {/* 1. Header & National Statistics */}
+      <div className="mps-header">
+        <div className="header-content">
+          <div className="title-row">
+            <h1>Members of Parliament Performance</h1>
+          </div>
+          <p>
+            Ranked parliamentary performance tracking and fund utilization analysis for Lok Sabha and Rajya Sabha MPs
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="text-right">
-            <div className="text-2xl font-black text-white">{mps.length}</div>
-            <div className="text-[11px] text-blue-300 uppercase tracking-wider font-semibold">
-              Active Parliamentarians
+        <div className="national-stats">
+          <div className="stat-box">
+            <span className="stat-label">Active MPs Tracked</span>
+            <span className="stat-value">{mps.length}</span>
+            <span className="stat-period">Both Houses</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-label">Total Allocated</span>
+            <span className="stat-value">
+              {formatCurrency(mps.reduce((sum, m) => sum + m.totalSanctioned, 0))}
+            </span>
+            <span className="stat-period">Sanctioned Outlay</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-label">Recorded Expenditure</span>
+            <span className="stat-value" style={{ color: "#059669" }}>
+              {formatCurrency(mps.reduce((sum, m) => sum + m.totalUtilized, 0))}
+            </span>
+            <span className="stat-period">Disbursed on Ground</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-label">Average Utilization</span>
+            <span className="stat-value">
+              {mps.length > 0
+                ? Math.round(
+                    mps.reduce((sum, m) => sum + m.utilizationPercentage, 0) / mps.length
+                  )
+                : 0}
+              %
+            </span>
+            <span className="stat-period">National Benchmark</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Performance Insights Banner */}
+      <div className="performance-insights">
+        <div className="insights-grid">
+          <div className="insight-card">
+            <div className="insight-icon high">
+              <TrendingUp size={24} />
+            </div>
+            <div className="insight-content">
+              <h3>High Efficiency</h3>
+              <p className="insight-count">
+                {mps.filter((m) => m.utilizationPercentage >= 70).length}
+              </p>
+              <p className="insight-desc">MPs with &ge; 70% utilization</p>
+            </div>
+          </div>
+
+          <div className="insight-card">
+            <div className="insight-icon medium">
+              <Award size={24} />
+            </div>
+            <div className="insight-content">
+              <h3>Moderate</h3>
+              <p className="insight-count">
+                {mps.filter((m) => m.utilizationPercentage >= 40 && m.utilizationPercentage < 70).length}
+              </p>
+              <p className="insight-desc">MPs with 40% - 69% utilization</p>
+            </div>
+          </div>
+
+          <div className="insight-card">
+            <div className="insight-icon low">
+              <Users size={24} />
+            </div>
+            <div className="insight-content">
+              <h3>Needs Attention</h3>
+              <p className="insight-count">
+                {mps.filter((m) => m.utilizationPercentage < 40).length}
+              </p>
+              <p className="insight-desc">MPs with &lt; 40% utilization</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter & Toolbar */}
-      <div className="civic-card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* 3. Controls Toolbar */}
+      <div className="mps-controls">
         {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search by MP name, constituency, state..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-          />
+        <div className="search-section">
+          <div className="search-box">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Search by MP name, constituency, state..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
-        {/* Filter Controls */}
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-          {/* House Filter */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="text-slate-400">House:</span>
-            <select
-              value={houseFilter}
-              onChange={(e: any) => setHouseFilter(e.target.value)}
-              className="py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700"
-            >
-              <option value="All">Both Houses</option>
-              <option value="Lok Sabha">Lok Sabha</option>
-              <option value="Rajya Sabha">Rajya Sabha</option>
-            </select>
-          </div>
+        {/* Filter & Sort Controls */}
+        <div className="control-buttons">
+          <div className="filter-controls">
+            {/* House Filter */}
+            <div className="filter-group">
+              <label>House:</label>
+              <select
+                value={houseFilter}
+                onChange={(e: any) => setHouseFilter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="All">Both Houses</option>
+                <option value="Lok Sabha">Lok Sabha</option>
+                <option value="Rajya Sabha">Rajya Sabha</option>
+              </select>
+            </div>
 
-          {/* State Filter */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="text-slate-400">State:</span>
-            <select
-              value={stateFilter}
-              onChange={(e) => setStateFilter(e.target.value)}
-              className="py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 max-w-[150px] truncate"
-            >
-              <option value="All">All States ({statesList.length})</option>
-              {statesList.map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* State Filter */}
+            <div className="filter-group">
+              <label>State:</label>
+              <select
+                value={stateFilter}
+                onChange={(e) => setStateFilter(e.target.value)}
+                className="filter-select"
+                style={{ maxWidth: "160px" }}
+              >
+                <option value="All">All States ({statesList.length})</option>
+                {statesList.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Sort Control */}
-          <div className="flex items-center gap-1 text-xs text-slate-600">
-            <span className="text-slate-400">Sort:</span>
-            <select
-              value={sortBy}
-              onChange={(e: any) => setSortBy(e.target.value)}
-              className="py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700"
-            >
-              <option value="rank">Efficiency Rank</option>
-              <option value="utilizationPercentage">Utilization %</option>
-              <option value="totalSanctioned">Sanctioned Outlay</option>
-              <option value="name">MP Name</option>
-            </select>
+            {/* Sort Control */}
+            <div className="sort-controls">
+              <label>Sort:</label>
+              <select
+                value={sortBy}
+                onChange={(e: any) => setSortBy(e.target.value)}
+                className="sort-select"
+              >
+                <option value="rank">Efficiency Rank</option>
+                <option value="utilizationPercentage">Utilization %</option>
+                <option value="totalSanctioned">Sanctioned Outlay</option>
+                <option value="name">MP Name</option>
+              </select>
+            </div>
+
             <button
               onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-700"
+              className="sort-controls cursor-pointer hover:bg-slate-50 transition-colors"
               title="Toggle Sort Direction"
+              style={{ padding: "0.5rem 0.85rem" }}
             >
-              <ArrowUpDown className="w-3.5 h-3.5" />
+              <ArrowUpDown size={15} />
+              <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>{sortOrder.toUpperCase()}</span>
             </button>
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50 p-0.5">
+          <div className="view-controls">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded ${
-                viewMode === "grid"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-              title="Grid View"
+              className={`view-btn ${viewMode === "grid" ? "active" : ""}`}
+              style={{
+                padding: "8px 14px",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+              }}
             >
-              <LayoutGrid className="w-4 h-4" />
+              <LayoutGrid size={15} /> Grid
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded ${
-                viewMode === "list"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-              title="List View"
+              className={`view-btn ${viewMode === "list" ? "active" : ""}`}
+              style={{
+                padding: "8px 14px",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+              }}
             >
-              <List className="w-4 h-4" />
+              <List size={15} /> Table
             </button>
           </div>
         </div>
       </div>
 
-      {/* Content Rendering */}
+      {/* 4. MP Cards Grid / Table */}
       {isLoading ? (
-        <div className="py-16 text-center text-slate-500">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <div style={{ padding: "64px 0", textAlign: "center", color: "var(--text-secondary)" }}>
+          <div style={{ width: "32px", height: "32px", border: "3px solid var(--primary-600)", borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 12px", animation: "spin 1s linear infinite" }} />
           Loading MP rosters from Supabase...
         </div>
       ) : filteredMPs.length === 0 ? (
-        <div className="civic-card p-12 text-center text-slate-500">
-          <Users className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-          <h4 className="text-base font-bold text-slate-700">No Parliamentarians Found</h4>
-          <p className="text-xs text-slate-400 mt-1">
+        <div style={{ background: "white", padding: "48px", textAlign: "center", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+          <Users size={36} style={{ color: "var(--text-tertiary)", margin: "0 auto 12px" }} />
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>No Parliamentarians Found</h3>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
             Try adjusting your search criteria or filter options.
           </p>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-civic-fade">
+        <div className="mps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "24px" }}>
           {filteredMPs.map((mp) => (
             <MPCard key={mp.mpId} mp={mp} onSelectMP={onSelectMP} />
           ))}
         </div>
       ) : (
-        <div className="civic-card overflow-hidden animate-civic-fade">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+        <div style={{ background: "white", borderRadius: "12px", border: "1px solid var(--border-color)", overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                  <th className="py-3 px-4 w-16">Rank</th>
-                  <th className="py-3 px-4">Member of Parliament</th>
-                  <th className="py-3 px-4">House & Party</th>
-                  <th className="py-3 px-4">Constituency</th>
-                  <th className="py-3 px-4">Sanctioned</th>
-                  <th className="py-3 px-4">Utilized</th>
-                  <th className="py-3 px-4 w-40">Utilization Rate</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)" }}>
+                  <th style={{ padding: "12px 16px", width: "65px" }}>Rank</th>
+                  <th style={{ padding: "12px 16px" }}>Member of Parliament</th>
+                  <th style={{ padding: "12px 16px" }}>House & Party</th>
+                  <th style={{ padding: "12px 16px" }}>Constituency</th>
+                  <th style={{ padding: "12px 16px" }}>Sanctioned</th>
+                  <th style={{ padding: "12px 16px" }}>Utilized</th>
+                  <th style={{ padding: "12px 16px", width: "160px" }}>Utilization Rate</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,63 +323,55 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
                   <tr
                     key={mp.mpId}
                     onClick={() => onSelectMP(mp)}
-                    className="border-b border-slate-100 hover:bg-blue-50/40 cursor-pointer transition-colors"
+                    style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", transition: "background 0.15s" }}
+                    className="hover:bg-blue-50/40"
                   >
-                    <td className="py-3.5 px-4 font-bold text-slate-700">
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-xs">
-                        #{mp.rank}
-                      </span>
+                    <td style={{ padding: "14px 16px", fontWeight: 700, color: "var(--text-secondary)" }}>
+                      #{mp.rank}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{mp.name}</div>
-                      <div className="text-xs text-slate-500">{mp.state}</div>
+                    <td style={{ padding: "14px 16px" }}>
+                      <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{mp.name}</div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{mp.state}</div>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 mr-1">
-                        {mp.house}
-                      </span>
+                    <td style={{ padding: "14px 16px" }}>
+                      <span className="house-badge">{mp.house}</span>
                       {mp.party && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700">
+                        <span className="house-badge" style={{ background: "#eff6ff", color: "#1d4ed8", marginLeft: "4px" }}>
                           {mp.party}
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700">{mp.constituency}</td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800">
+                    <td style={{ padding: "14px 16px", color: "var(--text-secondary)" }}>{mp.constituency}</td>
+                    <td style={{ padding: "14px 16px", fontWeight: 600 }}>
                       {formatCurrency(mp.totalSanctioned)}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-emerald-700">
+                    <td style={{ padding: "14px 16px", fontWeight: 600, color: "#059669" }}>
                       {formatCurrency(mp.totalUtilized)}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-bold text-slate-800">
-                          {mp.utilizationPercentage}%
-                        </span>
+                    <td style={{ padding: "14px 16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 700, marginBottom: "4px" }}>
+                        <span>{mp.utilizationPercentage}%</span>
                       </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div style={{ width: "100%", height: "6px", background: "#f1f5f9", borderRadius: "9999px", overflow: "hidden" }}>
                         <div
-                          className={`h-full rounded-full ${
-                            mp.utilizationPercentage >= 70
-                              ? "bg-emerald-500"
-                              : mp.utilizationPercentage >= 40
-                              ? "bg-amber-500"
-                              : "bg-rose-500"
-                          }`}
-                          style={{ width: `${Math.min(100, mp.utilizationPercentage)}%` }}
+                          style={{
+                            height: "100%",
+                            borderRadius: "inherit",
+                            background: mp.utilizationPercentage >= 70 ? "#059669" : mp.utilizationPercentage >= 40 ? "#d97706" : "#dc2626",
+                            width: `${Math.min(100, mp.utilizationPercentage)}%`,
+                          }}
                         />
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td style={{ padding: "14px 16px", textAlign: "right" }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           onSelectMP(mp);
                         }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100"
+                        style={{ padding: "6px 12px", borderRadius: "6px", border: "none", background: "#eff6ff", color: "var(--primary-600)", fontWeight: 600, fontSize: "0.8rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                       >
-                        Dossier
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        Dossier <ArrowRight size={13} />
                       </button>
                     </td>
                   </tr>
