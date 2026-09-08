@@ -11,13 +11,27 @@
 
 .nav-container {
   width: 100%;
-  padding: 0 1rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-height: 64px;
   position: relative;
   box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .nav-container {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav-container {
+    padding: 0 1rem;
+  }
 }
 
 /* Improved touch targets */

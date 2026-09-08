@@ -605,142 +605,162 @@ export const MinistryDashboard: React.FC = () => {
 
               {/* Top 8 Metrics Grid (.metrics-grid + .metric-card) */}
               <div className="metrics-grid">
-                <div className="metric-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="metric-card metric-blue">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Total Sanctioned Outlay
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                       <DollarSign size={18} />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-slate-900 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                    {nationalStats ? formatCurrency(nationalStats.totalSanctioned) : "₹641.87 Cr"}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Total financial outlay approved across works
+                  <div>
+                    <div className="text-3xl font-extrabold text-slate-900 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                      {nationalStats ? formatCurrency(nationalStats.totalSanctioned) : "₹641.87 Cr"}
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium">
+                      Total financial outlay approved across works
+                    </div>
                   </div>
                 </div>
 
-                <div className="metric-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="metric-card metric-green">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Certified Ground Expenditure
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
                       <CheckCircle2 size={18} />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-emerald-700 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                    {nationalStats ? formatCurrency(nationalStats.totalUtilized) : "₹412.30 Cr"}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Disbursed to implementing agencies & verified
+                  <div>
+                    <div className="text-3xl font-extrabold text-emerald-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                      {nationalStats ? formatCurrency(nationalStats.totalUtilized) : "₹412.30 Cr"}
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium">
+                      Disbursed to implementing agencies & verified
+                    </div>
                   </div>
                 </div>
 
-                <div className="metric-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="metric-card metric-indigo">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       National Fund Absorption
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
                       <TrendingUp size={18} />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-indigo-700 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                    {nationalStats ? `${nationalStats.nationalUtilization}%` : "64%"}
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-                    <div
-                      className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${nationalStats?.nationalUtilization || 64}%` }}
-                    />
+                  <div>
+                    <div className="text-3xl font-extrabold text-indigo-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                      {nationalStats ? `${nationalStats.nationalUtilization}%` : "64%"}
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
+                      <span>Utilization progress</span>
+                      <span className="font-semibold text-indigo-600">{nationalStats?.nationalUtilization || 64}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${nationalStats?.nationalUtilization || 64}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="metric-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="metric-card metric-amber">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Active Parliamentarians
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
                       <Users size={18} />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-slate-900 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                    {mps.length || 160} MPs
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Lok Sabha & Rajya Sabha members tracked
+                  <div>
+                    <div className="text-3xl font-extrabold text-slate-900 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                      {mps.length || 160} MPs
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium">
+                      Lok Sabha & Rajya Sabha members tracked
+                    </div>
                   </div>
                 </div>
 
-                <div className="metric-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="metric-card metric-purple">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Total Sanctioned Works
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
                       <Layers size={18} />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-purple-700 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                    {nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Across 36 States and Union Territories
+                  <div>
+                    <div className="text-3xl font-extrabold text-purple-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                      {nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"}
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium">
+                      Across 36 States and Union Territories
+                    </div>
                   </div>
                 </div>
 
-                <div className="metric-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="metric-card metric-emerald">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Completed Assets
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
                       <Award size={18} />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-emerald-700 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                    {nationalStats?.statusBreakdown.Completed || 13} Works
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Utilization certificates certified on ground
+                  <div>
+                    <div className="text-3xl font-extrabold text-emerald-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                      {nationalStats?.statusBreakdown.Completed || 13} Works
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium">
+                      Utilization certificates certified on ground
+                    </div>
                   </div>
                 </div>
 
-                <div className="metric-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="metric-card metric-sky">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       In Execution Pipeline
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100">
                       <Briefcase size={18} />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-sky-700 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                    {nationalStats?.statusBreakdown.InProgress || 118} Works
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Under active physical construction
+                  <div>
+                    <div className="text-3xl font-extrabold text-sky-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                      {nationalStats?.statusBreakdown.InProgress || 118} Works
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium">
+                      Under active physical construction
+                    </div>
                   </div>
                 </div>
 
-                <div className="metric-card">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="metric-card metric-rose">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       AI Risk / Flagged Works
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
                       <ShieldAlert size={18} />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-rose-700 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                    {nationalStats?.flaggedWorksCount || 120} Works
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Isolation Forest anomalies detected
+                  <div>
+                    <div className="text-3xl font-extrabold text-rose-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                      {nationalStats?.flaggedWorksCount || 120} Works
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium">
+                      Isolation Forest anomalies detected
+                    </div>
                   </div>
                 </div>
               </div>

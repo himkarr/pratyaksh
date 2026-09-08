@@ -14,6 +14,7 @@
 import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles/reference-app.css";
+import "./styles/Layout.css";
 import "./styles/Navigation.css";
 import "./styles/StateCard.css";
 import "./styles/StateCardList.css";

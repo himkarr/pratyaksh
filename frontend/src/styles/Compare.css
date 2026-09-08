@@ -1,7 +1,8 @@
 /* Compare Page Styles */
 .compare-page {
-  padding: 24px;
+  padding: 0;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .compare-header {

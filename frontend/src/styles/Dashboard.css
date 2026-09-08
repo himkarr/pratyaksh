@@ -207,25 +207,39 @@
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-  gap: var(--spacing-6);
-  margin: var(--spacing-8) 0;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin: 1.5rem 0 2rem;
+}
+
+@media (max-width: 1200px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }
 
 .metric-card {
-  background: var(--bg-gradient-card);
-  border-radius: var(--radius-2xl);
-  padding: var(--spacing-3);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-card);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   display: flex;
-  gap: 0.5rem;
-  /* Allow text blocks to shrink instead of forcing overflow */
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 155px;
   min-width: 0;
-  min-height: 8.5rem;
 }
 
 .metric-card::before {
@@ -234,21 +248,25 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent 0%, currentColor 50%, transparent 100%);
-  opacity: 0;
+  height: 4px;
+  background: #3b82f6;
+  opacity: 1;
   transition: opacity 0.3s ease;
-  z-index: 1;
 }
 
-.metric-card:hover::before {
-  opacity: 1;
-}
+.metric-card.metric-blue::before { background: #2563eb; }
+.metric-card.metric-green::before { background: #10b981; }
+.metric-card.metric-indigo::before { background: #6366f1; }
+.metric-card.metric-amber::before { background: #f59e0b; }
+.metric-card.metric-purple::before { background: #8b5cf6; }
+.metric-card.metric-emerald::before { background: #059669; }
+.metric-card.metric-sky::before { background: #0284c7; }
+.metric-card.metric-rose::before { background: #ef4444; }
 
 .metric-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: var(--shadow-card-elevated);
-  border-color: var(--border-color-hover);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  border-color: #cbd5e1;
 }
 
 .metric-title-row {
@@ -280,17 +298,9 @@
   color: var(--primary-700);
 }
 
-.metric-blue::before {
-  background: linear-gradient(90deg, transparent 0%, var(--primary-500) 50%, transparent 100%);
-}
-
 .metric-green .metric-icon {
   background: linear-gradient(135deg, var(--civic-green-100) 0%, var(--civic-green-200) 100%);
   color: var(--civic-green-700);
-}
-
-.metric-green::before {
-  background: linear-gradient(90deg, transparent 0%, var(--civic-green-500) 50%, transparent 100%);
 }
 
 .metric-yellow .metric-icon {
@@ -298,26 +308,14 @@
   color: var(--civic-gold-700);
 }
 
-.metric-yellow::before {
-  background: linear-gradient(90deg, transparent 0%, var(--civic-gold-500) 50%, transparent 100%);
-}
-
 .metric-red .metric-icon {
   background: linear-gradient(135deg, var(--civic-red-100) 0%, var(--civic-red-200) 100%);
   color: var(--civic-red-700);
 }
 
-.metric-red::before {
-  background: linear-gradient(90deg, transparent 0%, var(--civic-red-500) 50%, transparent 100%);
-}
-
 .metric-orange .metric-icon {
   background: linear-gradient(135deg, var(--civic-gold-100) 0%, var(--civic-gold-200) 100%);
   color: var(--civic-gold-700);
-}
-
-.metric-orange::before {
-  background: linear-gradient(90deg, transparent 0%, var(--civic-gold-600) 50%, transparent 100%);
 }
 
 .metric-content {
@@ -326,12 +324,12 @@
 }
 
 .metric-title {
-  font-size: 0.688rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-tertiary);
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 0.25rem 0;
+  letter-spacing: 0.04em;
+  margin: 0;
 }
 
 /* Preserve proper capitalization for MPs title */
@@ -340,13 +338,13 @@
 }
 
 .metric-value {
-  font-size: 1.375rem;
+  font-size: 1.75rem;
   font-weight: 800;
-  color: var(--text-primary);
-  margin: 0.25rem 0 0.25rem 0;
-  line-height: 1.1;
-  font-family: var(--font-mono);
-  letter-spacing: 0;
+  color: #0f172a;
+  margin: 0.35rem 0;
+  line-height: 1.15;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .metric-value-skeleton {
@@ -355,10 +353,11 @@
 }
 
 .metric-description {
-  font-size: 0.688rem;
-  color: var(--text-secondary);
-  line-height: 1.25;
+  font-size: 0.8125rem;
+  color: #64748b;
+  line-height: 1.35;
   margin: 0;
+  font-weight: 500;
 }
 
 .metric-period {
