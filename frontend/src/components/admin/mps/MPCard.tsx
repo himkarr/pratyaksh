@@ -7,7 +7,7 @@ interface MPCardProps {
   onSelectMP: (mp: MPSummary) => void;
 }
 
-export const MPCard: React.FC<MPCardProps> = ({ mp, onSelectMP }) => {
+const MPCardComponent: React.FC<MPCardProps> = ({ mp, onSelectMP }) => {
   const formatCurrency = (amt: number) => {
     if (amt >= 10000000) return `₹${(amt / 10000000).toFixed(2)} Cr`;
     if (amt >= 100000) return `₹${(amt / 100000).toFixed(2)} L`;
@@ -118,4 +118,6 @@ export const MPCard: React.FC<MPCardProps> = ({ mp, onSelectMP }) => {
     </div>
   );
 };
+
+export const MPCard = React.memo(MPCardComponent);
 export default MPCard;

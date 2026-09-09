@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useDeferredValue } from "react";
 import {
   Search,
   LayoutGrid,
@@ -6,14 +6,12 @@ import {
   TrendingUp,
   ArrowUpDown,
   Building,
-  DollarSign,
   PieChart,
-  CheckCircle2,
-  Filter,
 } from "lucide-react";
 import { StateSummary } from "../../../api/adminDataService";
 import { StateCard } from "./StateCard";
 import { StateCardList } from "./StateCardList";
+import { TableColumnHeader } from "../../common/TableColumnHeader";
 
 interface StateListProps {
   states: StateSummary[];
@@ -27,12 +25,11 @@ export const StateList: React.FC<StateListProps> = ({
   isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<
-    "utilizationPercentage" | "totalAllocated" | "totalExpenditure" | "projectCount"
-  >("utilizationPercentage");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const [sortBy, setSortBy] = useState<string>("utilizationPercentage");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterRange, setFilterRange] = useState<"all" | "high" | "medium" | "low">("all");
+  const [filterRange, setFilterRange] = useState<string>("all");
 
   // Format INR shorthand
   const formatCurrency = (amt: number) => {
@@ -59,12 +56,21 @@ export const StateList: React.FC<StateListProps> = ({
     };
   }, [states]);
 
+  const handleSortChange = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "state" ? "asc" : "desc");
+    }
+  };
+
   // Filter & Sort
   const filteredStates = useMemo(() => {
     return states
       .filter((s) => {
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
+        if (deferredSearchQuery.trim()) {
+          const q = deferredSearchQuery.toLowerCase();
           if (!s.state.toLowerCase().includes(q)) return false;
         }
         if (filterRange === "high" && s.utilizationPercentage < 70) return false;
@@ -78,7 +84,9 @@ export const StateList: React.FC<StateListProps> = ({
       })
       .sort((a, b) => {
         let diff = 0;
-        if (sortBy === "utilizationPercentage") {
+        if (sortBy === "rank") {
+          diff = a.rank - b.rank;
+        } else if (sortBy === "utilizationPercentage") {
           diff = a.utilizationPercentage - b.utilizationPercentage;
         } else if (sortBy === "totalAllocated") {
           diff = a.totalAllocated - b.totalAllocated;
@@ -86,6 +94,8 @@ export const StateList: React.FC<StateListProps> = ({
           diff = a.totalExpenditure - b.totalExpenditure;
         } else if (sortBy === "projectCount") {
           diff = a.projectCount - b.projectCount;
+        } else if (sortBy === "state") {
+          diff = a.state.localeCompare(b.state);
         }
         return sortOrder === "desc" ? -diff : diff;
       });
@@ -205,9 +215,9 @@ export const StateList: React.FC<StateListProps> = ({
               className="sort-select"
             >
               <option value="all">All Tiers (36)</option>
-              <option value="high">High (&gt;= 80%)</option>
-              <option value="medium">Average (50% - 79%)</option>
-              <option value="low">Needs Attention (&lt; 50%)</option>
+              <option value="high">High (&gt;= 70%)</option>
+              <option value="medium">Average (40% - 69%)</option>
+              <option value="low">Needs Attention (&lt; 40%)</option>
             </select>
           </div>
 
@@ -216,13 +226,14 @@ export const StateList: React.FC<StateListProps> = ({
             <label>Sort:</label>
             <select
               value={sortBy}
-              onChange={(e: any) => setSortBy(e.target.value)}
+              onChange={(e: any) => handleSortChange(e.target.value)}
               className="sort-select"
             >
               <option value="utilizationPercentage">Fund Utilization</option>
               <option value="totalAllocated">Total Outlay</option>
               <option value="totalExpenditure">Recorded Spent</option>
               <option value="projectCount">Total Works</option>
+              <option value="state">State Name</option>
             </select>
           </div>
 
@@ -278,7 +289,7 @@ export const StateList: React.FC<StateListProps> = ({
       {isLoading ? (
         <div className="states-loading">
           <div className="loading-spinner" />
-          <p>Loading live state governance data from Supabase...</p>
+          <p>Loading live state governance data...</p>
         </div>
       ) : filteredStates.length === 0 ? (
         <div style={{ background: "white", padding: "48px", textAlign: "center", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
@@ -299,18 +310,64 @@ export const StateList: React.FC<StateListProps> = ({
           ))}
         </div>
       ) : (
-        <div className="state-table-container">
+        <div className="state-table-container" style={{ background: "white", borderRadius: "12px", border: "1px solid var(--border-color)", overflow: "hidden" }}>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)" }}>
-                  <th style={{ padding: "12px 16px", width: "70px" }}>Rank</th>
-                  <th style={{ padding: "12px 16px" }}>State / Union Territory</th>
-                  <th style={{ padding: "12px 16px" }}>Works Portfolio</th>
-                  <th style={{ padding: "12px 16px" }}>Sanctioned Outlay</th>
-                  <th style={{ padding: "12px 16px" }}>Expenditure</th>
-                  <th style={{ padding: "12px 16px", width: "180px" }}>Utilization Rate</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Action</th>
+                  <TableColumnHeader
+                    title="Rank"
+                    field="rank"
+                    currentSortField={sortBy}
+                    currentSortDirection={sortOrder}
+                    onSort={handleSortChange}
+                    style={{ width: "80px" }}
+                  />
+                  <TableColumnHeader
+                    title="State / Union Territory"
+                    field="state"
+                    currentSortField={sortBy}
+                    currentSortDirection={sortOrder}
+                    onSort={handleSortChange}
+                  />
+                  <TableColumnHeader
+                    title="Works Portfolio"
+                    field="projectCount"
+                    currentSortField={sortBy}
+                    currentSortDirection={sortOrder}
+                    onSort={handleSortChange}
+                  />
+                  <TableColumnHeader
+                    title="Sanctioned Outlay"
+                    field="totalAllocated"
+                    currentSortField={sortBy}
+                    currentSortDirection={sortOrder}
+                    onSort={handleSortChange}
+                  />
+                  <TableColumnHeader
+                    title="Expenditure"
+                    field="totalExpenditure"
+                    currentSortField={sortBy}
+                    currentSortDirection={sortOrder}
+                    onSort={handleSortChange}
+                  />
+                  <TableColumnHeader
+                    title="Utilization Rate"
+                    field="utilizationPercentage"
+                    currentSortField={sortBy}
+                    currentSortDirection={sortOrder}
+                    onSort={handleSortChange}
+                    filterOptions={[
+                      { label: "All Tiers", value: "all" },
+                      { label: "High (>= 70%)", value: "high" },
+                      { label: "Average (40-69%)", value: "medium" },
+                      { label: "Needs Attention (< 40%)", value: "low" },
+                    ]}
+                    selectedFilter={filterRange}
+                    onFilterChange={setFilterRange}
+                    style={{ width: "190px" }}
+                  />
+                  <th style={{ padding: "12px 16px", textAlign: "right", color: "var(--text-secondary)", fontWeight: 700 }}>Action</th>
                 </tr>
               </thead>
               <tbody>

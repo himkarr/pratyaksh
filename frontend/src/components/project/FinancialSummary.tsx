@@ -91,11 +91,12 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
           </h4>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", flexGrow: 1 }}>
-            {/* Recommended Outlay (Soft Green #dcfce7) */}
+            {/* Recommended Outlay */}
             <div
               style={{
-                background: "#dcfce7",
-                border: "1px solid #bbf7d0",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #10b981",
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",
@@ -105,10 +106,16 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f0fdf4";
+                e.currentTarget.style.borderColor = "#86efac";
+                e.currentTarget.style.borderLeftColor = "#059669";
                 e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(5, 150, 105, 0.25)";
+                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(5, 150, 105, 0.2)";
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#ffffff";
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.borderLeftColor = "#10b981";
                 e.currentTarget.style.transform = "none";
                 e.currentTarget.style.boxShadow = "none";
               }}
@@ -118,31 +125,34 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                   width: "34px",
                   height: "34px",
                   borderRadius: "8px",
-                  background: "#059669",
-                  color: "#ffffff",
+                  background: "#ecfdf5",
+                  color: "#059669",
+                  border: "1px solid #a7f3d0",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
+                  transition: "all 0.2s ease",
                 }}
               >
                 <CheckCircle2 size={18} />
               </div>
               <div>
-                <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#065f46", display: "block", lineHeight: 1.1 }}>
+                <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
                   {formatCurrency(project.recommendedAmt)}
                 </span>
-                <span style={{ fontSize: "0.74rem", color: "#047857", fontWeight: 600, display: "block", marginTop: "2px" }}>
+                <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "2px" }}>
                   Recommended Outlay
                 </span>
               </div>
             </div>
 
-            {/* Sanctioned Amount (Soft Yellow #fef9c3) */}
+            {/* Sanctioned Amount */}
             <div
               style={{
-                background: "#fef9c3",
-                border: "1px solid #fef08a",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #f59e0b",
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",
@@ -152,10 +162,16 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#fffbeb";
+                e.currentTarget.style.borderColor = "#fde047";
+                e.currentTarget.style.borderLeftColor = "#d97706";
                 e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(217, 119, 6, 0.25)";
+                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(217, 119, 6, 0.2)";
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#ffffff";
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.borderLeftColor = "#f59e0b";
                 e.currentTarget.style.transform = "none";
                 e.currentTarget.style.boxShadow = "none";
               }}
@@ -165,31 +181,34 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                   width: "34px",
                   height: "34px",
                   borderRadius: "8px",
-                  background: "#d97706",
-                  color: "#ffffff",
+                  background: "#fffbeb",
+                  color: "#d97706",
+                  border: "1px solid #fde68a",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
+                  transition: "all 0.2s ease",
                 }}
               >
                 <TrendingUp size={18} />
               </div>
               <div>
-                <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#92400e", display: "block", lineHeight: 1.1 }}>
+                <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
                   {formatCurrency(project.sanctionedAmt)}
                 </span>
-                <span style={{ fontSize: "0.74rem", color: "#b45309", fontWeight: 600, display: "block", marginTop: "2px" }}>
+                <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "2px" }}>
                   Sanctioned Amount
                 </span>
               </div>
             </div>
 
-            {/* Recorded Expenditure (Soft Blue #e0f2fe) */}
+            {/* Recorded Expenditure */}
             <div
               style={{
-                background: "#e0f2fe",
-                border: "1px solid #bae6fd",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #0284c7",
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",
@@ -199,10 +218,16 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f0f9ff";
+                e.currentTarget.style.borderColor = "#7dd3fc";
+                e.currentTarget.style.borderLeftColor = "#0284c7";
                 e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(2, 132, 199, 0.25)";
+                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(2, 132, 199, 0.2)";
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#ffffff";
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.borderLeftColor = "#0284c7";
                 e.currentTarget.style.transform = "none";
                 e.currentTarget.style.boxShadow = "none";
               }}
@@ -212,31 +237,34 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                   width: "34px",
                   height: "34px",
                   borderRadius: "8px",
-                  background: "#0284c7",
-                  color: "#ffffff",
+                  background: "#f0f9ff",
+                  color: "#0284c7",
+                  border: "1px solid #bae6fd",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
+                  transition: "all 0.2s ease",
                 }}
               >
                 <Target size={18} />
               </div>
               <div>
-                <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0369a1", display: "block", lineHeight: 1.1 }}>
+                <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
                   {formatCurrency(project.expenditureAmt)}
                 </span>
-                <span style={{ fontSize: "0.74rem", color: "#0284c7", fontWeight: 600, display: "block", marginTop: "2px" }}>
+                <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "2px" }}>
                   Recorded Expenditure
                 </span>
               </div>
             </div>
 
-            {/* Remaining Balance (Soft Slate #f1f5f9) */}
+            {/* Remaining Balance */}
             <div
               style={{
-                background: "#f1f5f9",
+                background: "#ffffff",
                 border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #64748b",
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",
@@ -246,10 +274,16 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f8fafc";
+                e.currentTarget.style.borderColor = "#cbd5e1";
+                e.currentTarget.style.borderLeftColor = "#475569";
                 e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(100, 116, 139, 0.2)";
+                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(100, 116, 139, 0.15)";
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#ffffff";
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.borderLeftColor = "#64748b";
                 e.currentTarget.style.transform = "none";
                 e.currentTarget.style.boxShadow = "none";
               }}
@@ -259,22 +293,24 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                   width: "34px",
                   height: "34px",
                   borderRadius: "8px",
-                  background: "#475569",
-                  color: "#ffffff",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #e2e8f0",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
+                  transition: "all 0.2s ease",
                 }}
               >
                 <Users size={18} />
               </div>
               <div>
-                <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#1e293b", display: "block", lineHeight: 1.1 }}>
+                <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
                   {formatCurrency(unspentAmt)}
                 </span>
                 <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "2px" }}>
-                  Remaining Balance
+                  Unspent Allocation
                 </span>
               </div>
             </div>

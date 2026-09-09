@@ -13,7 +13,7 @@
  * - Multi-module routing: Overview, Browse States, Browse MPs, Compare, Works Registry, AI Governance
  */
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useDeferredValue, useCallback } from "react";
 import {
   Activity,
   Building2,
@@ -86,6 +86,7 @@ import { CompareView } from "../components/admin/compare/CompareView";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { WorkItem } from "../data/mpladsData";
+import { TableColumnHeader } from "../components/common/TableColumnHeader";
 
 interface ProjectGroup {
   key: string;
@@ -185,17 +186,28 @@ export const MinistryDashboard: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Admin Panel House Filter: "both" (default), "Lok Sabha", "Rajya Sabha"
+  const [adminHouseFilter, setAdminHouseFilter] = useState<"both" | "Lok Sabha" | "Rajya Sabha">("both");
+
   // Projects Registry filters & grouping
   const [projectSearch, setProjectSearch] = useState<string>("");
+  const deferredProjectSearch = useDeferredValue(projectSearch);
   const [selectedStateFilter, setSelectedStateFilter] = useState<string>("all");
+  const [selectedDistrictFilter, setSelectedDistrictFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<string>("all");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
+  const [projectSortField, setProjectSortField] = useState<string>("cost");
+  const [projectSortOrder, setProjectSortOrder] = useState<"asc" | "desc">("desc");
   const [groupByDistrict, setGroupByDistrict] = useState<boolean>(true);
   const [projectViewMode, setProjectViewMode] = useState<"grid" | "list">("grid");
   const [expandedProjectGroups, setExpandedProjectGroups] = useState<Set<string>>(new Set());
   const [projectsPage, setProjectsPage] = useState<number>(1);
   const PROJECTS_PER_PAGE = 24;
+
+  // Audit Ledger sorting
+  const [ledgerSortField, setLedgerSortField] = useState<string>("time");
+  const [ledgerSortOrder, setLedgerSortOrder] = useState<"asc" | "desc">("desc");
 
   // AI Governance & ML calibration
   const [isRetraining, setIsRetraining] = useState<boolean>(false);
@@ -263,17 +275,122 @@ export const MinistryDashboard: React.FC = () => {
     return false;
   };
 
-  // De-duplicate on the client before filtering. It protects the registry from repeated
-  // records returned by a source while retaining a deterministic project identity.
+  // Filtered MPs based on Admin House Filter
+  const displayedMps = useMemo(() => {
+    if (adminHouseFilter === "both") return mps;
+    return mps.filter((m) => m.house === adminHouseFilter);
+  }, [mps, adminHouseFilter]);
+
+  // De-duplicate on the client before filtering & apply house filter
   const uniqueProjects = useMemo(() => {
     const seen = new Set<string>();
     return projects.filter((project) => {
+      if (adminHouseFilter !== "both") {
+        const h = project.house || "Lok Sabha";
+        if (h !== adminHouseFilter) return false;
+      }
       const identity = getProjectIdentity(project);
       if (seen.has(identity)) return false;
       seen.add(identity);
       return true;
     });
-  }, [projects]);
+  }, [projects, adminHouseFilter]);
+
+  // Dynamically computed State Summaries strictly from live Supabase projects & filtered MPs
+  const displayedStates = useMemo(() => {
+    const stateMap = new Map<string, {
+      state: string;
+      projectCount: number;
+      totalAllocated: number;
+      totalExpenditure: number;
+      districts: Set<string>;
+      mps: Set<string>;
+      statusCounts: { Completed: number; InProgress: number; Sanctioned: number; Proposed: number; Delayed: number };
+    }>();
+
+    uniqueProjects.forEach((p) => {
+      const s = (p.state || "National").trim();
+      if (!stateMap.has(s)) {
+        stateMap.set(s, {
+          state: s,
+          projectCount: 0,
+          totalAllocated: 0,
+          totalExpenditure: 0,
+          districts: new Set(),
+          mps: new Set(),
+          statusCounts: { Completed: 0, InProgress: 0, Sanctioned: 0, Proposed: 0, Delayed: 0 },
+        });
+      }
+      const entry = stateMap.get(s)!;
+      entry.projectCount += 1;
+      entry.totalAllocated += Number(p.sanctioned_amount) || 0;
+      entry.totalExpenditure += Number(p.utilized_amount) || 0;
+      if (p.district) entry.districts.add(p.district);
+      if (p.mp_id) entry.mps.add(p.mp_id);
+
+      const norm = normalizeStatus(p.status);
+      if (norm === "Completed") entry.statusCounts.Completed++;
+      else if (norm === "In Progress") entry.statusCounts.InProgress++;
+      else if (norm === "Delayed") entry.statusCounts.Delayed++;
+      else if (norm === "Proposed") entry.statusCounts.Proposed++;
+      else entry.statusCounts.Sanctioned++;
+    });
+
+    const result: StateSummary[] = Array.from(stateMap.values()).map((s) => {
+      const utilPct = s.totalAllocated > 0 ? Math.round((s.totalExpenditure / s.totalAllocated) * 100) : 0;
+      return {
+        state: s.state,
+        mpCount: s.mps.size || displayedMps.filter((m) => m.state.toLowerCase() === s.state.toLowerCase()).length,
+        projectCount: s.projectCount,
+        totalAllocated: s.totalAllocated,
+        totalExpenditure: s.totalExpenditure,
+        utilizationPercentage: utilPct,
+        rank: 1,
+        statusCounts: s.statusCounts,
+        districtsCount: Math.max(s.districts.size, 1),
+      };
+    });
+
+    result.sort((a, b) => b.totalAllocated - a.totalAllocated);
+    result.forEach((s, idx) => {
+      s.rank = idx + 1;
+    });
+
+    return result;
+  }, [uniqueProjects, displayedMps]);
+
+  // Dynamically computed National Stats strictly from live Supabase projects & filtered MPs
+  const displayedNationalStats = useMemo(() => {
+    let totalSanctioned = 0;
+    let totalUtilized = 0;
+    let flaggedCount = 0;
+    const statusCounts = { Completed: 0, InProgress: 0, Sanctioned: 0, Proposed: 0, Delayed: 0 };
+
+    uniqueProjects.forEach((p) => {
+      totalSanctioned += Number(p.sanctioned_amount) || 0;
+      totalUtilized += Number(p.utilized_amount) || 0;
+      if (isProjectHighRisk(p)) flaggedCount++;
+      const st = normalizeStatus(p.status);
+      if (st === "Completed") statusCounts.Completed++;
+      else if (st === "In Progress") statusCounts.InProgress++;
+      else if (st === "Delayed") statusCounts.Delayed++;
+      else if (st === "Proposed") statusCounts.Proposed++;
+      else statusCounts.Sanctioned++;
+    });
+
+    const utilPct = totalSanctioned > 0 ? Math.round((totalUtilized / totalSanctioned) * 100) : 0;
+
+    return {
+      totalWorks: uniqueProjects.length,
+      totalSanctioned,
+      totalUtilized,
+      nationalUtilization: utilPct,
+      activeStatesCount: displayedStates.length,
+      activeMPsCount: displayedMps.length,
+      flaggedWorksCount: flaggedCount,
+      statusBreakdown: statusCounts,
+    };
+  }, [uniqueProjects, displayedStates, displayedMps]);
 
   // Dynamically extract states with exact counts from loaded projects
   const availableStates = useMemo(() => {
@@ -286,6 +403,18 @@ export const MinistryDashboard: React.FC = () => {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([name, count]) => ({ name, count }));
   }, [uniqueProjects]);
+
+  // Dynamically extract districts based on selected state
+  const availableDistricts = useMemo(() => {
+    const set = new Set<string>();
+    uniqueProjects.forEach((p) => {
+      if (selectedStateFilter !== "all") {
+        if ((p.state || "").trim().toLowerCase() !== selectedStateFilter.toLowerCase()) return;
+      }
+      if (p.district) set.add(p.district.trim());
+    });
+    return Array.from(set).sort();
+  }, [uniqueProjects, selectedStateFilter]);
 
   // Dynamically extract categories with exact counts from loaded projects
   const availableCategories = useMemo(() => {
@@ -303,18 +432,20 @@ export const MinistryDashboard: React.FC = () => {
   const filteredProjects = useMemo(() => {
     return uniqueProjects.filter((p) => {
       const pState = (p.state || "").trim();
+      const pDistrict = (p.district || "").trim();
       const pStatus = normalizeStatus(p.status);
       const pCategory = (p.category || p.sector_name || "Community Asset").trim();
       const isHighRisk = isProjectHighRisk(p);
 
       if (selectedStateFilter !== "all" && pState.toLowerCase() !== selectedStateFilter.toLowerCase()) return false;
+      if (selectedDistrictFilter !== "all" && pDistrict.toLowerCase() !== selectedDistrictFilter.toLowerCase()) return false;
       if (selectedStatusFilter !== "all" && pStatus !== selectedStatusFilter) return false;
       if (selectedCategoryFilter !== "all" && pCategory.toLowerCase() !== selectedCategoryFilter.toLowerCase()) return false;
       if (selectedRiskFilter === "HIGH" && !isHighRisk) return false;
       if (selectedRiskFilter === "LOW" && isHighRisk) return false;
 
-      if (projectSearch.trim()) {
-        const q = projectSearch.toLowerCase().trim();
+      if (deferredProjectSearch.trim()) {
+        const q = deferredProjectSearch.toLowerCase().trim();
         const title = String(p.project_name || p.title || "").toLowerCase();
         const id = String(p.project_id || p.id || "").toLowerCase();
         const dist = String(p.district || "").toLowerCase();
@@ -343,11 +474,46 @@ export const MinistryDashboard: React.FC = () => {
   }, [
     uniqueProjects,
     selectedStateFilter,
+    selectedDistrictFilter,
     selectedStatusFilter,
     selectedCategoryFilter,
     selectedRiskFilter,
-    projectSearch,
+    deferredProjectSearch,
   ]);
+
+  // Sort filtered projects
+  const sortedFilteredProjects = useMemo(() => {
+    return [...filteredProjects].sort((a, b) => {
+      let diff = 0;
+      if (projectSortField === "title") {
+        const nameA = a.project_name || a.title || "";
+        const nameB = b.project_name || b.title || "";
+        diff = nameA.localeCompare(nameB);
+      } else if (projectSortField === "location") {
+        const locA = `${a.state || ""} ${a.district || ""}`;
+        const locB = `${b.state || ""} ${b.district || ""}`;
+        diff = locA.localeCompare(locB);
+      } else if (projectSortField === "category") {
+        diff = (a.category || "").localeCompare(b.category || "");
+      } else if (projectSortField === "cost") {
+        diff = getProjectBudget(a) - getProjectBudget(b);
+      } else if (projectSortField === "status") {
+        diff = (a.status || "").localeCompare(b.status || "");
+      } else if (projectSortField === "risk") {
+        diff = (isProjectHighRisk(a) ? 1 : 0) - (isProjectHighRisk(b) ? 1 : 0);
+      }
+      return projectSortOrder === "desc" ? -diff : diff;
+    });
+  }, [filteredProjects, projectSortField, projectSortOrder]);
+
+  const handleProjectSort = (field: string) => {
+    if (projectSortField === field) {
+      setProjectSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setProjectSortField(field);
+      setProjectSortOrder("desc");
+    }
+  };
 
   // A geographic group is the compact navigation unit: it exposes unique locations first,
   // then reveals the individual works only when the user asks for them.
@@ -400,8 +566,8 @@ export const MinistryDashboard: React.FC = () => {
 
   const pagedProjects = useMemo(() => {
     const start = (projectsPage - 1) * projectPageSize;
-    return filteredProjects.slice(start, start + projectPageSize);
-  }, [filteredProjects, projectPageSize, projectsPage]);
+    return sortedFilteredProjects.slice(start, start + projectPageSize);
+  }, [sortedFilteredProjects, projectPageSize, projectsPage]);
 
   const pagedProjectGroups = useMemo(() => {
     const start = (projectsPage - 1) * projectPageSize;
@@ -461,13 +627,13 @@ export const MinistryDashboard: React.FC = () => {
 
   // Top states for Recharts chart
   const topStatesChartData = useMemo(() => {
-    return states.slice(0, 10).map((s) => ({
+    return displayedStates.slice(0, 10).map((s) => ({
       name: s.state.length > 14 ? s.state.slice(0, 12) + "..." : s.state,
       allocated: Math.round(s.totalAllocated / 10000000),
       utilized: Math.round(s.totalExpenditure / 10000000),
       rate: s.utilizationPercentage,
     }));
-  }, [states]);
+  }, [displayedStates]);
 
   // Handle ML Model Retraining Trigger
   const handleRetrainModel = async () => {
@@ -488,7 +654,7 @@ export const MinistryDashboard: React.FC = () => {
       }
     } catch {
       setRetrainNotice(
-        "Retraining simulation completed! Anomaly thresholds recalibrated for 11,538 live works."
+        "Retraining simulation completed! Anomaly thresholds recalibrated for live works."
       );
     } finally {
       setIsRetraining(false);
@@ -509,7 +675,7 @@ export const MinistryDashboard: React.FC = () => {
         t={t}
       />
 
-      {/* 2. Official MPLADS Top Navigation Bar (Emblem of India, MoSPI, Role Switcher) */}
+      {/* 2. Official MPLADS Top Navigation Bar (Emblem of India, MoSPI, Role Switcher, House Filter) */}
       <Navbar
         activeTab="dashboard"
         setActiveTab={() => {
@@ -523,7 +689,9 @@ export const MinistryDashboard: React.FC = () => {
           setIsLoginOpen(true);
         }}
         t={t}
-        flagCount={nationalStats?.flaggedWorksCount || 120}
+        flagCount={displayedNationalStats.flaggedWorksCount}
+        adminHouseFilter={adminHouseFilter}
+        onAdminHouseFilterChange={setAdminHouseFilter}
       />
       {/* 3. Main Content Area */}
       <main className="mplads-main" style={{ flex: 1, padding: "1.5rem 0 3.5rem" }}>
@@ -576,7 +744,7 @@ export const MinistryDashboard: React.FC = () => {
                   color: activeModule === "states" ? "#ffffff" : "#475569",
                   fontWeight: 700
                 }}>
-                  {states.length || 36}
+                  {displayedStates.length}
                 </span>
               </button>
 
@@ -600,7 +768,7 @@ export const MinistryDashboard: React.FC = () => {
                   color: activeModule === "mps" ? "#ffffff" : "#92400e",
                   fontWeight: 700
                 }}>
-                  {mps.length || 160}
+                  {displayedMps.length}
                 </span>
               </button>
 
@@ -638,7 +806,7 @@ export const MinistryDashboard: React.FC = () => {
                   color: activeModule === "projects" ? "#ffffff" : "#065f46",
                   fontWeight: 700
                 }}>
-                  11.5k
+                  {uniqueProjects.length}
                 </span>
               </button>
 
@@ -657,8 +825,8 @@ export const MinistryDashboard: React.FC = () => {
               </button>
             </div>
 
-            {/* Right Status Badges */}
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {/* Right Status Badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <div
                 style={{
                   display: "flex",
@@ -683,7 +851,7 @@ export const MinistryDashboard: React.FC = () => {
                     boxShadow: "0 0 6px #10b981",
                   }}
                 />
-                <span>{nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"} Works Live</span>
+                <span>{displayedNationalStats.totalWorks.toLocaleString("en-IN")} Works Live</span>
               </div>
             </div>
           </div>
@@ -697,7 +865,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="dashboard-title-section">
                   <h1>MPLADS National Development Dashboard</h1>
                   <p>
-                    Live tracking of approved government funds, local community projects, and public works across India in simple, easy-to-understand terms
+                    Live tracking of approved government funds, local community projects, and public works across India in simple, easy-to-understand terms ({adminHouseFilter === "both" ? "Both Houses" : adminHouseFilter})
                   </p>
                 </div>
               </div>
@@ -715,7 +883,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-slate-900 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats ? formatCurrency(nationalStats.totalSanctioned) : "₹641.87 Cr"}
+                      {formatCurrency(displayedNationalStats.totalSanctioned)}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Total funding allocated for community projects
@@ -734,7 +902,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-emerald-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats ? formatCurrency(nationalStats.totalUtilized) : "₹412.30 Cr"}
+                      {formatCurrency(displayedNationalStats.totalUtilized)}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Actual funds disbursed & verified on ground
@@ -753,16 +921,16 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-indigo-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats ? `${nationalStats.nationalUtilization}%` : "64%"}
+                      {displayedNationalStats.nationalUtilization}%
                     </div>
                     <div className="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
                       <span>Percentage of funds spent</span>
-                      <span className="font-semibold text-indigo-600">{nationalStats?.nationalUtilization || 64}%</span>
+                      <span className="font-semibold text-indigo-600">{displayedNationalStats.nationalUtilization}%</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                       <div
                         className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${nationalStats?.nationalUtilization || 64}%` }}
+                        style={{ width: `${displayedNationalStats.nationalUtilization}%` }}
                       />
                     </div>
                   </div>
@@ -779,10 +947,10 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-slate-900 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {mps.length || 160} MPs
+                      {displayedMps.length} MPs
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Lok Sabha & Rajya Sabha MPs tracking works
+                      {adminHouseFilter === "both" ? "Lok Sabha & Rajya Sabha MPs" : `${adminHouseFilter} MPs`}
                     </div>
                   </div>
                 </div>
@@ -798,10 +966,10 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-purple-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"}
+                      {displayedNationalStats.totalWorks.toLocaleString("en-IN")}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Approved projects across 36 States & UTs
+                      Approved projects across {displayedStates.length} States & UTs
                     </div>
                   </div>
                 </div>
@@ -817,7 +985,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-emerald-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats?.statusBreakdown.Completed || 13} Works
+                      {displayedNationalStats.statusBreakdown.Completed} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Completed and handed over to the public
@@ -836,7 +1004,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-sky-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats?.statusBreakdown.InProgress || 118} Works
+                      {displayedNationalStats.statusBreakdown.InProgress} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Works actively being built on the ground
@@ -855,7 +1023,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-rose-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats?.flaggedWorksCount || 120} Works
+                      {displayedNationalStats.flaggedWorksCount} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Flagged by automated cost & delay checks
@@ -877,10 +1045,10 @@ export const MinistryDashboard: React.FC = () => {
                     <div className="insight-content">
                       <h3>High Fund Usage (70% or more)</h3>
                       <p className="insight-count">
-                        {states.filter((s) => s.utilizationPercentage >= 70).length} States
+                        {displayedStates.filter((s) => s.utilizationPercentage >= 70).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage >= 70).length} MPs achieving the national target
+                        {displayedMps.filter((m) => m.utilizationPercentage >= 70).length} MPs achieving the national target
                       </p>
                     </div>
                   </div>
@@ -895,10 +1063,10 @@ export const MinistryDashboard: React.FC = () => {
                     <div className="insight-content">
                       <h3>Steady Progress (40% to 69%)</h3>
                       <p className="insight-count">
-                        {states.filter((s) => s.utilizationPercentage >= 40 && s.utilizationPercentage < 70).length} States
+                        {displayedStates.filter((s) => s.utilizationPercentage >= 40 && s.utilizationPercentage < 70).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage >= 40 && m.utilizationPercentage < 70).length} MPs with active ongoing projects
+                        {displayedMps.filter((m) => m.utilizationPercentage >= 40 && m.utilizationPercentage < 70).length} MPs with active ongoing projects
                       </p>
                     </div>
                   </div>
@@ -913,10 +1081,10 @@ export const MinistryDashboard: React.FC = () => {
                     <div className="insight-content">
                       <h3>Needs Faster Action (Under 40%)</h3>
                       <p className="insight-count">
-                        {states.filter((s) => s.utilizationPercentage < 40).length} States
+                        {displayedStates.filter((s) => s.utilizationPercentage < 40).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage < 40).length} MPs where project execution needs speed up
+                        {displayedMps.filter((m) => m.utilizationPercentage < 40).length} MPs where project execution needs speed up
                       </p>
                     </div>
                   </div>
@@ -937,7 +1105,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                   <div>
                     <h2 style={{ fontSize: "1.35rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-                      State-wise Budget vs Money Spent (Top 10 States)
+                      State-wise Budget vs Money Spent (Top {Math.min(10, displayedStates.length)} States)
                     </h2>
                     <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: "4px 0 0" }}>
                       Comparing total approved funds against money spent on ground (in ₹ Crores)
@@ -959,7 +1127,7 @@ export const MinistryDashboard: React.FC = () => {
                       cursor: "pointer",
                     }}
                   >
-                    <span>View All 36 States</span>
+                    <span>View All {displayedStates.length} States</span>
                     <ArrowRight size={14} />
                   </button>
                 </div>
@@ -993,9 +1161,9 @@ export const MinistryDashboard: React.FC = () => {
               {selectedStateName ? (
                 <StateDetail
                   stateName={selectedStateName}
-                  stateData={states.find((s) => s.state === selectedStateName)}
-                  mps={mps}
-                  projects={projects}
+                  stateData={displayedStates.find((s) => s.state === selectedStateName)}
+                  mps={displayedMps}
+                  projects={uniqueProjects}
                   onBack={() => setSelectedStateName(null)}
                   onSelectProject={(p) => openWorkDossier(p)}
                   onSelectMP={(mp) => {
@@ -1006,7 +1174,7 @@ export const MinistryDashboard: React.FC = () => {
                 />
               ) : (
                 <StateList
-                  states={states}
+                  states={displayedStates}
                   onSelectState={(stName) => setSelectedStateName(stName)}
                   isLoading={loading}
                 />
@@ -1022,13 +1190,13 @@ export const MinistryDashboard: React.FC = () => {
               {selectedMP ? (
                 <MPDetail
                   mp={selectedMP}
-                  projects={projects}
+                  projects={uniqueProjects}
                   onBack={() => setSelectedMP(null)}
                   onSelectProject={(p) => openWorkDossier(p)}
                 />
               ) : (
                 <MPList
-                  mps={mps}
+                  mps={displayedMps}
                   onSelectMP={(mp) => setSelectedMP(mp)}
                   isLoading={loading}
                 />
@@ -1041,7 +1209,7 @@ export const MinistryDashboard: React.FC = () => {
               ---------------------------------------------------------------- */}
           {activeModule === "compare" && (
             <CompareView
-              mps={mps}
+              mps={displayedMps}
               onSelectMP={(mp) => {
                 setSelectedMP(mp);
                 setActiveModule("mps");
@@ -1119,7 +1287,10 @@ export const MinistryDashboard: React.FC = () => {
                   {/* State Select */}
                   <select
                     value={selectedStateFilter}
-                    onChange={(e) => setSelectedStateFilter(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedStateFilter(e.target.value);
+                      setSelectedDistrictFilter("all");
+                    }}
                     style={{
                       height: "40px",
                       padding: "0 12px",
@@ -1134,6 +1305,28 @@ export const MinistryDashboard: React.FC = () => {
                     {availableStates.map((s) => (
                       <option key={s.name} value={s.name}>
                         {s.name} ({s.count})
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* District Select */}
+                  <select
+                    value={selectedDistrictFilter}
+                    onChange={(e) => setSelectedDistrictFilter(e.target.value)}
+                    style={{
+                      height: "40px",
+                      padding: "0 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                      background: "#ffffff",
+                      maxWidth: "180px",
+                    }}
+                  >
+                    <option value="all">All Districts ({availableDistricts.length})</option>
+                    {availableDistricts.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
                       </option>
                     ))}
                   </select>
@@ -1795,12 +1988,63 @@ export const MinistryDashboard: React.FC = () => {
                       <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
                         <thead>
                           <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>
-                            <th style={{ padding: "12px 16px", fontWeight: 700 }}>Project Name & ID</th>
-                            <th style={{ padding: "12px 16px", fontWeight: 700 }}>Location</th>
-                            <th style={{ padding: "12px 16px", fontWeight: 700 }}>Category</th>
-                            <th style={{ padding: "12px 16px", fontWeight: 700 }}>Approved Budget</th>
-                            <th style={{ padding: "12px 16px", fontWeight: 700 }}>Status</th>
-                            <th style={{ padding: "12px 16px", fontWeight: 700 }}>Review Status</th>
+                            <TableColumnHeader
+                              title="Project Name & ID"
+                              sortKey="title"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                            />
+                            <TableColumnHeader
+                              title="Location"
+                              sortKey="location"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                              filterOptions={availableStates.map((s) => s.name)}
+                              selectedFilter={selectedStateFilter}
+                              onSelectFilter={(st) => {
+                                setSelectedStateFilter(st);
+                                setSelectedDistrictFilter("all");
+                              }}
+                            />
+                            <TableColumnHeader
+                              title="Category"
+                              sortKey="category"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                              filterOptions={availableCategories.map((c) => c.name)}
+                              selectedFilter={selectedCategoryFilter}
+                              onSelectFilter={setSelectedCategoryFilter}
+                            />
+                            <TableColumnHeader
+                              title="Approved Budget"
+                              sortKey="cost"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                            />
+                            <TableColumnHeader
+                              title="Status"
+                              sortKey="status"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                              filterOptions={["Completed", "In Progress", "Sanctioned", "Delayed", "Recommended"]}
+                              selectedFilter={selectedStatusFilter}
+                              onSelectFilter={setSelectedStatusFilter}
+                            />
+                            <TableColumnHeader
+                              title="Review Status"
+                              sortKey="risk"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                              filterOptions={["HIGH", "LOW"]}
+                              selectedFilter={selectedRiskFilter}
+                              onSelectFilter={setSelectedRiskFilter}
+                            />
                             <th style={{ padding: "12px 16px", fontWeight: 700, textAlign: "right" }}>Action</th>
                           </tr>
                         </thead>

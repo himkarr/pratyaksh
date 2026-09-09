@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { MPSummary } from "../../../api/adminDataService";
 import { CivicUtilizationGauge } from "../../common/CivicUtilizationGauge";
+import { TableColumnHeader } from "../../common/TableColumnHeader";
 
 interface MPDetailProps {
   mp: MPSummary;
@@ -48,6 +49,9 @@ export const MPDetail: React.FC<MPDetailProps> = ({
   // Project search and filter
   const [projectSearch, setProjectSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sortField, setSortField] = useState<"title" | "category" | "cost" | "progress" | "status">("cost");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("grid");
   const [copied, setCopied] = useState(false);
 
@@ -94,21 +98,64 @@ export const MPDetail: React.FC<MPDetailProps> = ({
 
   const displayProjects = mpProjects.length > 0 ? mpProjects : projects.slice(0, 25);
 
-  const filteredProjects = useMemo(() => {
-    return displayProjects.filter((p) => {
-      if (statusFilter !== "all" && (p.status || "").toLowerCase() !== statusFilter.toLowerCase()) {
-        return false;
-      }
-      if (projectSearch.trim()) {
-        const q = projectSearch.toLowerCase();
-        const title = (p.project_name || p.title || "").toLowerCase();
-        const cat = (p.category || "").toLowerCase();
-        const id = (p.project_id || p.id || "").toLowerCase();
-        if (!title.includes(q) && !cat.includes(q) && !id.includes(q)) return false;
-      }
-      return true;
+  // Unique categories for column filter
+  const categoriesList = useMemo(() => {
+    const s = new Set<string>();
+    displayProjects.forEach((p) => {
+      if (p.category) s.add(p.category);
     });
-  }, [displayProjects, projectSearch, statusFilter]);
+    return Array.from(s).sort();
+  }, [displayProjects]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field as any);
+      setSortOrder("desc");
+    }
+  };
+
+  const filteredProjects = useMemo(() => {
+    return displayProjects
+      .filter((p) => {
+        if (statusFilter !== "all" && (p.status || "").toLowerCase() !== statusFilter.toLowerCase()) {
+          return false;
+        }
+        if (categoryFilter !== "all" && (p.category || "").toLowerCase() !== categoryFilter.toLowerCase()) {
+          return false;
+        }
+        if (projectSearch.trim()) {
+          const q = projectSearch.toLowerCase();
+          const title = (p.project_name || p.title || "").toLowerCase();
+          const cat = (p.category || "").toLowerCase();
+          const id = (p.project_id || p.id || "").toLowerCase();
+          if (!title.includes(q) && !cat.includes(q) && !id.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        let diff = 0;
+        if (sortField === "title") {
+          const titleA = a.project_name || a.title || "";
+          const titleB = b.project_name || b.title || "";
+          diff = titleA.localeCompare(titleB);
+        } else if (sortField === "category") {
+          diff = (a.category || "").localeCompare(b.category || "");
+        } else if (sortField === "cost") {
+          const costA = a.sanctioned_amount || a.cost || 0;
+          const costB = b.sanctioned_amount || b.cost || 0;
+          diff = costA - costB;
+        } else if (sortField === "progress") {
+          const progA = a.physical_progress ?? a.physicalProgress ?? 0;
+          const progB = b.physical_progress ?? b.physicalProgress ?? 0;
+          diff = progA - progB;
+        } else if (sortField === "status") {
+          diff = (a.status || "").localeCompare(b.status || "");
+        }
+        return sortOrder === "desc" ? -diff : diff;
+      });
+  }, [displayProjects, projectSearch, statusFilter, categoryFilter, sortField, sortOrder]);
 
   // Project Statistics
   const projectStats = useMemo(() => {
@@ -348,35 +395,16 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                 </h3>
 
                 <div className="project-stats-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", flexGrow: 1 }}>
-                  {/* Completed Projects (Soft Green #dcfce7) */}
+                  {/* Completed Projects */}
                   <div
                     className="project-stat-card completed"
-                    style={{
-                      background: "#dcfce7",
-                      border: "1px solid #bbf7d0",
-                      borderRadius: "10px",
-                      padding: "16px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "14px",
-                      transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                      cursor: "pointer",
+                    onClick={() => {
+                      setActiveTab("projects");
+                      setStatusFilter("completed");
                     }}
+                    title="Click to view Completed Projects"
                   >
-                    <div
-                      className="stat-icon-container"
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "8px",
-                        background: "#059669",
-                        color: "#ffffff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
+                    <div className="stat-icon-container">
                       <CheckCircle2 size={20} />
                     </div>
                     <div className="stat-content">
@@ -389,35 +417,16 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                     </div>
                   </div>
 
-                  {/* Ongoing Projects (Soft Yellow #fef9c3) */}
+                  {/* Ongoing Projects */}
                   <div
                     className="project-stat-card ongoing"
-                    style={{
-                      background: "#fef9c3",
-                      border: "1px solid #fef08a",
-                      borderRadius: "10px",
-                      padding: "16px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "14px",
-                      transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                      cursor: "pointer",
+                    onClick={() => {
+                      setActiveTab("projects");
+                      setStatusFilter("in progress");
                     }}
+                    title="Click to view Ongoing Projects"
                   >
-                    <div
-                      className="stat-icon-container"
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "8px",
-                        background: "#d97706",
-                        color: "#ffffff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
+                    <div className="stat-icon-container">
                       <TrendingUp size={20} />
                     </div>
                     <div className="stat-content">
@@ -430,35 +439,16 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                     </div>
                   </div>
 
-                  {/* Recommended Projects (Soft Blue #e0f2fe) */}
+                  {/* Recommended Projects */}
                   <div
                     className="project-stat-card recommended"
-                    style={{
-                      background: "#e0f2fe",
-                      border: "1px solid #bae6fd",
-                      borderRadius: "10px",
-                      padding: "16px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "14px",
-                      transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                      cursor: "pointer",
+                    onClick={() => {
+                      setActiveTab("projects");
+                      setStatusFilter("all");
                     }}
+                    title="Click to view all Recommended Projects"
                   >
-                    <div
-                      className="stat-icon-container"
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "8px",
-                        background: "#0284c7",
-                        color: "#ffffff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
+                    <div className="stat-icon-container">
                       <Target size={20} />
                     </div>
                     <div className="stat-content">
@@ -471,35 +461,16 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                     </div>
                   </div>
 
-                  {/* Total Projects (Soft Slate #f1f5f9) */}
+                  {/* Total Projects */}
                   <div
                     className="project-stat-card total"
-                    style={{
-                      background: "#f1f5f9",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "10px",
-                      padding: "16px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "14px",
-                      transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                      cursor: "pointer",
+                    onClick={() => {
+                      setActiveTab("projects");
+                      setStatusFilter("all");
                     }}
+                    title="Click to view Total Projects"
                   >
-                    <div
-                      className="stat-icon-container"
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "8px",
-                        background: "#475569",
-                        color: "#ffffff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
+                    <div className="stat-icon-container">
                       <Users size={20} />
                     </div>
                     <div className="stat-content">
@@ -860,12 +831,48 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                 <table>
                   <thead>
                     <tr>
-                      <th>Work ID & Title</th>
-                      <th>Category</th>
-                      <th>Approved Budget</th>
-                      <th>Physical Progress</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: "right" }}>Inspect</th>
+                      <TableColumnHeader
+                        title="Work ID & Title"
+                        sortKey="title"
+                        currentSortKey={sortField}
+                        currentSortOrder={sortOrder}
+                        onSort={handleSort}
+                      />
+                      <TableColumnHeader
+                        title="Category"
+                        sortKey="category"
+                        currentSortKey={sortField}
+                        currentSortOrder={sortOrder}
+                        onSort={handleSort}
+                        filterOptions={categoriesList}
+                        selectedFilter={categoryFilter}
+                        onSelectFilter={setCategoryFilter}
+                      />
+                      <TableColumnHeader
+                        title="Approved Budget"
+                        sortKey="cost"
+                        currentSortKey={sortField}
+                        currentSortOrder={sortOrder}
+                        onSort={handleSort}
+                      />
+                      <TableColumnHeader
+                        title="Physical Progress"
+                        sortKey="progress"
+                        currentSortKey={sortField}
+                        currentSortOrder={sortOrder}
+                        onSort={handleSort}
+                      />
+                      <TableColumnHeader
+                        title="Status"
+                        sortKey="status"
+                        currentSortKey={sortField}
+                        currentSortOrder={sortOrder}
+                        onSort={handleSort}
+                        filterOptions={["Completed", "In Progress", "Sanctioned", "Delayed"]}
+                        selectedFilter={statusFilter}
+                        onSelectFilter={setStatusFilter}
+                      />
+                      <th style={{ textAlign: "right", padding: "10px 14px" }}>Inspect</th>
                     </tr>
                   </thead>
                   <tbody>

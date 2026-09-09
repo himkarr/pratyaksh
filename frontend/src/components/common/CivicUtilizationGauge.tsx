@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Info } from "lucide-react";
 
-interface CivicUtilizationGaugeProps {
+export interface CivicUtilizationGaugeProps {
   utilization: number;
   title?: string;
   cardHeader?: string;
@@ -9,15 +9,16 @@ interface CivicUtilizationGaugeProps {
   infoTooltip?: string;
   size?: "sm" | "md" | "lg";
   hideCardWrap?: boolean;
+  variant?: "minimal" | "standard";
 }
 
 /**
- * High-Fidelity SVG Semicircle Speedometer/Gauge matching Civic Reference Architecture:
- * - 5 Continuous Color Zones: Red (0-20%), Orange (20-40%), Yellow (40-60%), Amber (60-80%), Green (80-100%)
- * - 11 inner tick marks & labels: 0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100%
- * - Smoothly animated tapered needle with dynamic sweep on load and update
- * - Prominent bold percentage below the needle
- * - Interactive hover effects and info tooltip
+ * Minimalist Civic Utilization Speedometer / Gauge:
+ * - Clean, understated track with sophisticated single-gradient progress arc
+ * - Avoids loud rainbow color segments in favor of refined civic editorial aesthetic
+ * - 5 delicate tick marks & percentage markers (0%, 25%, 50%, 75%, 100%)
+ * - Smoothly animated precision needle pointer
+ * - Prominent, crisp percentage display and subtle minimalist status pill
  */
 export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
   utilization = 0,
@@ -40,24 +41,23 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
   // Dimensions based on size
   const dims = useMemo(() => {
     if (size === "sm") {
-      return { width: 280, height: 180, cx: 140, cy: 135, r: 95, stroke: 16, needleLen: 70, fontSize: 28 };
+      return { width: 260, height: 165, cx: 130, cy: 125, r: 88, stroke: 12, needleLen: 66, fontSize: 26 };
     }
     if (size === "lg") {
-      return { width: 420, height: 260, cx: 210, cy: 195, r: 145, stroke: 22, needleLen: 112, fontSize: 38 };
+      return { width: 380, height: 235, cx: 190, cy: 175, r: 132, stroke: 16, needleLen: 102, fontSize: 34 };
     }
     // md default
-    return { width: 340, height: 220, cx: 170, cy: 160, r: 120, stroke: 18, needleLen: 92, fontSize: 34 };
+    return { width: 310, height: 195, cx: 155, cy: 145, r: 108, stroke: 14, needleLen: 82, fontSize: 30 };
   }, [size]);
 
   // Target needle angle (-180deg at 0% pointing Left to 0deg at 100% pointing Right)
   const targetAngle = -180 + (clampedVal / 100) * 180;
   const [currentAngle, setCurrentAngle] = useState<number>(-180);
-  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setCurrentAngle(targetAngle);
-    }, 60);
+    }, 50);
     return () => clearTimeout(timer);
   }, [targetAngle]);
 
@@ -81,26 +81,57 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
     ].join(" ");
   };
 
-  // 5 continuous colored segments (0-20%, 20-40%, 40-60%, 60-80%, 80-100%)
-  const segments = [
-    { name: "Critical (0-20%)", start: 0, end: 36, color: "#ef4444", hoverColor: "#dc2626" },   // Red
-    { name: "Low (20-40%)", start: 36, end: 72, color: "#f97316", hoverColor: "#ea580c" },       // Orange
-    { name: "Moderate (40-60%)", start: 72, end: 108, color: "#eab308", hoverColor: "#ca8a04" },  // Yellow
-    { name: "Steady (60-80%)", start: 108, end: 144, color: "#f59e0b", hoverColor: "#d97706" },  // Amber
-    { name: "High (80-100%)", start: 144, end: 180, color: "#10b981", hoverColor: "#059669" },  // Green
-  ];
+  // 5 delicate ticks from 0% to 100%
+  const ticks = [0, 25, 50, 75, 100];
 
-  // 11 ticks from 0% to 100%
-  const ticks = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-
-  const getStatusText = (val: number) => {
-    if (val >= 80) return { label: "High Absorption (≥80%)", color: "#10b981", bg: "#ecfdf5", border: "#a7f3d0" };
-    if (val >= 60) return { label: "Consistent (60–79%)", color: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" };
-    if (val >= 40) return { label: "Moderate (40–59%)", color: "#d97706", bg: "#fffbeb", border: "#fde68a" };
-    return { label: "Low Absorption (<40%)", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" };
+  // Subtle tone for progress arc & badge
+  const getMinimalTheme = (val: number) => {
+    if (val >= 75) {
+      return {
+        label: "High Absorption (≥75%)",
+        dotColor: "#059669",
+        gradientStart: "#0f766e",
+        gradientEnd: "#10b981",
+        badgeBg: "#f0fdf4",
+        badgeBorder: "#bbf7d0",
+        badgeText: "#166534",
+      };
+    }
+    if (val >= 50) {
+      return {
+        label: "Consistent (50–74%)",
+        dotColor: "#0284c7",
+        gradientStart: "#1e3a8a",
+        gradientEnd: "#0ea5e9",
+        badgeBg: "#f0f9ff",
+        badgeBorder: "#bae6fd",
+        badgeText: "#0369a1",
+      };
+    }
+    if (val >= 35) {
+      return {
+        label: "Moderate (35–49%)",
+        dotColor: "#d97706",
+        gradientStart: "#78350f",
+        gradientEnd: "#f59e0b",
+        badgeBg: "#fffbeb",
+        badgeBorder: "#fde68a",
+        badgeText: "#92400e",
+      };
+    }
+    return {
+      label: "Needs Acceleration (<35%)",
+      dotColor: "#dc2626",
+      gradientStart: "#450a0a",
+      gradientEnd: "#ef4444",
+      badgeBg: "#fef2f2",
+      badgeBorder: "#fecaca",
+      badgeText: "#991b1b",
+    };
   };
 
-  const status = getStatusText(clampedVal);
+  const theme = getMinimalTheme(clampedVal);
+  const gradId = `minimal-gauge-grad-${dims.width}-${Math.round(clampedVal)}`;
 
   const gaugeContent = (
     <div
@@ -126,7 +157,7 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1e293b" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#334155", letterSpacing: "0.01em" }}>
               {cardHeader}
             </span>
             {showInfoIcon && (
@@ -141,13 +172,13 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
                     border: "none",
                     padding: 0,
                     cursor: "pointer",
-                    color: "#3b82f6",
+                    color: "#64748b",
                     display: "flex",
                     alignItems: "center",
                   }}
                   aria-label="Fund utilization explanation"
                 >
-                  <Info size={15} />
+                  <Info size={14} />
                 </button>
                 {showTooltip && (
                   <div
@@ -159,11 +190,11 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
                       marginBottom: "8px",
                       background: "#0f172a",
                       color: "#f8fafc",
-                      padding: "8px 12px",
-                      borderRadius: "8px",
-                      fontSize: "0.74rem",
+                      padding: "7px 11px",
+                      borderRadius: "6px",
+                      fontSize: "0.72rem",
                       lineHeight: "1.35",
-                      width: "220px",
+                      width: "210px",
                       boxShadow: "0 10px 25px -5px rgba(0,0,0,0.25)",
                       zIndex: 50,
                       pointerEvents: "none",
@@ -179,12 +210,12 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
         </div>
       )}
 
-      {/* Subtitle / Title in Serif Header */}
+      {/* Subtitle / Title in Clean Header */}
       {title && (
         <h4
           style={{
-            margin: "0 0 14px 0",
-            fontSize: "1.1rem",
+            margin: "0 0 10px 0",
+            fontSize: size === "sm" ? "0.92rem" : "1.02rem",
             fontWeight: 700,
             color: "#1e293b",
             textAlign: "center",
@@ -196,61 +227,55 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
         </h4>
       )}
 
-      {/* SVG Semicircle Speedometer */}
+      {/* Minimalist SVG Semicircle Speedometer */}
       <svg
         width={dims.width}
         height={dims.height}
         viewBox={`0 0 ${dims.width} ${dims.height}`}
         style={{
           overflow: "visible",
-          transition: "transform 0.3s ease",
-          transform: isHovered ? "scale(1.02)" : "scale(1)",
+          transition: "transform 0.25s ease",
+          transform: isHovered ? "scale(1.015)" : "scale(1)",
         }}
       >
-        {/* Background Subtle Track */}
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={theme.gradientStart} />
+            <stop offset="100%" stopColor={theme.gradientEnd} />
+          </linearGradient>
+        </defs>
+
+        {/* Background Minimal Track */}
         <path
           d={describeArc(dims.cx, dims.cy, dims.r, 0, 180)}
           fill="none"
-          stroke="#f1f5f9"
-          strokeWidth={dims.stroke + 4}
+          stroke="#e2e8f0"
+          strokeWidth={dims.stroke}
           strokeLinecap="round"
         />
 
-        {/* 5 Continuous Color Arc Segments with interactive hover glow */}
-        {segments.map((seg, idx) => {
-          const isSegActive = hoveredSegment === seg.name;
-          return (
-            <path
-              key={idx}
-              d={describeArc(dims.cx, dims.cy, dims.r, seg.start, seg.end)}
-              fill="none"
-              stroke={isSegActive ? seg.hoverColor : seg.color}
-              strokeWidth={isSegActive ? dims.stroke + 3 : dims.stroke}
-              strokeLinecap={idx === 0 || idx === segments.length - 1 ? "round" : "butt"}
-              style={{
-                cursor: "pointer",
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                filter: isSegActive 
-                  ? "drop-shadow(0 4px 8px rgba(0,0,0,0.22))" 
-                  : isHovered 
-                  ? "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" 
-                  : "none",
-              }}
-              onMouseEnter={() => setHoveredSegment(seg.name)}
-              onMouseLeave={() => setHoveredSegment(null)}
-            >
-              <title>{seg.name}</title>
-            </path>
-          );
-        })}
+        {/* Sleek Filled Progress Arc (0 to clampedVal%) */}
+        {clampedVal > 0 && (
+          <path
+            d={describeArc(dims.cx, dims.cy, dims.r, 0, (clampedVal / 100) * 180)}
+            fill="none"
+            stroke={`url(#${gradId})`}
+            strokeWidth={dims.stroke}
+            strokeLinecap="round"
+            style={{
+              transition: "stroke-dashoffset 1s ease",
+              filter: isHovered ? "drop-shadow(0 2px 5px rgba(0,0,0,0.15))" : "none",
+            }}
+          />
+        )}
 
-        {/* 11 Ticks & Percentage Labels: 0% (Left) to 100% (Right) */}
+        {/* Minimal Ticks & Labels (0, 25, 50, 75, 100) */}
         {ticks.map((pct) => {
           const angleDeg = pct * 1.8;
           const rad = (angleDeg * Math.PI) / 180;
-          const rInner = dims.r - dims.stroke / 2 - 4;
+          const rInner = dims.r - dims.stroke / 2 - 3;
           const rOuter = dims.r - dims.stroke / 2 - 1;
-          const rText = dims.r - dims.stroke - 13;
+          const rText = dims.r - dims.stroke - 12;
 
           const x1 = dims.cx - rInner * Math.cos(rad);
           const y1 = dims.cy - rInner * Math.sin(rad);
@@ -267,16 +292,16 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
                 y1={y1}
                 x2={x2}
                 y2={y2}
-                stroke="#64748b"
-                strokeWidth={pct % 20 === 0 ? 1.5 : 1}
+                stroke="#94a3b8"
+                strokeWidth={pct === 0 || pct === 50 || pct === 100 ? 1.5 : 1}
                 strokeOpacity={0.7}
               />
               <text
                 x={tx}
                 y={ty}
-                fontSize={size === "sm" ? "8.5" : "10"}
-                fontWeight="600"
-                fill="#475569"
+                fontSize={size === "sm" ? "8" : "9.5"}
+                fontWeight="500"
+                fill="#64748b"
                 textAnchor="middle"
                 dominantBaseline="central"
                 style={{ userSelect: "none" }}
@@ -287,32 +312,31 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
           );
         })}
 
-        {/* Animated Needle Pointer */}
+        {/* Slender Minimalist Needle Pointer */}
         <g
           style={{
             transform: `rotate(${currentAngle}deg)`,
             transformOrigin: `${dims.cx}px ${dims.cy}px`,
-            transition: "transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
-            filter: isHovered ? "drop-shadow(0 4px 6px rgba(0,0,0,0.35))" : "drop-shadow(0 2px 3px rgba(0,0,0,0.25))",
+            transition: "transform 1.1s cubic-bezier(0.34, 1.35, 0.64, 1)",
           }}
         >
-          {/* Tapered Pointer Needle */}
+          {/* Slender Needle Polygon */}
           <polygon
-            points={`${dims.cx},${dims.cy - 4} ${dims.cx + dims.needleLen},${dims.cy} ${dims.cx},${dims.cy + 4}`}
+            points={`${dims.cx},${dims.cy - 2.5} ${dims.cx + dims.needleLen},${dims.cy} ${dims.cx},${dims.cy + 2.5}`}
             fill="#0f172a"
             style={{
-              filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.3))",
+              filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.25))",
             }}
           />
-          {/* Pivot Base Circles */}
-          <circle cx={dims.cx} cy={dims.cy} r={size === "sm" ? 6 : 8} fill="#0f172a" />
-          <circle cx={dims.cx} cy={dims.cy} r={size === "sm" ? 2.5 : 3} fill="#ffffff" />
+          {/* Subtle Pivot Base */}
+          <circle cx={dims.cx} cy={dims.cy} r={size === "sm" ? 5 : 6} fill="#0f172a" />
+          <circle cx={dims.cx} cy={dims.cy} r={size === "sm" ? 2 : 2.5} fill="#ffffff" />
         </g>
 
-        {/* Big Bold Percentage Below Needle */}
+        {/* Crisp Bold Percentage Below Needle */}
         <text
           x={dims.cx}
-          y={dims.cy + (size === "sm" ? 28 : 34)}
+          y={dims.cy + (size === "sm" ? 24 : 28)}
           fontSize={dims.fontSize}
           fontWeight="800"
           fill="#0f172a"
@@ -326,34 +350,34 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
         </text>
       </svg>
 
-      {/* Interactive Status Pill */}
+      {/* Understated Minimalist Status Pill */}
       <div
         style={{
-          marginTop: "4px",
-          padding: "5px 14px",
+          marginTop: "2px",
+          padding: "4px 12px",
           borderRadius: "9999px",
-          background: status.bg,
-          color: status.color,
-          border: `1px solid ${status.border}`,
-          fontSize: "0.76rem",
-          fontWeight: 700,
+          background: theme.badgeBg,
+          color: theme.badgeText,
+          border: `1px solid ${theme.badgeBorder}`,
+          fontSize: "0.74rem",
+          fontWeight: 600,
           display: "inline-flex",
           alignItems: "center",
           gap: "6px",
           transition: "all 0.2s ease",
-          boxShadow: isHovered ? "0 4px 12px rgba(0,0,0,0.06)" : "none",
+          boxShadow: isHovered ? "0 2px 6px rgba(0,0,0,0.04)" : "none",
         }}
       >
         <span
           style={{
-            width: 7,
-            height: 7,
+            width: 6,
+            height: 6,
             borderRadius: "50%",
-            background: status.color,
+            background: theme.dotColor,
             display: "inline-block",
           }}
         />
-        <span>{status.label}</span>
+        <span>{theme.label}</span>
       </div>
     </div>
   );
@@ -367,9 +391,9 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
       style={{
         background: "#ffffff",
         border: "1px solid #e2e8f0",
-        borderRadius: "14px",
-        padding: "20px",
-        boxShadow: isHovered ? "0 8px 24px -4px rgba(15,23,42,0.08)" : "0 1px 3px rgba(0,0,0,0.04)",
+        borderRadius: "12px",
+        padding: "16px",
+        boxShadow: isHovered ? "0 6px 18px -3px rgba(15,23,42,0.06)" : "0 1px 3px rgba(0,0,0,0.03)",
         transition: "all 0.25s ease",
         height: "100%",
         display: "flex",
@@ -381,3 +405,4 @@ export const CivicUtilizationGauge: React.FC<CivicUtilizationGaugeProps> = ({
     </div>
   );
 };
+export default CivicUtilizationGauge;

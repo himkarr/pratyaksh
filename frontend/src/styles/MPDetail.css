@@ -479,14 +479,17 @@
   gap: 14px;
   padding: 16px;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
 .project-stat-card:hover {
   transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08);
 }
 
 .project-stat-card:hover .stat-icon-container {
@@ -495,72 +498,100 @@
 }
 
 .project-stat-card.completed {
-  background: #dcfce7;
-  border-color: #bbf7d0;
+  border-left: 4px solid #10b981;
 }
 
 .project-stat-card.completed:hover {
+  background: #f0fdf4;
   border-color: #86efac;
+  border-left-color: #059669;
   box-shadow: 0 10px 20px -4px rgba(22, 163, 74, 0.2);
 }
 
 .project-stat-card.ongoing {
-  background: #fef9c3;
-  border-color: #fef08a;
+  border-left: 4px solid #f59e0b;
 }
 
 .project-stat-card.ongoing:hover {
+  background: #fffbeb;
   border-color: #fde047;
+  border-left-color: #d97706;
   box-shadow: 0 10px 20px -4px rgba(202, 138, 4, 0.2);
 }
 
 .project-stat-card.recommended {
-  background: #e0f2fe;
-  border-color: #bae6fd;
+  border-left: 4px solid #0284c7;
 }
 
 .project-stat-card.recommended:hover {
+  background: #f0f9ff;
   border-color: #7dd3fc;
+  border-left-color: #0284c7;
   box-shadow: 0 10px 20px -4px rgba(2, 132, 199, 0.2);
 }
 
 .project-stat-card.total {
-  background: #f1f5f9;
-  border-color: #e2e8f0;
+  border-left: 4px solid #64748b;
 }
 
 .project-stat-card.total:hover {
+  background: #f8fafc;
   border-color: #cbd5e1;
+  border-left-color: #475569;
   box-shadow: 0 10px 20px -4px rgba(100, 116, 139, 0.15);
 }
 
 .stat-icon-container {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  transition: transform 0.2s ease;
+  transition: transform 0.25s ease, background-color 0.25s ease;
 }
 
 .project-stat-card.completed .stat-icon-container {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.project-stat-card.completed:hover .stat-icon-container {
   background: #059669;
   color: white;
 }
 
 .project-stat-card.ongoing .stat-icon-container {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.project-stat-card.ongoing:hover .stat-icon-container {
   background: #d97706;
   color: white;
 }
 
 .project-stat-card.recommended .stat-icon-container {
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+.project-stat-card.recommended:hover .stat-icon-container {
   background: #0284c7;
   color: white;
 }
 
 .project-stat-card.total .stat-icon-container {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.project-stat-card.total:hover .stat-icon-container {
   background: #475569;
   color: white;
 }

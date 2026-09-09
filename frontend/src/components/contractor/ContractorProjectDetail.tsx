@@ -115,8 +115,9 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
             {/* Sanctioned */}
             <div
               style={{
-                background: "#dcfce7",
-                border: "1px solid #bbf7d0",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #10b981",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 display: "flex",
@@ -126,30 +127,37 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f0fdf4";
+                e.currentTarget.style.borderColor = "#86efac";
+                e.currentTarget.style.borderLeftColor = "#059669";
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(5, 150, 105, 0.25)";
+                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(5, 150, 105, 0.2)";
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#ffffff";
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.borderLeftColor = "#10b981";
                 e.currentTarget.style.transform = "none";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
-              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#059669", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <CheckCircle2 size={17} />
               </div>
               <div>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#065f46", display: "block", lineHeight: 1.1 }}>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
                   {formatCurrency(project.sanctionAmountRs)}
                 </span>
-                <span style={{ fontSize: "0.72rem", color: "#047857", fontWeight: 600 }}>Sanction Outlay</span>
+                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Sanction Outlay</span>
               </div>
             </div>
 
             {/* Recommended */}
             <div
               style={{
-                background: "#fef9c3",
-                border: "1px solid #fef08a",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #f59e0b",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 display: "flex",
@@ -159,30 +167,37 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#fffbeb";
+                e.currentTarget.style.borderColor = "#fde047";
+                e.currentTarget.style.borderLeftColor = "#d97706";
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(217, 119, 6, 0.25)";
+                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(217, 119, 6, 0.2)";
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#ffffff";
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.borderLeftColor = "#f59e0b";
                 e.currentTarget.style.transform = "none";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
-              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#d97706", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#fffbeb", color: "#d97706", border: "1px solid #fde68a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <TrendingUp size={17} />
               </div>
               <div>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#92400e", display: "block", lineHeight: 1.1 }}>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
                   {formatCurrency(project.recommendedAmountRs)}
                 </span>
-                <span style={{ fontSize: "0.72rem", color: "#b45309", fontWeight: 600 }}>Recommended</span>
+                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Recommended</span>
               </div>
             </div>
 
             {/* Spent */}
             <div
               style={{
-                background: "#e0f2fe",
-                border: "1px solid #bae6fd",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #0284c7",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 display: "flex",
@@ -192,30 +207,37 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f0f9ff";
+                e.currentTarget.style.borderColor = "#7dd3fc";
+                e.currentTarget.style.borderLeftColor = "#0284c7";
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(2, 132, 199, 0.25)";
+                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(2, 132, 199, 0.2)";
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#ffffff";
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.borderLeftColor = "#0284c7";
                 e.currentTarget.style.transform = "none";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
-              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#0284c7", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#f0f9ff", color: "#0284c7", border: "1px solid #bae6fd", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Target size={17} />
               </div>
               <div>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0369a1", display: "block", lineHeight: 1.1 }}>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
                   {formatCurrency(project.utilizedAmountRs)}
                 </span>
-                <span style={{ fontSize: "0.72rem", color: "#0284c7", fontWeight: 600 }}>Spent Amount</span>
+                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Spent Amount</span>
               </div>
             </div>
 
             {/* Physical Execution */}
             <div
               style={{
-                background: "#f1f5f9",
+                background: "#ffffff",
                 border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #64748b",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 display: "flex",
@@ -225,20 +247,26 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f8fafc";
+                e.currentTarget.style.borderColor = "#cbd5e1";
+                e.currentTarget.style.borderLeftColor = "#475569";
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(100, 116, 139, 0.2)";
+                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(100, 116, 139, 0.15)";
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#ffffff";
+                e.currentTarget.style.borderColor = "#e2e8f0";
+                e.currentTarget.style.borderLeftColor = "#64748b";
                 e.currentTarget.style.transform = "none";
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
-              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#475569", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Users size={17} />
+              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Clock size={17} />
               </div>
               <div>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#1e293b", display: "block", lineHeight: 1.1 }}>
-                  {project.physicalProgress}%
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
+                  {project.physicalProgress || 0}%
                 </span>
                 <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Physical Progress</span>
               </div>
