@@ -11,12 +11,14 @@ import { CitizenInteractiveMap } from "./CitizenInteractiveMap";
 export interface CitizenProjectSearchProps {
   works: WorkItem[];
   onSelectWork: (work: WorkItem) => void;
+  onReportProblem?: (work: WorkItem) => void;
   currentConstituency?: string;
 }
 
 export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({ 
   works, 
   onSelectWork,
+  onReportProblem,
   currentConstituency = "Pune"
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -280,6 +282,7 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
             works={filteredWorks}
             currentConstituency={currentConstituency}
             onSelectWork={onSelectWork}
+            onReportProblem={onReportProblem}
           />
         </div>
       )}
