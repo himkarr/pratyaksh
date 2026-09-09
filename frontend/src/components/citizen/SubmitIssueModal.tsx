@@ -6,7 +6,7 @@ import {
 import { CitizenIssue } from "../../data/citizenData";
 import { WorkItem, INITIAL_WORKS } from "../../data/mpladsData";
 import { Modal, Button, Input, Select, Textarea, Alert } from "../ui";
-import { fileToOptimizedDataUrl } from "../../utils/imageUploadHelper";
+import { fileToOptimizedDataUrl, extractOcrAndGisLocation, ExtractedImageGeoInfo } from "../../utils/imageUploadHelper";
 
 export interface SubmitIssueModalProps {
   isOpen: boolean;
@@ -46,6 +46,10 @@ export const SubmitIssueModal: React.FC<SubmitIssueModalProps> = ({
   const [geoMsg, setGeoMsg] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+
+  // AI OCR / GIS auto-detection state
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
+  const [isOptimizingPhoto, setIsOptimizingPhoto] = useState(false);
 
   useEffect(() => {
     if (initialWork) {
@@ -94,19 +98,34 @@ export const SubmitIssueModal: React.FC<SubmitIssueModalProps> = ({
     );
   };
 
-  const [isOptimizingPhoto, setIsOptimizingPhoto] = useState(false);
-
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsOptimizingPhoto(true);
+      setIsScanningOcr(true);
       try {
-        const dataUrl = await fileToOptimizedDataUrl(file, 1280, 1280, 0.85);
+        const [dataUrl, geoInfo] = await Promise.all([
+          fileToOptimizedDataUrl(file, 1280, 1280, 0.85),
+          extractOcrAndGisLocation(file, currentConstituency, "Maharashtra")
+        ]);
+
         setPhotoUrl(dataUrl);
+
+        if (geoInfo) {
+          if (geoInfo.latitude && geoInfo.longitude) {
+            setLat(geoInfo.latitude);
+            setLng(geoInfo.longitude);
+            setGeoMsg(`📍 Auto-pinned via Photo GIS: ${geoInfo.latitude.toFixed(4)}° N, ${geoInfo.longitude.toFixed(4)}° E`);
+          }
+          if (!locationName.trim() && geoInfo.locationName) {
+            setLocationName(geoInfo.locationName);
+          }
+        }
       } catch (err) {
-        console.error("Failed to process photo:", err);
+        console.error("Failed to process photo or OCR metadata:", err);
       } finally {
         setIsOptimizingPhoto(false);
+        setIsScanningOcr(false);
       }
     }
   };
@@ -306,29 +325,37 @@ export const SubmitIssueModal: React.FC<SubmitIssueModalProps> = ({
               }}
             >
               {photoUrl ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
-                  <img
-                    src={photoUrl}
-                    alt="Upload Preview"
-                    style={{ width: "80px", height: "60px", objectFit: "cover", borderRadius: "4px" }}
-                  />
-                  <span style={{ fontSize: "0.80rem", color: "var(--status-success-text)", fontWeight: 600 }}>
-                    ✓ Photo Attached
-                  </span>
-                  <Button type="button" variant="danger" size="sm" onClick={() => setPhotoUrl("")}>
-                    Remove
-                  </Button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
+                    <img
+                      src={photoUrl}
+                      alt="Upload Preview"
+                      style={{ width: "80px", height: "60px", objectFit: "cover", borderRadius: "4px" }}
+                    />
+                    <span style={{ fontSize: "0.80rem", color: "var(--status-success-text)", fontWeight: 600 }}>
+                      ✓ Photo Attached
+                    </span>
+                    <Button type="button" variant="danger" size="sm" onClick={() => setPhotoUrl("")}>
+                      Remove
+                    </Button>
+                  </div>
+                  {geoMsg && (
+                    <div style={{ fontSize: "0.72rem", color: "#059669", background: "rgba(16, 185, 129, 0.1)", padding: "4px 8px", borderRadius: "4px", fontWeight: 600 }}>
+                      {geoMsg}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
                   <Camera size={22} color="var(--text-muted)" style={{ margin: "0 auto 4px auto" }} />
                   <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                    Upload or take a photo of the site
+                    {isScanningOcr ? "⚡ Scanning Photo EXIF GIS & OCR Location..." : "Upload or take a photo of the site (Auto-extracts GIS location & Signboards)"}
                   </div>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handlePhotoSelect}
+                    disabled={isScanningOcr}
                     style={{ marginTop: "6px", fontSize: "0.75rem" }}
                   />
                 </div>

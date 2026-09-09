@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { CitizenIssue, IssuePhoto } from "../../data/citizenData";
 import { Modal, Button, Input, Select, Textarea, Alert } from "../ui";
-import { fileToOptimizedDataUrl } from "../../utils/imageUploadHelper";
+import { fileToOptimizedDataUrl, extractOcrAndGisLocation } from "../../utils/imageUploadHelper";
 
 export interface SubmitRecommendationModalProps {
   isOpen: boolean;
@@ -161,20 +161,51 @@ export const SubmitRecommendationModal: React.FC<SubmitRecommendationModalProps>
   };
 
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
+  const [detectedGisNote, setDetectedGisNote] = useState<string | null>(null);
 
   const handlePhotoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsProcessingPhoto(true);
+      setIsScanningOcr(true);
       try {
-        const dataUrl = await fileToOptimizedDataUrl(file, 1280, 1280, 0.85);
+        const [dataUrl, geoInfo] = await Promise.all([
+          fileToOptimizedDataUrl(file, 1280, 1280, 0.85),
+          extractOcrAndGisLocation(file, currentConstituency, currentState)
+        ]);
+
+        let photoLat = lat;
+        let photoLng = lng;
+
+        if (geoInfo) {
+          if (geoInfo.latitude && geoInfo.longitude) {
+            photoLat = geoInfo.latitude;
+            photoLng = geoInfo.longitude;
+            setLat(geoInfo.latitude);
+            setLng(geoInfo.longitude);
+            setGeoMsg(`📍 Auto-pinned via Photo GIS: ${geoInfo.latitude.toFixed(4)}° N, ${geoInfo.longitude.toFixed(4)}° E`);
+          }
+          if (!locationName.trim() && geoInfo.locationName) {
+            setLocationName(geoInfo.locationName);
+          }
+          if (!pincode.trim() && geoInfo.pincode) {
+            setPincode(geoInfo.pincode);
+          }
+          if (geoInfo.locationName || geoInfo.latitude) {
+            setDetectedGisNote(
+              `GIS / OCR detected: ${geoInfo.locationName || "Site"} ${geoInfo.latitude ? `(${geoInfo.latitude.toFixed(4)}° N, ${geoInfo.longitude?.toFixed(4)}° E)` : ""}`
+            );
+          }
+        }
+
         const newPhoto: IssuePhoto = {
           id: `photo-${Date.now()}`,
           url: dataUrl,
           timestamp: new Date().toLocaleString(),
           caption: photoCaptionInput.trim() || `Site evidence photo taken on ${new Date().toLocaleDateString()}`,
-          lat,
-          lng
+          lat: photoLat,
+          lng: photoLng
         };
         setPhotos((prev) => [...prev, newPhoto]);
         setPhotoCaptionInput("");
@@ -182,6 +213,7 @@ export const SubmitRecommendationModal: React.FC<SubmitRecommendationModalProps>
         console.error("Failed to process photo upload:", err);
       } finally {
         setIsProcessingPhoto(false);
+        setIsScanningOcr(false);
       }
     }
   };
@@ -587,6 +619,21 @@ export const SubmitRecommendationModal: React.FC<SubmitRecommendationModalProps>
                   Add Photo
                 </Button>
               </div>
+
+              {/* OCR Scanning & GIS Detection Feedback */}
+              {isScanningOcr && (
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", color: "var(--gov-accent)", fontWeight: 600 }}>
+                  <Sparkles size={13} className="spin-animate" />
+                  <span>AI OCR & EXIF GIS engine extracting coordinates and location...</span>
+                </div>
+              )}
+
+              {detectedGisNote && !isScanningOcr && (
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.74rem", color: "var(--status-success-text)", background: "rgba(16, 185, 129, 0.1)", padding: "4px 8px", borderRadius: "4px" }}>
+                  <Check size={13} />
+                  <span>{detectedGisNote}</span>
+                </div>
+              )}
             </div>
           </div>
 
