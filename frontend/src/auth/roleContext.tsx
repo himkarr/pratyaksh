@@ -61,11 +61,11 @@ const ALL_ROLES_DEFAULT_USERS: User[] = [
   },
   {
     id: "usr-contractor-01",
-    email: "vendor.jabalpur@nirikshak.gov.in",
-    name: "Jabalpur Implementing Infrastructure Agency",
+    email: "vendor.gurugram@nirikshak.gov.in",
+    name: "Gurugram Metropolitan Development Authority (GMDA)",
     role: "contractor",
-    state: "Madhya Pradesh",
-    district: "Jabalpur"
+    state: "Haryana",
+    district: "Gurugram"
   },
   {
     id: "usr-field-01",
@@ -77,11 +77,11 @@ const ALL_ROLES_DEFAULT_USERS: User[] = [
   },
   {
     id: "usr-district-01",
-    email: "district.jabalpur@nirikshak.gov.in",
-    name: "Smt. G. Srijana, IAS",
+    email: "district.gurugram@nirikshak.gov.in",
+    name: "Shri Nishant Kumar Yadav, IAS",
     role: "district",
-    state: "Madhya Pradesh",
-    district: "Jabalpur"
+    state: "Haryana",
+    district: "Gurugram"
   },
   {
     id: "usr-district-rohtak",

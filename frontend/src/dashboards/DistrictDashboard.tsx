@@ -32,8 +32,7 @@ import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Modal } from "../components/ui";
 
-import { WorkItem, ROHTAK_WORKS, GURUGRAM_WORKS, JABALPUR_WORKS } from "../data/mpladsData";
-import { ContractorsManagementTab } from "../components/district/ContractorsManagementTab";
+import { WorkItem, ROHTAK_WORKS, GURUGRAM_WORKS } from "../data/mpladsData";
 import { CreateWorkModal } from "../components/district/CreateWorkModal";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
@@ -45,7 +44,7 @@ export const DistrictDashboard: React.FC = () => {
   const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Active Section Navigation
-  const [activeTab, setActiveTab] = useState<"district_projects" | "verifications_review" | "anomaly_dossiers" | "contractors_management">("district_projects");
+  const [activeTab, setActiveTab] = useState<"district_projects" | "verifications_review" | "anomaly_dossiers">("district_projects");
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -68,32 +67,30 @@ export const DistrictDashboard: React.FC = () => {
   // Action Notice Toast State
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => user.district || "Jabalpur");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => (user.district && user.district !== "Jabalpur" ? user.district : "Gurugram"));
 
   // Dynamic District Authority Identity based on selected district
   const collectorName = useMemo(() => {
     const dLower = selectedDistrict.toLowerCase();
     if (dLower === "rohtak") return "Shri Ajay Kumar, IAS";
     if (dLower === "gurugram") return "Shri Nishant Kumar Yadav, IAS";
-    if (dLower === "jabalpur") return "Smt. G. Srijana, IAS";
     return user.role === "district" ? (user.name || "District Magistrate & Collector") : "District Magistrate & Collector";
   }, [selectedDistrict, user.name, user.role]);
 
   const collectorDesignation = "District Magistrate & Collector";
-  const districtName = selectedDistrict || user.district || "Jabalpur";
+  const districtName = selectedDistrict || (user.district && user.district !== "Jabalpur" ? user.district : "Gurugram");
   const stateName = useMemo(() => {
     const dLower = selectedDistrict.toLowerCase();
     if (dLower === "rohtak" || dLower === "gurugram") return "Haryana";
-    if (dLower === "jabalpur") return "Madhya Pradesh";
-    return user.state || "Madhya Pradesh";
+    return user.state || "Haryana";
   }, [selectedDistrict, user.state]);
 
   // Available districts dynamically discovered from datasets + default Rohtak & Gurugram
   const availableDistricts = useMemo(() => {
-    const dists = new Set<string>(["Jabalpur", "Rohtak", "Gurugram"]);
-    if (user.district) dists.add(user.district);
+    const dists = new Set<string>(["Gurugram", "Rohtak"]);
+    if (user.district && user.district !== "Jabalpur") dists.add(user.district);
     projects.forEach((p) => {
-      if (p.district && p.district.trim()) dists.add(p.district.trim());
+      if (p.district && p.district.trim() && p.district.trim() !== "Jabalpur") dists.add(p.district.trim());
     });
     return Array.from(dists).sort();
   }, [projects, user.district]);
@@ -102,85 +99,63 @@ export const DistrictDashboard: React.FC = () => {
     async function loadLiveDistrictProjects() {
       try {
         const liveProjs = await adminDataService.getProjectsByDistrict(districtName);
-        if (liveProjs && liveProjs.length > 0) {
-          const targetDistLower = districtName.toLowerCase().trim();
-          const districtFiltered = liveProjs;
+        const targetDistLower = districtName.toLowerCase().trim();
 
-          // Define local empanelled contractors by district for clean display
-          const rohtakContractors = [
-            "M/s Haryana Civil Infra Services",
-            "M/s Rohtak Development & Builders Ltd.",
-            "M/s Apex North Infrastructure Pvt Ltd."
-          ];
-          const gurugramContractors = [
-            "M/s Millennium City Builders & Engineers",
-            "M/s Gurugram Urban Infra Project Ltd.",
-            "M/s Cyber City Infrastructure Pvt Ltd."
-          ];
-          const jabalpurContractors = [
-            "M/s Apex Infra & Construction Ltd.",
-            "M/s Jabalpur Rural Infra Developers",
-            "M/s Mahakaushal Engineering Works"
-          ];
+        let datasetToMap: any[] = (liveProjs && liveProjs.length > 0) ? liveProjs : [];
+        if (datasetToMap.length === 0) {
+          if (targetDistLower === "rohtak") datasetToMap = ROHTAK_WORKS as any[];
+          else datasetToMap = GURUGRAM_WORKS as any[];
+        }
 
-          const activeContractors = targetDistLower === "rohtak"
-            ? rohtakContractors
-            : targetDistLower === "gurugram"
-            ? gurugramContractors
-            : jabalpurContractors;
-
-          let datasetToMap = districtFiltered;
-          if (districtFiltered.length === 0) {
-            if (targetDistLower === "rohtak") datasetToMap = ROHTAK_WORKS as any[];
-            else if (targetDistLower === "gurugram") datasetToMap = GURUGRAM_WORKS as any[];
-            else datasetToMap = JABALPUR_WORKS as any[];
-          }
-
-          const mapped: WorkItem[] = datasetToMap.map((p: any, idx: number) => {
-            const agency = p.implementing_agencies?.agency_name 
+        const mapped: WorkItem[] = datasetToMap.map((p: any, idx: number) => {
+          let assignedContractor = "";
+          if (targetDistLower === "gurugram") {
+            assignedContractor = (idx % 10 < 7)
+              ? "Gurugram Metropolitan Development Authority (GMDA)"
+              : "Municipal Corporation Gurugram (MCG)";
+          } else if (targetDistLower === "rohtak") {
+            assignedContractor = (idx % 10 < 6)
+              ? "Public Health Engineering Department (PHED), Rohtak"
+              : "Public Works Department (PWD B&R), Rohtak";
+          } else {
+            assignedContractor = p.implementing_agencies?.agency_name 
               || p.agency 
               || p.implementing_agency_name 
               || `Office of District Magistrate & Collector (IDA), ${p.district || districtName}`;
-            
-            const contractor = (p.tender_reference_no && !p.tender_reference_no.includes("NIT") && !p.tender_reference_no.includes("MP-18LS")) 
-              ? p.tender_reference_no 
-              : (p.contractor && !p.contractor.includes("Empaneled")) 
-              ? p.contractor 
-              : activeContractors[idx % activeContractors.length];
+          }
 
-            return {
-              id: p.project_id || p.id || `LIVE-${districtName.toUpperCase()}-${idx + 1}`,
-              title: p.project_name || p.title || "MPLADS Infrastructure Development Work",
-              house: "Lok Sabha",
-              state: p.state || stateName,
-              district: p.district || districtName,
-              constituency: p.constituency || `${p.district || districtName} (PC-01)`,
-              constituency_code: "DIST-01",
-              mpName: p.mp_name || "District Parliamentary MP",
-              category: p.category || "Community Asset",
-              sectorName: p.category || "Infrastructure",
-              recommendedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
-              sanctionedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
-              expenditureAmt: Number(p.utilized_amount || 0) / 10000000,
-              physicalProgress: p.progress_percentage ?? (p.status === "Completed" ? 100 : p.status === "InProgress" ? 45 : 15),
-              financialProgress: Math.round(
-                ((Number(p.utilized_amount || 0)) / Math.max(1, Number(p.sanctioned_amount || 1))) * 100
-              ) || (p.status === "Completed" ? 100 : 20),
-              dateSanctioned: p.start_date || "2024-04-01",
-              targetCompletion: p.expected_completion_date || "2025-06-30",
-              status: (p.status || "Sanctioned") as any,
-              agency: agency,
-              contractor: contractor,
-              rating: 4.8,
-              reviewsCount: 3,
-              attachments: [],
-              reviews: []
-            };
-          });
+          return {
+            id: p.project_id || p.id || `LIVE-${districtName.toUpperCase()}-${idx + 1}`,
+            title: p.project_name || p.title || "MPLADS Infrastructure Development Work",
+            house: "Lok Sabha",
+            state: p.state || stateName,
+            district: p.district || districtName,
+            constituency: p.constituency || `${p.district || districtName} (PC-01)`,
+            constituency_code: "DIST-01",
+            mpName: p.mp_name || "District Parliamentary MP",
+            category: p.category || "Community Asset",
+            sectorName: p.category || "Infrastructure",
+            recommendedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+            sanctionedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+            expenditureAmt: Number(p.utilized_amount || 0) / 10000000,
+            physicalProgress: p.progress_percentage ?? (p.status === "Completed" ? 100 : p.status === "InProgress" ? 45 : 15),
+            financialProgress: Math.round(
+              ((Number(p.utilized_amount || 0)) / Math.max(1, Number(p.sanctioned_amount || 1))) * 100
+            ) || (p.status === "Completed" ? 100 : 20),
+            dateSanctioned: p.start_date || "2024-04-01",
+            targetCompletion: p.expected_completion_date || "2025-06-30",
+            status: (p.status || "Sanctioned") as any,
+            agency: assignedContractor,
+            contractor: assignedContractor,
+            rating: 4.8,
+            reviewsCount: 3,
+            attachments: [],
+            reviews: []
+          };
+        });
 
-          setProjects(mapped);
-          setIsLiveConnected(true);
-        }
+        setProjects(mapped);
+        setIsLiveConnected(true);
       } catch (err) {
         console.warn("Using local fallback projects for District Authority:", err);
       }
@@ -352,6 +327,9 @@ export const DistrictDashboard: React.FC = () => {
         }}
         t={t}
         flagCount={highRiskProjects.length}
+        selectedDistrict={selectedDistrict}
+        onSelectDistrict={(d) => setSelectedDistrict(d)}
+        availableDistricts={availableDistricts}
       />
 
       <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
@@ -399,34 +377,6 @@ export const DistrictDashboard: React.FC = () => {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-            {/* District Selector */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "0.70rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>
-                Select District Jurisdiction:
-              </label>
-              <select
-                value={selectedDistrict}
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                style={{
-                  background: "rgba(255, 255, 255, 0.12)",
-                  color: "#ffffff",
-                  border: "1px solid rgba(255, 255, 255, 0.25)",
-                  borderRadius: "8px",
-                  padding: "7px 14px",
-                  fontSize: "0.82rem",
-                  fontWeight: 600,
-                  outline: "none",
-                  cursor: "pointer"
-                }}
-              >
-                {availableDistricts.map((d) => (
-                  <option key={d} value={d} style={{ color: "#0f172a", background: "#ffffff" }}>
-                    {d} District
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <Button
               variant="outline"
               size="sm"
@@ -589,25 +539,7 @@ export const DistrictDashboard: React.FC = () => {
             <span>Inquiries & Dossiers</span>
             <span className="civic-tab-badge">{highRiskProjects.length}</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("contractors_management")}
-            className={`civic-tab-btn ${activeTab === "contractors_management" ? "active" : ""}`}
-          >
-            <Building2 size={15} />
-            <span>Contractors & Vendors</span>
-          </button>
         </div>
-
-        {/* TAB: CONTRACTORS & VENDORS MANAGEMENT */}
-        {activeTab === "contractors_management" && (
-          <ContractorsManagementTab
-            works={districtProjects}
-            onSelectWork={(w) => setSelectedWorkForDetail(w)}
-            onUpdateWorks={(updatedWorks) => setProjects(updatedWorks)}
-          />
-        )}
 
         {/* TAB 1: DISTRICT WORKS REGISTER (Spacious table padding, evidence button, and clean actions) */}
         {activeTab === "district_projects" && (
@@ -884,7 +816,7 @@ export const DistrictDashboard: React.FC = () => {
                           {work.title}
                         </h4>
                         <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                          Inspecting Officer: <strong>Er. Rajesh Kumar (Jabalpur Division)</strong> • Location: <strong>{work.district || districtName}, {work.state || stateName}</strong>
+                          Inspecting Officer: <strong>Er. Rajesh Kumar (District Quality Inspection Division)</strong> • Location: <strong>{work.district || districtName}, {work.state || stateName}</strong>
                         </div>
                         <p style={{ fontSize: "0.80rem", color: "var(--text-body)", margin: "6px 0 0 0", lineHeight: 1.45 }}>
                           "On-site inspection completed. Foundation laying and plinth construction physically verified with 3 geotagged photographs. Measurement book entries verified as per PWD standards."

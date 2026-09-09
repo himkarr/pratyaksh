@@ -19,6 +19,7 @@ import {
 import { TranslationDict } from '../data/translations';
 import { useRole, Role } from '../auth/roleContext';
 import { usePreferences } from '../context/PreferencesContext';
+import { REGISTERED_VENDORS } from '../data/contractorData';
 
 interface NavbarProps {
   activeTab: string;
@@ -29,6 +30,11 @@ interface NavbarProps {
   flagCount?: number;
   adminHouseFilter?: "both" | "Lok Sabha" | "Rajya Sabha";
   onAdminHouseFilterChange?: (filter: "both" | "Lok Sabha" | "Rajya Sabha") => void;
+  selectedVendorId?: string;
+  onSelectVendorId?: (vendorId: string) => void;
+  selectedDistrict?: string;
+  onSelectDistrict?: (district: string) => void;
+  availableDistricts?: string[];
 }
 
 const ROLES_EN: { id: Role; label: string; desc: string; icon: any }[] = [
@@ -51,7 +57,7 @@ const ROLES_HI: { id: Role; label: string; desc: string; icon: any }[] = [
   { id: "ministry", label: "सांख्यिकी मंत्रालय (MoSPI)", desc: "शीर्ष राष्ट्रीय पर्यवेक्षण", icon: Award }
 ];
 
-export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: propT, adminHouseFilter, onAdminHouseFilterChange }: NavbarProps) {
+export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: propT, adminHouseFilter, onAdminHouseFilterChange, selectedVendorId, onSelectVendorId, selectedDistrict, onSelectDistrict, availableDistricts }: NavbarProps) {
   const { user, logout, setRole, isAuthenticated } = useRole();
   const { t: prefT, lang } = usePreferences();
   const t = prefT || propT;
@@ -210,6 +216,89 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                   <option value="both">Both Houses (Default)</option>
                   <option value="Lok Sabha">Lok Sabha</option>
                   <option value="Rajya Sabha">Rajya Sabha</option>
+                </select>
+              </div>
+            )}
+
+            {/* Active Contractor / Vendor Selector Dropdown (Top Navbar) */}
+            {selectedVendorId !== undefined && onSelectVendorId && (
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  marginLeft: '4px',
+                  background: 'rgba(241, 245, 249, 0.9)',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1'
+                }}
+              >
+                <UserCheck size={14} color="#0284c7" />
+                <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Vendor:</span>
+                <select
+                  value={selectedVendorId}
+                  onChange={(e) => onSelectVendorId(e.target.value)}
+                  style={{
+                    padding: "3px 6px",
+                    borderRadius: "4px",
+                    border: "1px solid #94a3b8",
+                    background: "#ffffff",
+                    color: "#0f172a",
+                    fontSize: "0.80rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    outline: "none",
+                    maxWidth: "260px"
+                  }}
+                  title="Switch Active Contractor / Implementing Agency"
+                >
+                  {REGISTERED_VENDORS.map(v => (
+                    <option key={v.vendorId} value={v.vendorId}>
+                      {v.firmName} ({v.vendorId} • {v.district})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Active District Jurisdiction Selector Dropdown (Top Navbar) */}
+            {selectedDistrict !== undefined && onSelectDistrict && (
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  marginLeft: '4px',
+                  background: 'rgba(241, 245, 249, 0.9)',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1'
+                }}
+              >
+                <MapPin size={14} color="#0284c7" />
+                <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>District:</span>
+                <select
+                  value={selectedDistrict}
+                  onChange={(e) => onSelectDistrict(e.target.value)}
+                  style={{
+                    padding: "3px 6px",
+                    borderRadius: "4px",
+                    border: "1px solid #94a3b8",
+                    background: "#ffffff",
+                    color: "#0f172a",
+                    fontSize: "0.80rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    outline: "none"
+                  }}
+                  title="Select District Jurisdiction"
+                >
+                  {(availableDistricts || ["Gurugram", "Rohtak"]).map((d) => (
+                    <option key={d} value={d}>
+                      {d} District
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
