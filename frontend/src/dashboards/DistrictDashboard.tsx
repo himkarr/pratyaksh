@@ -305,6 +305,26 @@ export const DistrictDashboard: React.FC = () => {
     setTimeout(() => setActionNotice(null), 4500);
   };
 
+  const handleOpenEvidence = async (work: WorkItem) => {
+    let hasEvidence = !!(work.attachments && work.attachments.length > 0);
+    if (!hasEvidence) {
+      try {
+        const subs = await districtContractorSync.getStageSubmissionsForWork(work.id);
+        hasEvidence = subs.some(s => s.files && s.files.length > 0);
+      } catch (e) {
+        hasEvidence = false;
+      }
+    }
+
+    if (!hasEvidence) {
+      setActionNotice(`No geotagged evidence photos or documents submitted yet for Work #${work.id} (${work.title}).`);
+      setTimeout(() => setActionNotice(null), 5000);
+      return;
+    }
+
+    setSelectedWorkForAttachments(work);
+  };
+
   const handleExportPDF = () => {
     window.print();
   };
@@ -785,7 +805,7 @@ export const DistrictDashboard: React.FC = () => {
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() => setSelectedWorkForAttachments(work)}
+                              onClick={() => handleOpenEvidence(work)}
                               icon={<Camera size={13} />}
                               title="Inspect Geotagged Milestone Photos & Measurement Book (MB)"
                             >
@@ -891,7 +911,7 @@ export const DistrictDashboard: React.FC = () => {
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => setSelectedWorkForAttachments(work)}
+                        onClick={() => handleOpenEvidence(work)}
                         icon={<Camera size={13} />}
                       >
                         Inspect Geotagged Photos
@@ -964,7 +984,7 @@ export const DistrictDashboard: React.FC = () => {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => setSelectedWorkForAttachments(work)}
+                      onClick={() => handleOpenEvidence(work)}
                       icon={<Camera size={13} />}
                     >
                       Inspect Evidence
@@ -1032,7 +1052,7 @@ export const DistrictDashboard: React.FC = () => {
                     onClick={() => {
                       const w = selectedWorkForDossier;
                       setSelectedWorkForDossier(null);
-                      setSelectedWorkForAttachments(w);
+                      handleOpenEvidence(w);
                     }}
                     icon={<Camera size={12} />}
                   >
@@ -1103,7 +1123,7 @@ export const DistrictDashboard: React.FC = () => {
       <WorkDetailModal
         work={selectedWorkForDetail}
         onClose={() => setSelectedWorkForDetail(null)}
-        onViewAttachments={(w) => { setSelectedWorkForDetail(null); setSelectedWorkForAttachments(w); }}
+        onViewAttachments={(w) => { setSelectedWorkForDetail(null); handleOpenEvidence(w); }}
         onViewReviews={() => {}}
       />
 
