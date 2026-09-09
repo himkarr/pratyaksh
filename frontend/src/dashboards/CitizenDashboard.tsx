@@ -578,168 +578,6 @@ export const CitizenDashboard: React.FC = () => {
         {activeTab === "home" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             
-            {/* Modern Civic Action & Overview Banner (Light Modern Styled) */}
-            <div 
-              className="civic-card"
-              style={{ 
-                background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)", 
-                color: "var(--text-main, #0f172a)", 
-                padding: "24px 28px", 
-                borderRadius: "14px", 
-                border: "1px solid var(--border-main, #cbd5e1)",
-                boxShadow: "0 4px 20px rgba(15, 23, 42, 0.05)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "18px"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-                <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(10, 37, 64, 0.06)", border: "1px solid rgba(10, 37, 64, 0.12)", borderRadius: "20px", padding: "3px 10px", fontSize: "0.72rem", color: "var(--gov-primary, #0a2540)", fontWeight: 700, marginBottom: "8px" }}>
-                    <Landmark size={12} color="var(--gov-accent)" />
-                    <span>MPLADS CITIZEN PARTICIPATION & TRANSPARENCY</span>
-                  </div>
-                  <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 4px 0", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
-                    {currentConstituency} Civic Action Hub
-                  </h2>
-                  <p style={{ fontSize: "0.84rem", color: "var(--text-muted, #475569)", maxWidth: "680px", lineHeight: 1.45, margin: 0 }}>
-                    Welcome <strong style={{ color: "var(--gov-primary, #0a2540)" }}>{user?.name || "Rajesh Kumar Sharma"}</strong>. Track sanctioned development works in <strong style={{ color: "#b45309" }}>{currentConstituency}</strong>, submit ground recommendations with AI OCR geotagging, or report local issues directly to authorities.
-                  </p>
-                </div>
-              </div>
-
-              {/* 3 Interactive Quick Civic Action Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
-                
-                {/* Action 1: Propose to MP */}
-                <div 
-                  onClick={handleOpenRecommend}
-                  style={{
-                    background: "linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)",
-                    border: "1px solid #bbf7d0",
-                    borderRadius: "10px",
-                    padding: "16px",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.08)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(16, 185, 129, 0.16)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(16, 185, 129, 0.08)";
-                  }}
-                >
-                  <div>
-                    <div style={{ display: "inline-flex", background: "rgba(16, 185, 129, 0.15)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
-                      <Sparkles size={18} color="#059669" />
-                    </div>
-                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gov-primary, #0a2540)", margin: "0 0 4px 0" }}>
-                      Propose Project to MP
-                    </h4>
-                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)", margin: 0, lineHeight: 1.4 }}>
-                      Recommend new roads, water kiosks, solar lights or public facilities with photo evidence.
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#059669", fontWeight: 700 }}>
-                    <span>Submit Proposal</span>
-                    <ArrowRight size={13} />
-                  </div>
-                </div>
-
-                {/* Action 2: Report an Issue */}
-                <div 
-                  onClick={handleOpenGeneralReport}
-                  style={{
-                    background: "linear-gradient(180deg, #ffffff 0%, #fff7ed 100%)",
-                    border: "1px solid #fed7aa",
-                    borderRadius: "10px",
-                    padding: "16px",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    boxShadow: "0 2px 8px rgba(234, 88, 12, 0.08)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(234, 88, 12, 0.16)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(234, 88, 12, 0.08)";
-                  }}
-                >
-                  <div>
-                    <div style={{ display: "inline-flex", background: "rgba(234, 88, 12, 0.15)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
-                      <AlertTriangle size={18} color="#ea580c" />
-                    </div>
-                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gov-primary, #0a2540)", margin: "0 0 4px 0" }}>
-                      Report On-Ground Issue
-                    </h4>
-                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)", margin: 0, lineHeight: 1.4 }}>
-                      Flag delays, construction defects, or damaged works for physical verification by District DM.
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#ea580c", fontWeight: 700 }}>
-                    <span>File Incident Report</span>
-                    <ArrowRight size={13} />
-                  </div>
-                </div>
-
-                {/* Action 3: Find Works */}
-                <div 
-                  onClick={() => setActiveTab("find_works")}
-                  style={{
-                    background: "linear-gradient(180deg, #ffffff 0%, #eff6ff 100%)",
-                    border: "1px solid #bfdbfe",
-                    borderRadius: "10px",
-                    padding: "16px",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    boxShadow: "0 2px 8px rgba(37, 99, 235, 0.08)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(37, 99, 235, 0.16)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(37, 99, 235, 0.08)";
-                  }}
-                >
-                  <div>
-                    <div style={{ display: "inline-flex", background: "rgba(37, 99, 235, 0.15)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
-                      <Search size={18} color="#2563eb" />
-                    </div>
-                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gov-primary, #0a2540)", margin: "0 0 4px 0" }}>
-                      Find Development Works
-                    </h4>
-                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)", margin: 0, lineHeight: 1.4 }}>
-                      Explore all sanctioned projects in {currentConstituency}, interactive map, budgets and ratings.
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#2563eb", fontWeight: 700 }}>
-                    <span>Browse {totalWorksCount} Projects</span>
-                    <ArrowRight size={13} />
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
             {/* Combined Section: "Development works near you" with compact stats + max 3 cards */}
             <div className="civic-card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "18px" }}>
               {/* Section Header & Compact Inline Statistics */}
@@ -780,61 +618,76 @@ export const CitizenDashboard: React.FC = () => {
                   return (
                     <div
                       key={work.id}
-                      className="civic-card"
                       style={{
-                        padding: "18px 20px",
+                        padding: "20px 22px",
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
                         boxSizing: "border-box",
-                        borderTop: "3.5px solid #d97706"
+                        borderRadius: "12px",
+                        border: "1px solid var(--border-light, #e2e8f0)",
+                        background: "#ffffff",
+                        boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
+                        transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                        gap: "14px"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "var(--border-main, #cbd5e1)";
+                        e.currentTarget.style.boxShadow = "0 8px 24px rgba(15, 23, 42, 0.08)";
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "var(--border-light, #e2e8f0)";
+                        e.currentTarget.style.boxShadow = "0 1px 3px rgba(15, 23, 42, 0.04)";
+                        e.currentTarget.style.transform = "none";
                       }}
                     >
                       <div>
                         {/* Type & Status */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "4px" }}>
-                          <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.66rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
+                          <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.68rem", fontWeight: 600, padding: "3px 8px", borderRadius: "6px" }}>
                             {work.sectorName || work.category || "Public Project"}
                           </span>
                           {getWorkStatusBadge(work.status)}
                         </div>
 
                         {/* Title */}
-                        <h4 style={{ fontSize: "0.96rem", fontWeight: 700, color: "var(--text-main, #0f172a)", margin: "0 0 6px 0", lineHeight: 1.35, wordBreak: "break-word", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+                        <h4 style={{ fontSize: "0.96rem", fontWeight: 700, color: "var(--text-main, #0f172a)", margin: "0 0 6px 0", lineHeight: 1.4, wordBreak: "break-word", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
                           {work.title}
                         </h4>
 
                         {/* Location */}
-                        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px", marginBottom: "12px" }}>
-                          <MapPin size={12} color="var(--gov-accent)" style={{ flexShrink: 0 }} />
+                        <div style={{ fontSize: "0.74rem", color: "var(--text-muted, #64748b)", display: "flex", alignItems: "center", gap: "4px", marginBottom: "14px" }}>
+                          <MapPin size={13} color="var(--gov-accent, #d97706)" style={{ flexShrink: 0 }} />
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {work.constituency}, {work.district}
                           </span>
                         </div>
 
                         {/* Progress Bar */}
-                        <div style={{ marginBottom: "12px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", fontWeight: 700, marginBottom: "4px" }}>
-                            <span>Progress</span>
-                            <span style={{ color: "var(--gov-accent)" }}>{progress}%</span>
+                        <div style={{ marginBottom: "14px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", fontWeight: 700, marginBottom: "5px" }}>
+                            <span style={{ color: "var(--text-muted, #64748b)" }}>Progress</span>
+                            <span style={{ color: "var(--gov-primary, #0a2540)" }}>{progress}%</span>
                           </div>
-                          <div style={{ width: "100%", height: "6px", background: "var(--border-light)", borderRadius: "3px", overflow: "hidden" }}>
+                          <div style={{ width: "100%", height: "6px", background: "var(--border-light, #f1f5f9)", borderRadius: "3px", overflow: "hidden" }}>
                             <div
                               style={{
                                 width: `${Math.min(100, progress)}%`,
                                 height: "100%",
-                                background: work.status === "Completed" ? "var(--status-success-text)" : (work.status === "Delayed" ? "var(--status-warning-text)" : "var(--gov-accent)"),
-                                borderRadius: "3px"
+                                background: work.status === "Completed" ? "var(--status-success-text, #059669)" : (work.status === "Delayed" ? "var(--status-warning-text, #d97706)" : "var(--gov-primary, #0a2540)"),
+                                borderRadius: "3px",
+                                transition: "width 0.4s ease"
                               }}
                             />
                           </div>
                         </div>
 
                         {/* Financials & Target Date */}
-                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "6px", marginBottom: "12px" }}>
-                          <span>Sanctioned: <strong>₹{sanctioned.toFixed(2)} Cr</strong></span>
-                          <span>Spent: <strong>₹{spent.toFixed(2)} Cr</strong></span>
-                          <span>Target: <strong>{work.targetCompletion || "2025-03-31"}</strong></span>
+                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted, #64748b)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "6px", marginBottom: "4px", padding: "8px 0", borderTop: "1px dashed var(--border-light, #e2e8f0)" }}>
+                          <span>Sanctioned: <strong style={{ color: "var(--text-main, #0f172a)" }}>₹{sanctioned.toFixed(2)} Cr</strong></span>
+                          <span>Spent: <strong style={{ color: "var(--text-main, #0f172a)" }}>₹{spent.toFixed(2)} Cr</strong></span>
+                          <span>Target: <strong style={{ color: "var(--text-main, #0f172a)" }}>{work.targetCompletion || "2025-03-31"}</strong></span>
                         </div>
                       </div>
 
@@ -844,7 +697,7 @@ export const CitizenDashboard: React.FC = () => {
                         variant="secondary"
                         size="sm"
                         onClick={() => setSelectedWork(work)}
-                        style={{ width: "100%", fontSize: "0.76rem", minHeight: "36px" }}
+                        style={{ width: "100%", fontSize: "0.78rem", minHeight: "36px", fontWeight: 600, borderRadius: "8px" }}
                       >
                         View Details
                       </Button>

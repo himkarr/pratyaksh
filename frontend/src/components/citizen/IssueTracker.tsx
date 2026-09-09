@@ -187,30 +187,6 @@ export const IssueTracker: React.FC<IssueTrackerProps> = ({
               Track work recommendation requests submitted to your MP and local grievance reports
             </p>
           </div>
-
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {onOpenRecommendModal && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onOpenRecommendModal}
-                icon={<Sparkles size={14} />}
-                style={{ background: "#059669", borderColor: "#047857", fontWeight: 700 }}
-              >
-                Propose Recommendation
-              </Button>
-            )}
-            {onOpenReportModal && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onOpenReportModal}
-                icon={<Plus size={14} />}
-              >
-                Report Problem
-              </Button>
-            )}
-          </div>
         </div>
 
         {/* Sub-Tabs: All / Recommendations / Reports */}

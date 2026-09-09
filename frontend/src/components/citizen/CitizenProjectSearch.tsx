@@ -241,48 +241,6 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
         }
       `}</style>
 
-      {/* Top Banner: Propose Recommendation to MP */}
-      {onOpenRecommendModal && (
-        <div 
-          style={{
-            background: "linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(10, 37, 64, 0.06) 100%)",
-            border: "1px solid rgba(5, 150, 105, 0.3)",
-            borderRadius: "var(--radius-sm)",
-            padding: "14px 18px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "12px"
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: "240px", flex: 1 }}>
-            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "rgba(5, 150, 105, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669", flexShrink: 0 }}>
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--gov-primary)" }}>
-                Need a new development project in your area?
-              </div>
-              <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
-                Submit a work recommendation request with photo evidence for the Hon'ble MP to sponsor under MPLADS.
-              </div>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={onOpenRecommendModal}
-            icon={<Plus size={14} />}
-            style={{ background: "#059669", borderColor: "#047857", fontWeight: 700, whiteSpace: "nowrap" }}
-          >
-            Propose Work Recommendation
-          </Button>
-        </div>
-      )}
-
       {/* Search & Filter Header */}
       <div className="citizen-search-header">
         <div className="citizen-search-top-row">
