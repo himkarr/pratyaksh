@@ -10,6 +10,8 @@ import { X, Image as ImageIcon, FileText, CheckCircle2, ExternalLink, Upload, Pr
 import { WorkItem, WorkAttachment } from '../data/mpladsData';
 import { useBodyScrollLock } from '../utils/scrollLock';
 
+import { districtContractorSync } from '../api/districtContractorSync';
+
 interface AttachmentsModalProps {
   work: WorkItem | null;
   onClose: () => void;
@@ -33,14 +35,42 @@ export function AttachmentsModal({ work, onClose, onAttachmentAdded }: Attachmen
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (work) {
-      const atts = (work.attachments && work.attachments.length > 0) 
-        ? work.attachments 
+    async function loadAllAttachmentsAndEvidence() {
+      if (!work) return;
+
+      const initialAtts = (work.attachments && work.attachments.length > 0)
+        ? [...work.attachments]
         : [DEFAULT_FALLBACK_ATT];
-      setLocalAttachments(atts);
-      setSelectedAttachment(atts[0]);
-      setUploadNotice(null);
+
+      try {
+        const stageSubmissions = await districtContractorSync.getStageSubmissionsForWork(work.id);
+        const contractorAtts: WorkAttachment[] = [];
+
+        stageSubmissions.forEach(sub => {
+          (sub.files || []).forEach((file, fIdx) => {
+            const isImage = file.type?.includes("Photo") || file.type?.includes("image") || /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name) || (file.url && (file.url.startsWith("http") || file.url.startsWith("data:")));
+            contractorAtts.push({
+              id: `contractor-ev-${sub.id}-${fIdx}`,
+              type: isImage ? 'image' : 'document',
+              title: `${sub.checkpointActionName || sub.workStage} — ${file.name}`,
+              stage: `Uploaded by ${sub.contractorName || 'Contractor'} (${sub.verificationStatus || 'Submitted'})`,
+              url: file.url || "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=800&q=80"
+            });
+          });
+        });
+
+        const combined = [...contractorAtts, ...initialAtts];
+        setLocalAttachments(combined);
+        setSelectedAttachment(combined[0] || DEFAULT_FALLBACK_ATT);
+        setUploadNotice(null);
+      } catch (err) {
+        console.warn("Using default attachments fallback:", err);
+        setLocalAttachments(initialAtts);
+        setSelectedAttachment(initialAtts[0] || DEFAULT_FALLBACK_ATT);
+      }
     }
+
+    loadAllAttachmentsAndEvidence();
   }, [work?.id]);
 
   if (!work) return null;

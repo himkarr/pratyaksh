@@ -1,5 +1,5 @@
-import React from "react";
-import { FileText, MapPin, CheckCircle2, Clock, ShieldCheck, Download } from "lucide-react";
+import React, { useState } from "react";
+import { FileText, MapPin, CheckCircle2, Clock, ShieldCheck, Download, ExternalLink, X } from "lucide-react";
 import { EvidenceSubmissionRecord } from "../../data/contractorData";
 
 interface SubmissionHistoryProps {
@@ -7,6 +7,8 @@ interface SubmissionHistoryProps {
 }
 
 export const SubmissionHistory: React.FC<SubmissionHistoryProps> = ({ history }) => {
+  const [selectedModalImage, setSelectedModalImage] = useState<{ url: string; title: string } | null>(null);
+
   const formatRs = (amtRs: number) => {
     if (amtRs >= 10000000) return `₹${(amtRs / 10000000).toFixed(2)} Cr`;
     return `₹${(amtRs / 100000).toFixed(2)} Lakh`;
@@ -123,35 +125,69 @@ export const SubmissionHistory: React.FC<SubmissionHistoryProps> = ({ history })
                   )}
                 </div>
 
-                {/* Attached Files Grid */}
+                {/* Attached Files & Photo Thumbnails Grid */}
                 {rec.files && rec.files.length > 0 && (
                   <div>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "4px" }}>
-                      Attached Files ({rec.files.length}):
+                    <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--gov-primary)", marginBottom: "6px" }}>
+                      Uploaded Geotagged Evidence & Attachments ({rec.files.length}):
                     </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                      {rec.files.map((file, fIdx) => (
-                        <div
-                          key={fIdx}
-                          style={{
-                            background: "var(--bg-surface)",
-                            border: "1px solid var(--border-main)",
-                            borderRadius: "4px",
-                            padding: "4px 8px",
-                            fontSize: "0.72rem",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px"
-                          }}
-                        >
-                          <span>{file.type.includes("Photo") ? "📷" : "📄"} {file.name}</span>
-                          {file.lat && file.lng && (
-                            <span style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
-                              ({file.lat.toFixed(2)}, {file.lng.toFixed(2)})
-                            </span>
-                          )}
-                        </div>
-                      ))}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "10px" }}>
+                      {rec.files.map((file, fIdx) => {
+                        const isImage = file.type?.includes("Photo") || file.type?.includes("image") || (file.url && (file.url.startsWith("data:") || file.url.startsWith("http"))) || /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name);
+                        return (
+                          <div
+                            key={fIdx}
+                            style={{
+                              border: "1px solid var(--border-main)",
+                              borderRadius: "6px",
+                              overflow: "hidden",
+                              background: "var(--bg-surface)",
+                              display: "flex",
+                              flexDirection: "column"
+                            }}
+                          >
+                            {isImage && file.url ? (
+                              <div
+                                style={{ height: "100px", overflow: "hidden", position: "relative", background: "#f1f5f9", cursor: "pointer" }}
+                                onClick={() => setSelectedModalImage({ url: file.url, title: file.name })}
+                              >
+                                <img
+                                  src={file.url}
+                                  alt={file.name}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.65)", color: "#fff", fontSize: "0.62rem", padding: "2px 4px", display: "flex", alignItems: "center", gap: "2px" }}>
+                                  <MapPin size={9} color="#38bdf8" />
+                                  <span>GPS Geotagged</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ height: "70px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-surface-subtle)", color: "var(--gov-primary)" }}>
+                                <FileText size={24} />
+                              </div>
+                            )}
+
+                            <div style={{ padding: "6px 8px", fontSize: "0.70rem" }}>
+                              <div style={{ fontWeight: 700, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={file.name}>
+                                {file.name}
+                              </div>
+                              <div style={{ color: "var(--text-muted)", fontSize: "0.64rem", marginTop: "1px" }}>
+                                {file.size || "1.2 MB"} • {file.type || "Evidence File"}
+                              </div>
+                              {file.url && file.url !== "#" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedModalImage({ url: file.url, title: file.name })}
+                                  style={{ background: "none", border: "none", padding: 0, color: "var(--gov-accent)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "2px", marginTop: "4px", cursor: "pointer", fontSize: "0.68rem" }}
+                                >
+                                  <span>View Photo</span>
+                                  <ExternalLink size={9} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -159,6 +195,57 @@ export const SubmissionHistory: React.FC<SubmissionHistoryProps> = ({ history })
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Lightbox Image Preview Modal */}
+      {selectedModalImage && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(15, 23, 42, 0.85)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setSelectedModalImage(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "12px",
+              padding: "16px",
+              maxWidth: "700px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              position: "relative"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "var(--gov-primary)" }}>
+                📷 {selectedModalImage.title}
+              </h4>
+              <button
+                onClick={() => setSelectedModalImage(null)}
+                style={{ background: "#f1f5f9", border: "none", borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <X size={16} color="#64748b" />
+              </button>
+            </div>
+
+            <img
+              src={selectedModalImage.url}
+              alt={selectedModalImage.title}
+              style={{ maxWidth: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: "8px", border: "1px solid var(--border-main)" }}
+            />
+          </div>
         </div>
       )}
     </div>

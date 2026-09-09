@@ -1,5 +1,5 @@
-import React from "react";
-import { Clock, CheckCircle2, AlertCircle, ArrowDown, Upload, FileText, MapPin, ShieldCheck, Award, FileCheck, Lock } from "lucide-react";
+import React, { useState } from "react";
+import { Clock, CheckCircle2, AlertCircle, ArrowDown, Upload, FileText, MapPin, ShieldCheck, Award, FileCheck, Lock, X } from "lucide-react";
 import { ContractorProject, MonitoringScheduleItem } from "../../data/contractorData";
 import { calculateMonitoringSchedule } from "../../utils/aiTimelineGenerator";
 import { Button } from "../ui/Button";
@@ -15,6 +15,8 @@ export const ContractorTimeline: React.FC<ContractorTimelineProps> = ({
   onSubmitStageEvidence,
   onRequestCompletionCertificate
 }) => {
+  const [selectedModalImage, setSelectedModalImage] = useState<{ url: string; title: string } | null>(null);
+
   const scheduleData = project.schedule && project.schedule.length > 0 
     ? project.schedule 
     : calculateMonitoringSchedule({
@@ -198,12 +200,58 @@ export const ContractorTimeline: React.FC<ContractorTimelineProps> = ({
                       <div style={{ color: "var(--text-body)", marginTop: "4px" }}>
                         Reported Physical Progress: <strong>{rec.physicalProgressPercent}%</strong> | Expenditure: <strong>{formatRs(rec.expenditureAmountRs)}</strong>
                       </div>
-                      <div style={{ color: "var(--text-muted)", marginTop: "2px" }}>
-                        Files Attached: {rec.files ? rec.files.length : 0} files ({rec.files ? rec.files.map(f => f.name).join(", ") : "Evidence file"})
-                      </div>
+
+                      {/* Photo & Document Thumbnails Gallery */}
+                      {rec.files && rec.files.length > 0 && (
+                        <div style={{ marginTop: "8px" }}>
+                          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gov-primary)", marginBottom: "6px" }}>
+                            Uploaded Evidence Assets ({rec.files.length}):
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "8px" }}>
+                            {rec.files.map((f, fIdx) => {
+                              const isImg = f.type?.includes("Photo") || f.type?.includes("image") || (f.url && (f.url.startsWith("data:") || f.url.startsWith("http"))) || /\.(jpg|jpeg|png|webp|gif)$/i.test(f.name);
+                              return (
+                                <div
+                                  key={fIdx}
+                                  style={{
+                                    border: "1px solid var(--border-main)",
+                                    borderRadius: "4px",
+                                    overflow: "hidden",
+                                    background: "var(--bg-surface)",
+                                    display: "flex",
+                                    flexDirection: "column"
+                                  }}
+                                >
+                                  {isImg && f.url && f.url !== "#" ? (
+                                    <div
+                                      style={{ height: "85px", overflow: "hidden", position: "relative", background: "#f1f5f9", cursor: "pointer" }}
+                                      onClick={() => setSelectedModalImage({ url: f.url, title: f.name })}
+                                    >
+                                      <img
+                                        src={f.url}
+                                        alt={f.name}
+                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                      />
+                                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.65)", color: "#fff", fontSize: "0.60rem", padding: "2px 4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        📷 {f.name}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div style={{ padding: "6px", fontSize: "0.70rem", color: "var(--text-body)", display: "flex", alignItems: "center", gap: "4px" }}>
+                                      📄 <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {rec.locationText && (
-                        <div style={{ color: "var(--status-info-text)", marginTop: "2px" }}>
-                          📍 {rec.locationText}
+                        <div style={{ color: "var(--status-info-text)", marginTop: "6px", fontSize: "0.72rem", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <MapPin size={12} color="#1d4ed8" />
+                          <span>📍 <strong>Location Tagged:</strong> {rec.locationText}</span>
                         </div>
                       )}
                     </div>
@@ -359,6 +407,57 @@ export const ContractorTimeline: React.FC<ContractorTimelineProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Lightbox Image Preview Modal */}
+      {selectedModalImage && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(15, 23, 42, 0.85)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setSelectedModalImage(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "12px",
+              padding: "16px",
+              maxWidth: "700px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              position: "relative"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "var(--gov-primary)" }}>
+                📷 {selectedModalImage.title}
+              </h4>
+              <button
+                onClick={() => setSelectedModalImage(null)}
+                style={{ background: "#f1f5f9", border: "none", borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <X size={16} color="#64748b" />
+              </button>
+            </div>
+
+            <img
+              src={selectedModalImage.url}
+              alt={selectedModalImage.title}
+              style={{ maxWidth: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: "8px", border: "1px solid var(--border-main)" }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
