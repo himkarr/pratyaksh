@@ -317,6 +317,7 @@ def action_recommendation(
             related_entity_id=proj.project_id,
             is_read=False
         )
+        db.add(notif)
         db.commit()
 
         # Auto-trigger baseline AI/Rule Engine analysis
