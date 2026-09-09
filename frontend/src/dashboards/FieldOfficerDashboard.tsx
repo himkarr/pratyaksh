@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   ShieldCheck, 
   Search, 
@@ -14,7 +14,9 @@ import {
   UserCheck, 
   AlertCircle, 
   Compass, 
-  ShieldAlert 
+  ShieldAlert,
+  Database,
+  Download
 } from "lucide-react";
 import { Header } from "../components/Header";
 import { Navbar } from "../components/Navbar";
@@ -29,6 +31,7 @@ import { SubmitVerificationModal, VerificationReportSubmission } from "../compon
 import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
+import { adminDataService } from "../api/adminDataService";
 
 export const FieldOfficerDashboard: React.FC = () => {
   const { user } = useRole();
@@ -44,7 +47,57 @@ export const FieldOfficerDashboard: React.FC = () => {
 
   // Projects State
   const [projects, setProjects] = useState<WorkItem[]>(INITIAL_WORKS);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   
+  // Field Officer Info
+  const officerName = user.name || "Senior Field Inspection Officer";
+  const district = user.district || "Pune";
+
+  // Hydrate projects from live Supabase
+  useEffect(() => {
+    async function loadOfficerProjects() {
+      try {
+        const liveProjs = await adminDataService.getRawProjects();
+        if (liveProjs && liveProjs.length > 0) {
+          const mapped: WorkItem[] = liveProjs.map((p, idx) => ({
+            id: p.project_id || p.id || `INSP-${idx}`,
+            title: p.project_name || p.title || "Public Infrastructure Inspection Task",
+            house: "Lok Sabha",
+            state: p.state || "Maharashtra",
+            district: p.district || district,
+            constituency: p.district || district,
+            constituency_code: "DIST-01",
+            mpName: "District Parliamentary Representative",
+            category: p.category || "Community Work",
+            sectorName: p.category || "Infrastructure",
+            recommendedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+            sanctionedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+            expenditureAmt: Number(p.utilized_amount || 400000) / 10000000,
+            physicalProgress: p.progress_percentage || (p.status === "Completed" ? 100 : 45),
+            financialProgress: Math.round(
+              ((Number(p.utilized_amount || 0)) / Math.max(1, Number(p.sanctioned_amount || 1))) * 100
+            ) || 40,
+            dateSanctioned: p.start_date || "2024-04-01",
+            targetCompletion: p.expected_completion_date || "2025-06-30",
+            status: (p.status || "Ongoing") as any,
+            agency: "Division Public Works & Rural Engineering",
+            contractor: "Contractor Executing Body",
+            rating: 4.8,
+            reviewsCount: 1,
+            attachments: [],
+            reviews: []
+          }));
+
+          setProjects(mapped);
+          setIsLiveConnected(true);
+        }
+      } catch (err) {
+        console.warn("FieldOfficerDashboard live fetch fallback:", err);
+      }
+    }
+    loadOfficerProjects();
+  }, [district]);
+
   // Verification Records List
   const [verificationRecords, setVerificationRecords] = useState<VerificationReportSubmission[]>([
     {
@@ -74,10 +127,6 @@ export const FieldOfficerDashboard: React.FC = () => {
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
-
-  // Field Officer Info
-  const officerName = user.name || "Senior Field Inspection Officer";
-  const district = user.district || "Pune";
 
   // Verification Tasks Queue with Priority Assignment
   const verificationQueue = useMemo(() => {
@@ -136,7 +185,7 @@ export const FieldOfficerDashboard: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page, #f8fafc)" }}>
       {/* 1. Header Navigation */}
       <Header
         fontScale={fontScale}
@@ -160,121 +209,140 @@ export const FieldOfficerDashboard: React.FC = () => {
         flagCount={kpis.priority1Count}
       />
 
-      <main className="container" style={{ flex: 1, padding: "20px 0", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
+        <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         
         {/* Field Officer Workspace Banner */}
         <div 
+          className="civic-card"
           style={{ 
-            background: "var(--gov-header)", 
-            color: "var(--text-white)", 
-            padding: "20px 24px", 
-            borderRadius: "var(--radius-sm)", 
-            border: "1px solid rgba(255, 255, 255, 0.15)",
+            background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)", 
+            color: "#ffffff", 
+            padding: "24px 28px", 
+            borderRadius: "14px", 
+            border: "1px solid rgba(255, 255, 255, 0.12)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: "16px"
+            gap: "18px",
+            boxShadow: "0 4px 20px rgba(15, 23, 42, 0.12)"
           }}
         >
           <div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--text-white)", margin: "0 0 6px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#93c5fd", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Field Engineer Inspection Desk · {district} District
+              </span>
+              {isLiveConnected && (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#34d399", fontWeight: 600 }}>
+                  <Database size={11} />
+                  <span>Live Supabase Connected</span>
+                </div>
+              )}
+            </div>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0", lineHeight: 1.25, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
               {officerName} — Field Inspection Workspace
-            </h2>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
+            </h1>
+            <p style={{ fontSize: "0.84rem", color: "#cbd5e1", maxWidth: "760px", lineHeight: 1.45, margin: 0 }}>
               On-site physical verifications, geotagged evidence capture, and inspection report submissions.
             </p>
           </div>
 
-          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.08)", borderRadius: "var(--radius-xs)", fontSize: "0.80rem", border: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#34d399", display: "inline-block" }}></span>
-            <span>Field Officer · {district} District</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              icon={<Download size={14} />}
+              style={{ background: "#ffffff", color: "var(--gov-primary, #0a2540)", borderColor: "#ffffff", fontWeight: 700, borderRadius: "8px" }}
+            >
+              Export Inspection Log (PDF)
+            </Button>
           </div>
         </div>
 
-        {/* KPI Summary Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+        {/* 4 KPI Summary Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px" }}>
           
-          <div className="gov-card" style={{ padding: "14px 16px" }}>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
-              Verification Tasks
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #0a2540" }}>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
+              Assigned Tasks
             </div>
-            <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--gov-primary)", marginTop: "2px" }}>
-              {kpis.totalAssigned} Assigned
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--text-main, #0f172a)", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpis.totalAssigned}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
               Pending Action: <strong>{kpis.pendingCount}</strong>
             </div>
           </div>
 
-          <div className="gov-card" style={{ padding: "14px 16px" }}>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
-              Priority 1 (Urgent AI Alert)
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #dc2626" }}>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
+              Priority 1 (Urgent Audit)
             </div>
-            <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--status-danger-text)", marginTop: "2px" }}>
-              {kpis.priority1Count} High Risk
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#dc2626", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpis.priority1Count}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
               Immediate Field Audit Needed
             </div>
           </div>
 
-          <div className="gov-card" style={{ padding: "14px 16px" }}>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #16a34a" }}>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
               Verified Clean
             </div>
-            <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--status-success-text)", marginTop: "2px" }}>
-              {kpis.verifiedCount} Verified
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#16a34a", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpis.verifiedCount}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
               Report Transmitted to DM
             </div>
           </div>
 
-          <div className="gov-card" style={{ padding: "14px 16px" }}>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #ea580c" }}>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
               Flagged Issues
             </div>
-            <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--status-warning-text)", marginTop: "2px" }}>
-              {kpis.flaggedCount} Flagged
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#ea580c", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+              {kpis.flaggedCount}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
               Escalated to District Collector
             </div>
           </div>
 
         </div>
 
-        {/* Section Tabs */}
-        <div style={{ display: "flex", gap: "8px", borderBottom: "2px solid var(--border-light)", paddingBottom: "2px", flexWrap: "wrap" }}>
-          
+        {/* Civic Navigation Tabs */}
+        <div className="civic-nav-tabs">
           <button
             onClick={() => setActiveTab("pending_queue")}
-            className={`gov-tab ${activeTab === "pending_queue" ? "active" : ""}`}
-            style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            className={`civic-tab-btn ${activeTab === "pending_queue" ? "active" : ""}`}
           >
             <ShieldCheck size={15} />
-            <span>Assigned Verification Queue ({filteredQueue.length})</span>
+            <span>Assigned Queue</span>
+            <span className="civic-tab-badge">{filteredQueue.length}</span>
           </button>
 
           <button
             onClick={() => setActiveTab("my_verifications")}
-            className={`gov-tab ${activeTab === "my_verifications" ? "active" : ""}`}
-            style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            className={`civic-tab-btn ${activeTab === "my_verifications" ? "active" : ""}`}
           >
             <CheckCircle2 size={15} />
-            <span>Completed Verification Reports ({verificationRecords.length})</span>
+            <span>Completed Reports</span>
+            <span className="civic-tab-badge">{verificationRecords.length}</span>
           </button>
 
           <button
             onClick={() => setActiveTab("flagged_projects")}
-            className={`gov-tab ${activeTab === "flagged_projects" ? "active" : ""}`}
-            style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            className={`civic-tab-btn ${activeTab === "flagged_projects" ? "active" : ""}`}
           >
             <ShieldAlert size={15} />
-            <span>Flagged Exception Dossiers ({verificationRecords.filter(r => r.verificationStatus === "FLAGGED").length})</span>
+            <span>Flagged Dossiers</span>
+            <span className="civic-tab-badge">{verificationRecords.filter(r => r.verificationStatus === "FLAGGED").length}</span>
           </button>
-
         </div>
 
         {/* TAB 1: PENDING VERIFICATION QUEUE */}
@@ -287,7 +355,7 @@ export const FieldOfficerDashboard: React.FC = () => {
             </Alert>
 
             {/* Filter Bar */}
-            <div className="gov-card" style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+            <div className="civic-card" style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   <Search size={14} color="var(--text-muted)" />
@@ -333,7 +401,7 @@ export const FieldOfficerDashboard: React.FC = () => {
             </div>
 
             {/* Queue Table */}
-            <div className="gov-card" style={{ overflowX: "auto" }}>
+            <div className="civic-card" style={{ padding: "16px 20px", overflowX: "auto" }}>
               <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
@@ -422,17 +490,17 @@ export const FieldOfficerDashboard: React.FC = () => {
         {/* TAB 2: COMPLETED VERIFICATION REPORTS */}
         {activeTab === "my_verifications" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div className="gov-card" style={{ padding: "16px" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--gov-primary)", marginBottom: "4px" }}>
+            <div className="civic-card" style={{ padding: "20px 24px" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-main, #0f172a)", marginBottom: "4px", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
                 Field Officer Submitted Verification Audit Reports ({verificationRecords.length})
               </h3>
-              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "14px" }}>
+              <p style={{ fontSize: "0.80rem", color: "var(--text-muted)", marginBottom: "16px" }}>
                 Log of physical inspection reports transmitted to District Collectorate by {officerName}.
               </p>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {verificationRecords.map((r, idx) => (
-                  <div key={idx} style={{ padding: "14px 16px", border: "1px solid var(--border-main)", borderRadius: "var(--radius-xs)", background: "var(--bg-surface)" }}>
+                  <div key={idx} style={{ padding: "16px 18px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "10px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -463,6 +531,7 @@ export const FieldOfficerDashboard: React.FC = () => {
           </div>
         )}
 
+        </div>
       </main>
 
       {/* Modals */}

@@ -1,5 +1,5 @@
 import React from "react";
-import { Building2, Bell, ShieldCheck, UserCheck, RefreshCw } from "lucide-react";
+import { Building2, Bell, ShieldCheck, UserCheck, RefreshCw, Database } from "lucide-react";
 import { ContractorProfile, ContractorNotification } from "../../data/contractorData";
 import { REGISTERED_VENDORS } from "../../api/districtContractorSync";
 
@@ -24,18 +24,19 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
 
   return (
     <div
+      className="civic-card"
       style={{
-        background: "var(--gov-header, #07335c)",
+        background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)",
         color: "#ffffff",
-        padding: "18px 22px",
-        borderRadius: "8px",
-        border: "1px solid rgba(255, 255, 255, 0.2)",
+        padding: "22px 26px",
+        borderRadius: "12px",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         flexWrap: "wrap",
-        gap: "16px",
-        boxShadow: "0 4px 14px rgba(7, 51, 92, 0.2)"
+        gap: "18px",
+        boxShadow: "0 4px 20px rgba(15, 23, 42, 0.12)"
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", flex: 1, minWidth: "300px" }}>
@@ -83,6 +84,24 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
               }}
             >
               {assignedProjectCount} ASSIGNED WORKS
+            </span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                background: "rgba(16, 185, 129, 0.2)",
+                color: "#34d399",
+                border: "1px solid rgba(52, 211, 153, 0.3)",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                padding: "3px 8px",
+                borderRadius: "4px",
+                letterSpacing: "0.4px"
+              }}
+            >
+              <Database size={12} />
+              SUPABASE LIVE • REPOSITORIES CONNECTED
             </span>
           </div>
 

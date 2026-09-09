@@ -9,12 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "latest",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.41.0",
     "react": "latest",
     "react-dom": "latest",
     "recharts": "^3.10.1",
+    "tailwindcss": "^4.3.3",
     "typescript": "latest",
     "vite": "latest"
   },

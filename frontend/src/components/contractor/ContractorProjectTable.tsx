@@ -138,10 +138,10 @@ export const ContractorProjectTable: React.FC<ContractorProjectTableProps> = ({
       </div>
 
       {/* Main Government Assigned Projects Table */}
-      <div className="gov-card" style={{ overflowX: "auto" }}>
-        <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
+      <div className="civic-card" style={{ overflowX: "auto", padding: 0, border: "1px solid var(--border-light)" }}>
+        <table style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
+            <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left", borderBottom: "2px solid var(--border-light)" }}>
               <th style={{ padding: "10px 12px" }}>Work ID</th>
               <th style={{ padding: "10px 12px" }}>Project Title & Description</th>
               <th style={{ padding: "10px 12px" }}>Sanction Amount</th>

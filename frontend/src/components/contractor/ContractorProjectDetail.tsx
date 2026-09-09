@@ -73,7 +73,7 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
       {/* ========================================================================= */}
       {/* SECTION 1: OFFICIAL PROJECT INFORMATION                                  */}
       {/* ========================================================================= */}
-      <div className="gov-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div className="civic-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
         <div style={{ borderBottom: "1px solid var(--border-light)", paddingBottom: "10px" }}>
           <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
             SECTION 1 — OFFICIAL MPLADS PROJECT INFORMATION
@@ -182,7 +182,7 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
       {/* SECTION 2: OFFICIAL SCHEDULE PROVIDED BY AUTHORITY                         */}
       {/* ========================================================================= */}
       <div 
-        className="gov-card" 
+        className="civic-card" 
         style={{ 
           padding: "16px 20px", 
           background: "var(--status-info-bg)", 
