@@ -82,7 +82,6 @@ import { StateList } from "../components/admin/states/StateList";
 import { StateDetail } from "../components/admin/states/StateDetail";
 import { MPList } from "../components/admin/mps/MPList";
 import { MPDetail } from "../components/admin/mps/MPDetail";
-import { CompareView } from "../components/admin/compare/CompareView";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { WorkItem } from "../data/mpladsData";
@@ -172,7 +171,7 @@ export const MinistryDashboard: React.FC = () => {
 
   // Active module navigation
   const [activeModule, setActiveModule] = useState<
-    "overview" | "states" | "mps" | "compare" | "projects" | "governance"
+    "overview" | "states" | "mps" | "projects" | "governance"
   >("overview");
 
   // Selection state for drill-down views
@@ -775,20 +774,6 @@ export const MinistryDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setActiveModule("compare");
-                  setSelectedStateName(null);
-                  setSelectedMP(null);
-                }}
-                className={`gov-tab ${activeModule === "compare" ? "active" : ""}`}
-                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
-              >
-                <BarChart2 size={16} />
-                <span>Comparative Analytics</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
                   setActiveModule("projects");
                   setSelectedStateName(null);
                   setSelectedMP(null);
@@ -1205,20 +1190,7 @@ export const MinistryDashboard: React.FC = () => {
           )}
 
           {/* ----------------------------------------------------------------
-              TAB 4: COMPARE BENCHMARKING (CompareView)
-              ---------------------------------------------------------------- */}
-          {activeModule === "compare" && (
-            <CompareView
-              mps={displayedMps}
-              onSelectMP={(mp) => {
-                setSelectedMP(mp);
-                setActiveModule("mps");
-              }}
-            />
-          )}
-
-          {/* ----------------------------------------------------------------
-              TAB 5: WORKS REGISTRY (Deep Search over 11,538 Works)
+              TAB 4: WORKS REGISTRY (Deep Search over Works)
               ---------------------------------------------------------------- */}
           {activeModule === "projects" && (
             <div style={{ width: "100%" }}>
