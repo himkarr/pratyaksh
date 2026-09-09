@@ -30,6 +30,8 @@ import "./styles/ProjectDetailModal.css";
 import "./styles/ProjectListing.css";
 import "./styles/PaymentDetailsModal.css";
 import "./styles/ResponsiveTable.css";
+import "./styles/WorksDirectory.css";
+import "./styles/ProjectGroups.css";
 import "./styles/Report.css";
 import "./styles/TrackArea.css";
 import "./styles/Admin.css";

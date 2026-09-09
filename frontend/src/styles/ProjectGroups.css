@@ -1,0 +1,90 @@
+/* Frontend-only project aggregation. Groups expose locations and their unique summaries first. */
+.project-groups {
+  background: var(--bg-surface-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+}
+
+.project-group {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.project-group__trigger {
+  align-items: center;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 20px minmax(180px, 1.5fr) 72px minmax(150px, 1.3fr) minmax(105px, 0.8fr) minmax(92px, 0.7fr) minmax(120px, 0.8fr);
+  min-height: 68px;
+  padding: 10px 14px;
+  text-align: left;
+  transition: background 150ms ease;
+  width: 100%;
+}
+
+.project-group__trigger:hover { background: #fafbfc; }
+.project-group__chevron { color: var(--text-muted); display: flex; }
+.project-group__place, .project-group__metric { display: flex; flex-direction: column; min-width: 0; }
+.project-group__place strong { color: var(--text-main); font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-group__place span { color: var(--text-muted); font-size: 0.7rem; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-group__count { color: var(--text-body); font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+
+.project-group__categories { display: flex; flex-wrap: wrap; gap: 4px; }
+.project-group__categories span, .project-group-record__status, .project-group-record__review {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  color: var(--text-body);
+  font-size: 0.65rem;
+  font-weight: 650;
+  line-height: 1.2;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+
+.project-group__metric small { color: var(--text-muted); font-size: 0.61rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.project-group__metric strong { color: var(--text-main); font-size: 0.75rem; margin-top: 2px; white-space: nowrap; }
+.project-group__review { color: #466151; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+.project-group__review.has-review { color: #874a3b; }
+
+.project-group__records { border-top: 1px solid var(--border-light); padding: 0 14px; }
+.project-group-record {
+  align-items: center;
+  border-bottom: 1px solid var(--border-light);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 22px minmax(200px, 1fr) 100px 115px 55px 62px;
+  min-height: 60px;
+}
+.project-group-record:last-child { border-bottom: 0; }
+.project-group-record__index { color: var(--text-muted); font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.68rem; }
+.project-group-record__title { display: flex; flex-direction: column; min-width: 0; }
+.project-group-record__title strong { color: var(--text-main); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-group-record__title span { color: var(--text-muted); font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.64rem; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-group-record__budget { color: var(--text-body); font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.project-group-record__review { border-color: #ead8d3; color: #874a3b; text-align: center; }
+.project-group-record button { background: transparent; border: 1px solid var(--border-main); border-radius: 5px; color: var(--text-body); cursor: pointer; font-size: 0.67rem; font-weight: 700; padding: 5px 7px; }
+.project-group-record button:hover { background: var(--bg-surface-subtle); color: var(--text-main); }
+
+@media (max-width: 900px) {
+  .project-group__trigger { grid-template-columns: 20px minmax(165px, 1.5fr) 68px minmax(110px, 1fr) minmax(90px, 0.75fr); }
+  .project-group__metric:last-of-type, .project-group__review { display: none; }
+  .project-group-record { grid-template-columns: 20px minmax(190px, 1fr) 98px 62px; }
+  .project-group-record__budget, .project-group-record__review { display: none; }
+}
+
+@media (max-width: 600px) {
+  .project-groups { padding: 8px; }
+  .project-group__trigger { gap: 8px; grid-template-columns: 18px minmax(125px, 1fr) 60px; min-height: 62px; padding: 10px; }
+  .project-group__categories, .project-group__metric, .project-group__review { display: none; }
+  .project-group__records { padding: 0 10px; }
+  .project-group-record { gap: 8px; grid-template-columns: 18px minmax(130px, 1fr) 58px; min-height: 62px; }
+  .project-group-record__status { display: none; }
+}

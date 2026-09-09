@@ -82,6 +82,85 @@ import { MPDetail } from "../components/admin/mps/MPDetail";
 import { CompareView } from "../components/admin/compare/CompareView";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
+import { WorkItem } from "../data/mpladsData";
+
+interface ProjectGroup {
+  key: string;
+  state: string;
+  district: string;
+  projects: any[];
+  totalBudget: number;
+  averageProgress: number;
+  highRiskCount: number;
+  categories: string[];
+  statusCounts: Record<string, number>;
+}
+
+const getProjectIdentity = (project: any) => {
+  const id = String(project.project_id || project.id || "").trim().toLowerCase();
+  if (id) return `id:${id}`;
+
+  return [project.project_name || project.title || "untitled", project.state || "", project.district || ""]
+    .join("::")
+    .trim()
+    .toLowerCase();
+};
+
+const getProjectProgress = (project: any) => Number(
+  project.physical_progress
+  ?? project.progress_percentage
+  ?? (project.status === "Completed" ? 100 : project.status === "In Progress" ? 65 : 20)
+);
+
+const getProjectBudget = (project: any) => Number(project.sanctioned_amount || project.cost || 500000);
+
+const toCrores = (amount: unknown) => {
+  const numericAmount = Number(amount || 0);
+  return numericAmount >= 100000 ? numericAmount / 10000000 : numericAmount;
+};
+
+const toWorkItem = (project: any): WorkItem => {
+  const sanctionedAmt = toCrores(project.sanctioned_amount ?? project.cost);
+  const expenditureAmt = toCrores(project.utilized_amount ?? project.expenditure_amount ?? project.released_amount);
+  const statusMap: Record<string, WorkItem["status"]> = {
+    Completed: "Completed",
+    "In Progress": "Ongoing",
+    Ongoing: "Ongoing",
+    Delayed: "Delayed",
+    Recommended: "Recommended",
+    Sanctioned: "Sanctioned",
+  };
+
+  return {
+    id: String(project.project_id || project.id || "MPLADS-UNASSIGNED"),
+    title: project.project_name || project.title || "MPLADS Community Work",
+    house: project.house || "Lok Sabha",
+    state: project.state || "Unassigned State",
+    district: project.district || "Unassigned District",
+    constituency: project.constituency || project.constituency_name || "Not recorded",
+    constituency_code: project.constituency_code || project.constituency || "N/A",
+    mpName: project.mp_name || project.mpName || "Not recorded",
+    category: project.category || "Community Asset",
+    sectorName: project.sector_name || project.category || "Community Asset",
+    recommendedAmt: toCrores(project.recommended_amount ?? project.sanctioned_amount ?? project.cost),
+    sanctionedAmt,
+    expenditureAmt,
+    physicalProgress: getProjectProgress(project),
+    financialProgress: sanctionedAmt > 0 ? Math.round((expenditureAmt / sanctionedAmt) * 100) : 0,
+    dateSanctioned: project.sanction_date || project.start_date || "Not recorded",
+    targetCompletion: project.expected_completion_date || project.target_completion || "Not recorded",
+    status: statusMap[project.status] || "Sanctioned",
+    agency: project.implementing_agency || project.agency || "District implementing agency",
+    contractor: project.contractor || project.contractor_name || "Not assigned",
+    rating: Number(project.rating || 0),
+    reviewsCount: Number(project.reviews_count || 0),
+    attachments: Array.isArray(project.attachments) ? project.attachments : [],
+    reviews: Array.isArray(project.reviews) ? project.reviews : [],
+    justification: project.justification,
+    districtNotes: project.district_notes,
+    citizenRequestId: project.citizen_request_id,
+  };
+};
 
 export const MinistryDashboard: React.FC = () => {
   const { user, setRole } = useRole();
@@ -109,7 +188,8 @@ export const MinistryDashboard: React.FC = () => {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<string>("all");
   const [projectsPage, setProjectsPage] = useState<number>(1);
-  const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("grid");
+  const [projectViewMode, setProjectViewMode] = useState<"grouped" | "grid" | "list">("grouped");
+  const [expandedProjectGroups, setExpandedProjectGroups] = useState<Set<string>>(new Set());
   const PROJECTS_PER_PAGE = 24;
 
   // AI Governance & ML calibration
@@ -118,7 +198,7 @@ export const MinistryDashboard: React.FC = () => {
   const [ruleSensitivity, setRuleSensitivity] = useState<number>(0.85);
 
   // Modals
-  const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<any | null>(null);
+  const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState<boolean>(false);
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
   const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
@@ -155,9 +235,21 @@ export const MinistryDashboard: React.FC = () => {
     return `₹${amt.toLocaleString("en-IN")}`;
   };
 
-  // Filtered projects for registry
+  // De-duplicate on the client before filtering. It protects the registry from repeated
+  // records returned by a source while retaining a deterministic project identity.
+  const uniqueProjects = useMemo(() => {
+    const seen = new Set<string>();
+    return projects.filter((project) => {
+      const identity = getProjectIdentity(project);
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    });
+  }, [projects]);
+
+  // Filtered unique projects for registry
   const filteredProjects = useMemo(() => {
-    return projects.filter((p) => {
+    return uniqueProjects.filter((p) => {
       const pState = p.state || "";
       const pStatus = p.status || "Sanctioned";
       const isHighRisk = p.is_flagged || (p.latest_risk_score || 0) > 50;
@@ -179,12 +271,89 @@ export const MinistryDashboard: React.FC = () => {
       }
       return true;
     });
-  }, [projects, selectedStateFilter, selectedStatusFilter, selectedRiskFilter, projectSearch]);
+  }, [uniqueProjects, selectedStateFilter, selectedStatusFilter, selectedRiskFilter, projectSearch]);
+
+  // A geographic group is the compact navigation unit: it exposes unique locations first,
+  // then reveals the individual works only when the user asks for them.
+  const projectGroups = useMemo<ProjectGroup[]>(() => {
+    const groups = new Map<string, ProjectGroup>();
+
+    filteredProjects.forEach((project) => {
+      const state = project.state || "Unassigned State";
+      const district = project.district || "Unassigned District";
+      const key = `${state}::${district}`.toLowerCase();
+      const current = groups.get(key);
+      const isHighRisk = project.is_flagged || (project.latest_risk_score || 0) > 50;
+      const status = project.status || "Sanctioned";
+      const category = project.category || "Community Asset";
+
+      if (current) {
+        current.projects.push(project);
+        current.totalBudget += getProjectBudget(project);
+        current.averageProgress += getProjectProgress(project);
+        current.highRiskCount += isHighRisk ? 1 : 0;
+        current.statusCounts[status] = (current.statusCounts[status] || 0) + 1;
+        if (!current.categories.includes(category)) current.categories.push(category);
+        return;
+      }
+
+      groups.set(key, {
+        key,
+        state,
+        district,
+        projects: [project],
+        totalBudget: getProjectBudget(project),
+        averageProgress: getProjectProgress(project),
+        highRiskCount: isHighRisk ? 1 : 0,
+        categories: [category],
+        statusCounts: { [status]: 1 },
+      });
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({ ...group, averageProgress: Math.round(group.averageProgress / group.projects.length) }))
+      .sort((a, b) => a.state.localeCompare(b.state) || a.district.localeCompare(b.district));
+  }, [filteredProjects]);
+
+  const projectPageSize = projectViewMode === "grouped" ? 12 : PROJECTS_PER_PAGE;
+  const totalProjectPages = Math.max(1, Math.ceil((projectViewMode === "grouped" ? projectGroups.length : filteredProjects.length) / projectPageSize));
 
   const pagedProjects = useMemo(() => {
-    const start = (projectsPage - 1) * PROJECTS_PER_PAGE;
-    return filteredProjects.slice(start, start + PROJECTS_PER_PAGE);
-  }, [filteredProjects, projectsPage]);
+    const start = (projectsPage - 1) * projectPageSize;
+    return filteredProjects.slice(start, start + projectPageSize);
+  }, [filteredProjects, projectPageSize, projectsPage]);
+
+  const pagedProjectGroups = useMemo(() => {
+    const start = (projectsPage - 1) * projectPageSize;
+    return projectGroups.slice(start, start + projectPageSize);
+  }, [projectGroups, projectPageSize, projectsPage]);
+
+  useEffect(() => {
+    setProjectsPage((page) => Math.min(page, totalProjectPages));
+  }, [totalProjectPages]);
+
+  const setRegistryView = (view: "grouped" | "grid" | "list") => {
+    setProjectViewMode(view);
+    setProjectsPage(1);
+  };
+
+  const toggleProjectGroup = (groupKey: string) => {
+    setExpandedProjectGroups((groups) => {
+      const next = new Set(groups);
+      next.has(groupKey) ? next.delete(groupKey) : next.add(groupKey);
+      return next;
+    });
+  };
+
+  const openWorkDossier = (project: any) => {
+    setSelectedWorkForDetail(toWorkItem(project));
+  };
+
+  const openStateWorkspace = (state: string) => {
+    setSelectedStateName(state);
+    setSelectedMP(null);
+    setActiveModule("states");
+  };
 
   // Top states for Recharts chart
   const topStatesChartData = useMemo(() => {
@@ -724,7 +893,7 @@ export const MinistryDashboard: React.FC = () => {
                   mps={mps}
                   projects={projects}
                   onBack={() => setSelectedStateName(null)}
-                  onSelectProject={(p) => setSelectedWorkForDetail(p)}
+                  onSelectProject={(p) => openWorkDossier(p)}
                   onSelectMP={(mp) => {
                     setSelectedStateName(null);
                     setSelectedMP(mp);
@@ -751,7 +920,7 @@ export const MinistryDashboard: React.FC = () => {
                   mp={selectedMP}
                   projects={projects}
                   onBack={() => setSelectedMP(null)}
-                  onSelectProject={(p) => setSelectedWorkForDetail(p)}
+                  onSelectProject={(p) => openWorkDossier(p)}
                 />
               ) : (
                 <MPList
@@ -893,7 +1062,7 @@ export const MinistryDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Projects Container (Grid or Table View) */}
+              {/* Projects container: compact list for scanning, grid for project review. */}
               <div
                 style={{
                   background: "#ffffff",
@@ -907,17 +1076,19 @@ export const MinistryDashboard: React.FC = () => {
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                   <div>
                     <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1e293b" }}>
-                      Showing {pagedProjects.length} of {filteredProjects.length.toLocaleString("en-IN")} matching projects
+                      {projectViewMode === "grouped"
+                        ? `Showing ${pagedProjectGroups.length} of ${projectGroups.length.toLocaleString("en-IN")} location groups`
+                        : `Showing ${pagedProjects.length} of ${filteredProjects.length.toLocaleString("en-IN")} unique projects`}
                     </div>
                     <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "2px" }}>
-                      Page {projectsPage} of {Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE) || 1}
+                      {filteredProjects.length.toLocaleString("en-IN")} unique works · Page {projectsPage} of {totalProjectPages}
                     </div>
                   </div>
 
-                  {/* View Mode Toggle: Grid Cards vs Table View */}
-                  <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                  {/* View mode toggle */}
+                  <div style={{ display: "inline-flex", background: "#f8fafc", padding: "3px", borderRadius: "7px", border: "1px solid #e2e8f0" }}>
                     <button
-                      onClick={() => setProjectViewMode("grid")}
+                      onClick={() => setRegistryView("grouped")}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -925,20 +1096,43 @@ export const MinistryDashboard: React.FC = () => {
                         padding: "6px 14px",
                         borderRadius: "6px",
                         border: "none",
-                        background: projectViewMode === "grid" ? "#2563eb" : "transparent",
-                        color: projectViewMode === "grid" ? "#ffffff" : "#475569",
-                        fontWeight: projectViewMode === "grid" ? 700 : 500,
+                        background: projectViewMode === "grouped" ? "#ffffff" : "transparent",
+                        color: projectViewMode === "grouped" ? "#172033" : "#64748b",
+                        fontWeight: projectViewMode === "grouped" ? 700 : 500,
                         fontSize: "0.8rem",
-                        boxShadow: projectViewMode === "grid" ? "0 1px 3px rgba(0,0,0,0.15)" : "none",
+                        boxShadow: projectViewMode === "grouped" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
                         cursor: "pointer",
                         transition: "all 0.15s ease",
                       }}
+                      aria-pressed={projectViewMode === "grouped"}
+                    >
+                      <Layers size={15} />
+                      <span>Grouped</span>
+                    </button>
+                    <button
+                      onClick={() => setRegistryView("grid")}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: projectViewMode === "grid" ? "#ffffff" : "transparent",
+                        color: projectViewMode === "grid" ? "#172033" : "#64748b",
+                        fontWeight: projectViewMode === "grid" ? 700 : 500,
+                        fontSize: "0.8rem",
+                        boxShadow: projectViewMode === "grid" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                      aria-pressed={projectViewMode === "grid"}
                     >
                       <LayoutGrid size={15} />
                       <span>Grid View</span>
                     </button>
                     <button
-                      onClick={() => setProjectViewMode("table")}
+                      onClick={() => setRegistryView("list")}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -946,23 +1140,86 @@ export const MinistryDashboard: React.FC = () => {
                         padding: "6px 14px",
                         borderRadius: "6px",
                         border: "none",
-                        background: projectViewMode === "table" ? "#2563eb" : "transparent",
-                        color: projectViewMode === "table" ? "#ffffff" : "#475569",
-                        fontWeight: projectViewMode === "table" ? 700 : 500,
+                        background: projectViewMode === "list" ? "#ffffff" : "transparent",
+                        color: projectViewMode === "list" ? "#172033" : "#64748b",
+                        fontWeight: projectViewMode === "list" ? 700 : 500,
                         fontSize: "0.8rem",
-                        boxShadow: projectViewMode === "table" ? "0 1px 3px rgba(0,0,0,0.15)" : "none",
+                        boxShadow: projectViewMode === "list" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
                         cursor: "pointer",
                         transition: "all 0.15s ease",
                       }}
+                      aria-pressed={projectViewMode === "list"}
                     >
                       <List size={15} />
-                      <span>Table View</span>
+                      <span>List View</span>
                     </button>
                   </div>
                 </div>
 
-                {/* View Mode 1: GRID CARDS VIEW */}
-                {projectViewMode === "grid" ? (
+                {/* Grouped view: one navigable location summary per district/state. */}
+                {projectViewMode === "grouped" ? (
+                  <div className="project-groups">
+                    {pagedProjectGroups.map((group) => {
+                      const isExpanded = expandedProjectGroups.has(group.key);
+                      const reviewLabel = group.highRiskCount
+                        ? `${group.highRiskCount} review ${group.highRiskCount === 1 ? "item" : "items"}`
+                        : "No review items";
+
+                      return (
+                        <section className="project-group" key={group.key}>
+                          <button
+                            type="button"
+                            className="project-group__trigger"
+                            onClick={() => toggleProjectGroup(group.key)}
+                            aria-expanded={isExpanded}
+                          >
+                            <span className="project-group__chevron" aria-hidden="true">
+                              <ChevronDown size={18} style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
+                            </span>
+                            <span className="project-group__place">
+                              <strong>{group.district}</strong>
+                              <span>{group.state}</span>
+                            </span>
+                            <span className="project-group__count">{group.projects.length} works</span>
+                            <span className="project-group__categories" title={group.categories.join(", ")}>
+                              {group.categories.slice(0, 2).map((category) => <span key={category}>{category}</span>)}
+                              {group.categories.length > 2 && <span>+{group.categories.length - 2}</span>}
+                            </span>
+                            <span className="project-group__metric"><small>Sanctioned</small><strong>{formatCurrency(group.totalBudget)}</strong></span>
+                            <span className="project-group__metric"><small>Avg. progress</small><strong>{group.averageProgress}%</strong></span>
+                            <span className={`project-group__review ${group.highRiskCount ? "has-review" : ""}`}>{reviewLabel}</span>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="project-group__records">
+                              {group.projects.map((project, index) => {
+                                const isHighRisk = project.is_flagged || (project.latest_risk_score || 0) > 50;
+                                return (
+                                  <div className="project-group-record" key={getProjectIdentity(project)}>
+                                    <span className="project-group-record__index">{index + 1}</span>
+                                    <div className="project-group-record__title">
+                                      <strong>{project.project_name || project.title || "MPLADS Community Work"}</strong>
+                                      <span>{project.project_id || project.id} · {project.category || "Community Asset"}</span>
+                                    </div>
+                                    <span className="project-group-record__status">{project.status || "Sanctioned"}</span>
+                                    <span className="project-group-record__budget">{formatCurrency(getProjectBudget(project))}</span>
+                                    {isHighRisk && <span className="project-group-record__review">Review</span>}
+                                    <button
+                                      type="button"
+                                      onClick={(event) => { event.stopPropagation(); openWorkDossier(project); }}
+                                    >
+                                      Inspect
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
+                ) : projectViewMode === "grid" ? (
                   <div
                     style={{
                       padding: "20px",
@@ -980,7 +1237,7 @@ export const MinistryDashboard: React.FC = () => {
                       return (
                         <div
                           key={p.project_id || p.id || idx}
-                          onClick={() => setSelectedWorkForDetail(p)}
+                          onClick={() => openWorkDossier(p)}
                           style={{
                             background: "#ffffff",
                             borderRadius: "14px",
@@ -1083,7 +1340,7 @@ export const MinistryDashboard: React.FC = () => {
 
                             {/* Location */}
                             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#475569", marginBottom: "16px" }}>
-                              <MapPin size={14} style={{ color: "#2563eb", flexShrink: 0 }} />
+                              <MapPin size={14} style={{ color: "#64748b", flexShrink: 0 }} />
                               <span style={{ fontWeight: 600 }}>{p.district || "District"}</span>
                               <span style={{ color: "#94a3b8" }}>•</span>
                               <span>{p.state || "State"}</span>
@@ -1111,7 +1368,7 @@ export const MinistryDashboard: React.FC = () => {
                                   style={{
                                     width: `${progress}%`,
                                     height: "100%",
-                                    background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
+                                    background: "#334155",
                                     borderRadius: "9999px",
                                   }}
                                 />
@@ -1122,7 +1379,7 @@ export const MinistryDashboard: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedWorkForDetail(p);
+                                openWorkDossier(p);
                               }}
                               style={{
                                 width: "100%",
@@ -1130,7 +1387,7 @@ export const MinistryDashboard: React.FC = () => {
                                 borderRadius: "8px",
                                 background: "#f1f5f9",
                                 border: "1px solid #cbd5e1",
-                                color: "#1e40af",
+                                color: "#334155",
                                 fontSize: "0.78rem",
                                 fontWeight: 700,
                                 display: "flex",
@@ -1141,13 +1398,13 @@ export const MinistryDashboard: React.FC = () => {
                                 transition: "all 0.15s ease",
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "#2563eb";
+                                e.currentTarget.style.background = "#172033";
                                 e.currentTarget.style.color = "#ffffff";
-                                e.currentTarget.style.borderColor = "#2563eb";
+                                e.currentTarget.style.borderColor = "#172033";
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.background = "#f1f5f9";
-                                e.currentTarget.style.color = "#1e40af";
+                                e.currentTarget.style.color = "#334155";
                                 e.currentTarget.style.borderColor = "#cbd5e1";
                               }}
                             >
@@ -1160,7 +1417,7 @@ export const MinistryDashboard: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  /* View Mode 2: TABLE VIEW */
+                  /* Compact list view */
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
                       <thead>
@@ -1185,7 +1442,7 @@ export const MinistryDashboard: React.FC = () => {
                                 background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd",
                                 cursor: "pointer",
                               }}
-                              onClick={() => setSelectedWorkForDetail(p)}
+                              onClick={() => openWorkDossier(p)}
                             >
                               <td style={{ padding: "12px 16px", maxWidth: "320px" }}>
                                 <div style={{ fontWeight: 700, color: "#1e293b" }}>
@@ -1249,7 +1506,7 @@ export const MinistryDashboard: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setSelectedWorkForDetail(p);
+                                    openWorkDossier(p);
                                   }}
                                   style={{
                                     padding: "5px 10px",
@@ -1291,21 +1548,21 @@ export const MinistryDashboard: React.FC = () => {
                     Previous Page
                   </button>
                   <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                    Page {projectsPage} of {Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE) || 1}
+                    Page {projectsPage} of {totalProjectPages}
                   </span>
                   <button
-                    disabled={projectsPage >= Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE)}
+                    disabled={projectsPage >= totalProjectPages}
                     onClick={() => setProjectsPage(projectsPage + 1)}
                     style={{
                       padding: "6px 14px",
                       borderRadius: "6px",
                       border: "1px solid #cbd5e1",
                       background:
-                        projectsPage >= Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE)
+                        projectsPage >= totalProjectPages
                           ? "#f1f5f9"
                           : "#ffffff",
                       cursor:
-                        projectsPage >= Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE)
+                        projectsPage >= totalProjectPages
                           ? "not-allowed"
                           : "pointer",
                       fontSize: "0.8rem",
