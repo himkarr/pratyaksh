@@ -476,36 +476,73 @@
 .project-stat-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.project-stat-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+.project-stat-card:hover .stat-icon-container {
+  transform: scale(1.08) rotate(4deg);
+  transition: transform 0.25s ease;
 }
 
 .project-stat-card.completed {
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
+.project-stat-card.completed:hover {
+  border-color: #86efac;
+  box-shadow: 0 10px 20px -4px rgba(22, 163, 74, 0.2);
 }
 
 .project-stat-card.ongoing {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  background: #fef9c3;
+  border-color: #fef08a;
+}
+
+.project-stat-card.ongoing:hover {
+  border-color: #fde047;
+  box-shadow: 0 10px 20px -4px rgba(202, 138, 4, 0.2);
 }
 
 .project-stat-card.recommended {
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  background: #e0f2fe;
+  border-color: #bae6fd;
+}
+
+.project-stat-card.recommended:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 10px 20px -4px rgba(2, 132, 199, 0.2);
 }
 
 .project-stat-card.total {
-  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.project-stat-card.total:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 20px -4px rgba(100, 116, 139, 0.15);
 }
 
 .stat-icon-container {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
+  transition: transform 0.2s ease;
 }
 
 .project-stat-card.completed .stat-icon-container {
@@ -519,12 +556,12 @@
 }
 
 .project-stat-card.recommended .stat-icon-container {
-  background: #0891b2;
+  background: #0284c7;
   color: white;
 }
 
 .project-stat-card.total .stat-icon-container {
-  background: #4b5563;
+  background: #475569;
   color: white;
 }
 
@@ -535,48 +572,53 @@
 }
 
 .stat-number {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   color: var(--text-primary);
+  line-height: 1.1;
 }
 
 .stat-description {
   font-size: 12px;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* Performance Summary */
-.performance-summary {
+.performance-summary-section {
   background: white;
   padding: 24px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid #e5e7eb;
+  transition: all 0.25s ease;
 }
 
-.performance-summary h3 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 24px 0;
+.performance-summary-section:hover {
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.06);
 }
 
 .performance-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
   gap: 24px;
 }
 
 .performance-card {
   padding: 20px;
-  background: #f9fafb;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.25s ease;
+}
+
+.performance-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
 }
 
 .performance-card h4 {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 800;
   color: var(--text-primary);
   margin: 0 0 16px 0;
 }
@@ -591,8 +633,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 8px 6px;
+  border-bottom: 1px solid #f1f5f9;
+  border-radius: 6px;
+  transition: background 0.15s ease, padding 0.15s ease;
+}
+
+.detail-row:hover:not(.highlight) {
+  background: rgba(241, 245, 249, 0.8);
 }
 
 .detail-row:last-child {
@@ -601,11 +649,16 @@
 
 .detail-row.highlight {
   font-weight: 600;
-  background: white;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border-radius: 8px;
   border-bottom: none;
-  margin-top: 8px;
+  margin-top: 4px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.detail-row.highlight:hover {
+  transform: scale(1.01);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
 }
 
 .detail-row span:first-child {

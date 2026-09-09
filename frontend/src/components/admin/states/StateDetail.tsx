@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { StateSummary, MPSummary } from "../../../api/adminDataService";
 import { CivicUtilizationGauge } from "../../common/CivicUtilizationGauge";
+import { MPPersonalityDonut } from "./MPPersonalityDonut";
 
 interface StateDetailProps {
   stateName: string;
@@ -322,83 +323,58 @@ export const StateDetail: React.FC<StateDetailProps> = ({
         {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
           <div className="overview-section">
-            <div className="charts-grid">
-              {/* Fund Utilization Half-Gauge */}
-              <div className="chart-container">
+            {/* Top Row: Gauge & MP Personality Types Donut (Matching Reference Architecture) */}
+            <div className="charts-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: "24px", marginBottom: "28px" }}>
+              {/* Left Column: Fund Utilization Gauge */}
+              <div className="chart-container" style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <CivicUtilizationGauge
                   utilization={utilizationRate}
-                  title={`${stateName} Fund Usage & Progress`}
+                  title={`${stateName} Utilization`}
+                  cardHeader="Fund Utilization"
                   size="md"
+                  hideCardWrap={true}
                 />
-
-                {/* Status Benchmark & Summary Chips (Fills empty space with clear info) */}
-                <div style={{ marginTop: "16px", padding: "14px 16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#64748b" }}>
-                      National Goal
-                    </span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: utilizationRate >= 70 ? "#059669" : utilizationRate >= 40 ? "#d97706" : "#dc2626" }}>
-                      {utilizationRate >= 70 ? "● Target Met (≥70%)" : utilizationRate >= 40 ? "● Steady Spending (40-69%)" : "● Needs Speed Up (<40%)"}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: "0.82rem", color: "#334155", margin: "0 0 12px", lineHeight: "1.4" }}>
-                    {utilizationRate >= 70
-                      ? `${stateName} has spent ${utilizationRate}% of its sanctioned funds, successfully surpassing the national target of 70%.`
-                      : utilizationRate >= 40
-                      ? `${stateName} is actively spending funds (${utilizationRate}% utilized), with ongoing project bills being processed.`
-                      : `${stateName} fund spending (${utilizationRate}%) is currently below the 40% benchmark. District sanctioning should be expedited.`}
-                  </p>
-                  
-                  {/* 3 mini summary chips */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", paddingTop: "10px", borderTop: "1px solid #e2e8f0" }}>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Total Budget</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>{formatCurrency(totalAllocated)}</div>
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Money Spent</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#059669" }}>{formatCurrency(totalExpenditure)}</div>
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Remaining</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#d97706" }}>{formatCurrency(unspentBalance)}</div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Financial Breakdown Card */}
-              <div className="financial-breakdown">
-                <h3>State Budget Summary</h3>
-                <div className="breakdown-grid">
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Total Budget Approved</span>
-                    <span className="breakdown-value">{formatCurrency(totalAllocated)}</span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Actual Money Spent</span>
-                    <span className="breakdown-value">{formatCurrency(totalExpenditure)}</span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Remaining Balance</span>
-                    <span className="breakdown-value" style={{ color: "#d97706" }}>
-                      {formatCurrency(unspentBalance)}
-                    </span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Average Budget per MP</span>
-                    <span className="breakdown-value">{formatCurrency(avgPerMp)}</span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Total Local Projects</span>
-                    <span className="breakdown-value">{stateProjects.length} Works</span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Completed Projects</span>
-                    <span className="breakdown-value" style={{ color: "#059669" }}>
-                      {completedProjectsCount} Works
-                    </span>
-                  </div>
+              {/* Right Column: MP Personality Types Donut */}
+              <div className="chart-container" style={{ height: "100%" }}>
+                <MPPersonalityDonut stateName={stateName} mps={stateMPs} />
+              </div>
+            </div>
+
+            {/* Financial Breakdown Section (Matching Reference Architecture Header) */}
+            <div className="financial-breakdown-card" style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", padding: "24px", marginBottom: "28px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <h3 style={{ fontFamily: "var(--font-serif, 'Cormorant Garamond', Georgia, serif)", fontSize: "1.3rem", fontWeight: 700, color: "#1e293b", margin: "0 0 20px 0" }}>
+                Financial Breakdown
+              </h3>
+              <div className="breakdown-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
+                <div className="breakdown-item" style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}>
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Total Budget Approved</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", marginTop: "4px" }}>{formatCurrency(totalAllocated)}</span>
+                </div>
+                <div className="breakdown-item" style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}>
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Actual Money Spent</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#059669", marginTop: "4px" }}>{formatCurrency(totalExpenditure)}</span>
+                </div>
+                <div className="breakdown-item" style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}>
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Remaining Balance</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#d97706", marginTop: "4px" }}>
+                    {formatCurrency(unspentBalance)}
+                  </span>
+                </div>
+                <div className="breakdown-item" style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}>
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Average Budget per MP</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", marginTop: "4px" }}>{formatCurrency(avgPerMp)}</span>
+                </div>
+                <div className="breakdown-item" style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}>
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Total Local Projects</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#2563eb", marginTop: "4px" }}>{stateProjects.length} Works</span>
+                </div>
+                <div className="breakdown-item" style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}>
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Completed Projects</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#059669", marginTop: "4px" }}>
+                    {completedProjectsCount} Works
+                  </span>
                 </div>
               </div>
             </div>

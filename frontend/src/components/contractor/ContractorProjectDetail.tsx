@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, Calendar, FileText, CheckCircle2, Clock, Upload, ShieldCheck, MapPin, AlertCircle, Building2 } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, CheckCircle2, Clock, Upload, ShieldCheck, MapPin, AlertCircle, Building2, Target, TrendingUp, Users, Info } from "lucide-react";
 import { ContractorProject, MonitoringScheduleItem } from "../../data/contractorData";
 import { SubmitStagePayload } from "../../api/contractorApi";
 import { ContractorTimeline } from "./ContractorTimeline";
@@ -7,6 +7,7 @@ import { EvidenceUploadModal } from "./EvidenceUploadModal";
 import { RequestCompletionCertificateModal } from "./RequestCompletionCertificateModal";
 import { SubmissionHistory } from "./SubmissionHistory";
 import { Button } from "../ui/Button";
+import { CivicUtilizationGauge } from "../common/CivicUtilizationGauge";
 
 interface ContractorProjectDetailProps {
   project: ContractorProject;
@@ -90,6 +91,158 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
             <span>Constituency: <strong>{project.constituency}</strong></span>
             <span>District: <strong>{project.district}</strong></span>
             <span>MP: <strong>{project.mpName}</strong></span>
+          </div>
+        </div>
+
+        {/* Top Visual Row: Gauge & 2x2 Overview Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: "16px", marginBottom: "8px" }}>
+          {/* Left: Speedometer Gauge */}
+          <div style={{ background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <CivicUtilizationGauge
+              utilization={(project.sanctionAmountRs && project.sanctionAmountRs > 0)
+                ? Math.min(100, Math.round(((project.utilizedAmountRs || 0) / project.sanctionAmountRs) * 100))
+                : (project.physicalProgress || 0)}
+              title={`${project.title.slice(0, 32).toUpperCase()} Utilization`}
+              cardHeader="Fund Utilization"
+              showInfoIcon={true}
+              size="sm"
+              hideCardWrap={true}
+            />
+          </div>
+
+          {/* Right: 2x2 Colored Overview Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            {/* Sanctioned */}
+            <div
+              style={{
+                background: "#dcfce7",
+                border: "1px solid #bbf7d0",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                transition: "all 0.25s ease",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(5, 150, 105, 0.25)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#059669", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <CheckCircle2 size={17} />
+              </div>
+              <div>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#065f46", display: "block", lineHeight: 1.1 }}>
+                  {formatCurrency(project.sanctionAmountRs)}
+                </span>
+                <span style={{ fontSize: "0.72rem", color: "#047857", fontWeight: 600 }}>Sanction Outlay</span>
+              </div>
+            </div>
+
+            {/* Recommended */}
+            <div
+              style={{
+                background: "#fef9c3",
+                border: "1px solid #fef08a",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                transition: "all 0.25s ease",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(217, 119, 6, 0.25)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#d97706", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <TrendingUp size={17} />
+              </div>
+              <div>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#92400e", display: "block", lineHeight: 1.1 }}>
+                  {formatCurrency(project.recommendedAmountRs)}
+                </span>
+                <span style={{ fontSize: "0.72rem", color: "#b45309", fontWeight: 600 }}>Recommended</span>
+              </div>
+            </div>
+
+            {/* Spent */}
+            <div
+              style={{
+                background: "#e0f2fe",
+                border: "1px solid #bae6fd",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                transition: "all 0.25s ease",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(2, 132, 199, 0.25)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#0284c7", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Target size={17} />
+              </div>
+              <div>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0369a1", display: "block", lineHeight: 1.1 }}>
+                  {formatCurrency(project.utilizedAmountRs)}
+                </span>
+                <span style={{ fontSize: "0.72rem", color: "#0284c7", fontWeight: 600 }}>Spent Amount</span>
+              </div>
+            </div>
+
+            {/* Physical Execution */}
+            <div
+              style={{
+                background: "#f1f5f9",
+                border: "1px solid #e2e8f0",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                transition: "all 0.25s ease",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(100, 116, 139, 0.2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#475569", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Users size={17} />
+              </div>
+              <div>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#1e293b", display: "block", lineHeight: 1.1 }}>
+                  {project.physicalProgress}%
+                </span>
+                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Physical Progress</span>
+              </div>
+            </div>
           </div>
         </div>
 

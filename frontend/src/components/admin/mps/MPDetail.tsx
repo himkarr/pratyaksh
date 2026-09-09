@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   List,
   ArrowRight,
+  Info,
 } from "lucide-react";
 import { MPSummary } from "../../../api/adminDataService";
 import { CivicUtilizationGauge } from "../../common/CivicUtilizationGauge";
@@ -326,145 +327,271 @@ export const MPDetail: React.FC<MPDetailProps> = ({
         {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
           <div className="overview-section">
-            <div className="overview-grid">
-              {/* Gauge Container */}
-              <div className="chart-container">
+            {/* Top Row: Fund Utilization Gauge & Projects Overview Grid (Matching Screenshot) */}
+            <div className="overview-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: "24px", marginBottom: "28px" }}>
+              {/* Left Column: Fund Utilization Gauge */}
+              <div className="chart-container" style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <CivicUtilizationGauge
                   utilization={mp.utilizationPercentage}
-                  title={`${mp.name} Fund Usage & Spending`}
+                  title={`${mp.name.toUpperCase()} Fund Utilization`}
+                  cardHeader="Fund Utilization"
+                  showInfoIcon={true}
                   size="md"
+                  hideCardWrap={true}
                 />
-
-                {/* Status Benchmark & Summary Chips (Fills empty space with clear info) */}
-                <div style={{ marginTop: "16px", padding: "14px 16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#64748b" }}>
-                      National Goal
-                    </span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: mp.utilizationPercentage >= 70 ? "#059669" : mp.utilizationPercentage >= 40 ? "#d97706" : "#dc2626" }}>
-                      {mp.utilizationPercentage >= 70 ? "● Target Met (≥70%)" : mp.utilizationPercentage >= 40 ? "● Steady Spending (40-69%)" : "● Early Stage (<40%)"}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: "0.82rem", color: "#334155", margin: "0 0 12px", lineHeight: "1.4" }}>
-                    {mp.utilizationPercentage >= 70
-                      ? `${mp.name} has spent ${mp.utilizationPercentage}% of constituency funds, successfully surpassing the national target of 70%.`
-                      : mp.utilizationPercentage >= 40
-                      ? `${mp.name} has utilized ${mp.utilizationPercentage}%. Works are actively ongoing across local wards and villages.`
-                      : `${mp.name} has utilized ${mp.utilizationPercentage}%. Most recommended works are in initial execution or awaiting final billing.`}
-                  </p>
-                  
-                  {/* 3 mini summary chips */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", paddingTop: "10px", borderTop: "1px solid #e2e8f0" }}>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Total Budget</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>{formatINRCompact(totalSanctioned)}</div>
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Money Spent</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#059669" }}>{formatINRCompact(totalUtilized)}</div>
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Balance Left</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#d97706" }}>{formatINRCompact(remainingBalance)}</div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Projects Overview */}
-              <div className="projects-overview">
-                <h3>Constituency Projects Delivery</h3>
-                <div className="project-stats-grid">
-                  <div className="project-stat-card completed">
-                    <div className="stat-icon-container">
-                      <CheckCircle2 size={18} />
+              {/* Right Column: Projects Overview 2x2 Colored Cards */}
+              <div className="projects-overview" style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#1e293b", margin: "0 0 16px 0", fontFamily: "var(--font-serif, 'Cormorant Garamond', Georgia, serif)" }}>
+                  Projects Overview
+                </h3>
+
+                <div className="project-stats-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", flexGrow: 1 }}>
+                  {/* Completed Projects (Soft Green #dcfce7) */}
+                  <div
+                    className="project-stat-card completed"
+                    style={{
+                      background: "#dcfce7",
+                      border: "1px solid #bbf7d0",
+                      borderRadius: "10px",
+                      padding: "16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      className="stat-icon-container"
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "8px",
+                        background: "#059669",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <CheckCircle2 size={20} />
                     </div>
                     <div className="stat-content">
-                      <span className="stat-number">{projectStats.completed}</span>
-                      <span className="stat-description">Completed Projects</span>
+                      <span className="stat-number" style={{ fontSize: "1.4rem", fontWeight: 800, color: "#065f46", lineHeight: 1.1 }}>
+                        {projectStats.completed}
+                      </span>
+                      <span className="stat-description" style={{ fontSize: "0.78rem", color: "#047857", fontWeight: 600, display: "block", marginTop: "3px" }}>
+                        Completed Projects
+                      </span>
                     </div>
                   </div>
 
-                  <div className="project-stat-card ongoing">
-                    <div className="stat-icon-container">
-                      <TrendingUp size={18} />
+                  {/* Ongoing Projects (Soft Yellow #fef9c3) */}
+                  <div
+                    className="project-stat-card ongoing"
+                    style={{
+                      background: "#fef9c3",
+                      border: "1px solid #fef08a",
+                      borderRadius: "10px",
+                      padding: "16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      className="stat-icon-container"
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "8px",
+                        background: "#d97706",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <TrendingUp size={20} />
                     </div>
                     <div className="stat-content">
-                      <span className="stat-number">{projectStats.ongoing}</span>
-                      <span className="stat-description">Ongoing Works</span>
+                      <span className="stat-number" style={{ fontSize: "1.4rem", fontWeight: 800, color: "#92400e", lineHeight: 1.1 }}>
+                        {projectStats.ongoing}
+                      </span>
+                      <span className="stat-description" style={{ fontSize: "0.78rem", color: "#b45309", fontWeight: 600, display: "block", marginTop: "3px" }}>
+                        Ongoing Projects
+                      </span>
                     </div>
                   </div>
 
-                  <div className="project-stat-card recommended">
-                    <div className="stat-icon-container">
-                      <Target size={18} />
+                  {/* Recommended Projects (Soft Blue #e0f2fe) */}
+                  <div
+                    className="project-stat-card recommended"
+                    style={{
+                      background: "#e0f2fe",
+                      border: "1px solid #bae6fd",
+                      borderRadius: "10px",
+                      padding: "16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      className="stat-icon-container"
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "8px",
+                        background: "#0284c7",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Target size={20} />
                     </div>
                     <div className="stat-content">
-                      <span className="stat-number">{mp.worksRecommendedCount}</span>
-                      <span className="stat-description">Recommended Works</span>
+                      <span className="stat-number" style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0369a1", lineHeight: 1.1 }}>
+                        {mp.worksRecommendedCount || projectStats.total}
+                      </span>
+                      <span className="stat-description" style={{ fontSize: "0.78rem", color: "#0284c7", fontWeight: 600, display: "block", marginTop: "3px" }}>
+                        Recommended Projects
+                      </span>
                     </div>
                   </div>
 
-                  <div className="project-stat-card total">
-                    <div className="stat-icon-container">
-                      <Users size={18} />
+                  {/* Total Projects (Soft Slate #f1f5f9) */}
+                  <div
+                    className="project-stat-card total"
+                    style={{
+                      background: "#f1f5f9",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "10px",
+                      padding: "16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      className="stat-icon-container"
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "8px",
+                        background: "#475569",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Users size={20} />
                     </div>
                     <div className="stat-content">
-                      <span className="stat-number">{projectStats.completionRate}%</span>
-                      <span className="stat-description">Completion Rate</span>
+                      <span className="stat-number" style={{ fontSize: "1.4rem", fontWeight: 800, color: "#1e293b", lineHeight: 1.1 }}>
+                        {projectStats.total}
+                      </span>
+                      <span className="stat-description" style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "3px" }}>
+                        Total Projects
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Performance Summary Cards (Plain English) */}
-            <div className="performance-summary">
-              <h3>Constituency Performance Summary</h3>
-              <div className="performance-cards">
-                <div className="performance-card">
-                  <h4>Budget & Spending</h4>
-                  <div className="performance-details">
-                    <div className="detail-row">
-                      <span>Total Approved Budget:</span>
-                      <span style={{ fontWeight: 700 }}>{formatCurrency(totalSanctioned)}</span>
+            {/* Performance Summary (Matching Reference Architecture 2-Column Breakdown) */}
+            <div className="performance-summary-section" style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <h3 style={{ fontFamily: "var(--font-serif, 'Cormorant Garamond', Georgia, serif)", fontSize: "1.25rem", fontWeight: 700, color: "#1e293b", margin: "0 0 20px 0" }}>
+                Performance Summary
+              </h3>
+
+              <div className="performance-cards" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "24px" }}>
+                {/* Left Card: Financial Performance */}
+                <div className="performance-card" style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px" }}>
+                  <h4 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", margin: "0 0 16px 0" }}>Financial Performance</h4>
+                  <div className="performance-details" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div className="detail-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#475569", fontSize: "0.88rem" }}>Allocated Amount:</span>
+                      <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem" }}>{formatCurrency(totalSanctioned)}</span>
                     </div>
-                    <div className="detail-row">
-                      <span>Actual Money Spent:</span>
-                      <span style={{ fontWeight: 700, color: "#059669" }}>{formatCurrency(totalUtilized)}</span>
+                    <div className="detail-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#475569", fontSize: "0.88rem" }}>Recorded Expenditure:</span>
+                      <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem" }}>{formatCurrency(totalUtilized)}</span>
                     </div>
-                    <div className="detail-row">
-                      <span>Remaining Balance:</span>
-                      <span style={{ fontWeight: 700, color: "#d97706" }}>{formatCurrency(remainingBalance)}</span>
+                    <div className="detail-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#475569", fontSize: "0.88rem" }}>Remaining Balance:</span>
+                      <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem" }}>{formatCurrency(remainingBalance)}</span>
                     </div>
-                    <div className="detail-row highlight">
-                      <span>Overall Fund Usage:</span>
-                      <span className={`stat-value utilization-${getUtilizationClass(mp.utilizationPercentage)}`} style={{ fontSize: "1.2rem" }}>
-                        {mp.utilizationPercentage}%
+
+                    {/* Highlight row for Fund Utilization */}
+                    <div className="detail-row highlight" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 14px", borderRadius: "8px", margin: "4px 0" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#166534", fontWeight: 600, fontSize: "0.88rem" }}>
+                        Fund Utilization
+                        <Info size={14} color="#16a34a" />
                       </span>
+                      <span style={{ fontWeight: 800, color: "#16a34a", fontSize: "1.05rem" }}>
+                        {(mp.utilizationPercentage || 0).toFixed(1)}%
+                      </span>
+                    </div>
+
+                    <div className="detail-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
+                      <span style={{ color: "#475569", fontSize: "0.88rem" }}>Works Completed:</span>
+                      <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem" }}>{projectStats.completed}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="performance-card">
-                  <h4>Project Delivery on Ground</h4>
-                  <div className="performance-details">
-                    <div className="detail-row">
-                      <span>Projects Recommended:</span>
-                      <span style={{ fontWeight: 700 }}>{mp.worksRecommendedCount}</span>
+                {/* Right Card: Project Delivery */}
+                <div className="performance-card" style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px" }}>
+                  <h4 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", margin: "0 0 16px 0" }}>Project Delivery</h4>
+                  <div className="performance-details" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div className="detail-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#475569", fontSize: "0.88rem" }}>Total Projects:</span>
+                      <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.95rem" }}>{projectStats.total}</span>
                     </div>
-                    <div className="detail-row">
-                      <span>Completed Projects:</span>
-                      <span style={{ fontWeight: 700, color: "#059669" }}>{projectStats.completed}</span>
+                    <div className="detail-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#475569", fontSize: "0.88rem" }}>Completed:</span>
+                      <span style={{ fontWeight: 800, color: "#059669", fontSize: "0.95rem" }}>{projectStats.completed}</span>
                     </div>
-                    <div className="detail-row">
-                      <span>Under Construction:</span>
-                      <span style={{ fontWeight: 700, color: "#d97706" }}>{projectStats.ongoing}</span>
+                    <div className="detail-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
+                      <span style={{ color: "#475569", fontSize: "0.88rem" }}>In Progress:</span>
+                      <span style={{ fontWeight: 800, color: "#d97706", fontSize: "0.95rem" }}>{projectStats.ongoing}</span>
                     </div>
-                    <div className="detail-row highlight">
-                      <span>Completion Rate:</span>
-                      <span style={{ fontSize: "1.2rem", fontWeight: 800, color: projectStats.completionRate >= 60 ? "#059669" : "#d97706" }}>
-                        {projectStats.completionRate}%
+
+                    {/* Highlight row for Completion Rate */}
+                    <div className="detail-row highlight" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fef2f2", border: "1px solid #fecaca", padding: "10px 14px", borderRadius: "8px", margin: "4px 0" }}>
+                      <span style={{ color: "#991b1b", fontWeight: 600, fontSize: "0.88rem" }}>
+                        Completion Rate:
+                      </span>
+                      <span style={{ fontWeight: 800, color: projectStats.completionRate >= 50 ? "#16a34a" : "#dc2626", fontSize: "1.05rem" }}>
+                        {projectStats.completionRate.toFixed(1)}%
+                      </span>
+                    </div>
+
+                    {/* Highlight row for Fund Utilization */}
+                    <div className="detail-row highlight" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 14px", borderRadius: "8px", margin: "4px 0" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#166534", fontWeight: 600, fontSize: "0.88rem" }}>
+                        Fund Utilization
+                        <Info size={14} color="#16a34a" />
+                      </span>
+                      <span style={{ fontWeight: 800, color: "#16a34a", fontSize: "1.05rem" }}>
+                        {(mp.utilizationPercentage || 0).toFixed(1)}%
                       </span>
                     </div>
                   </div>
