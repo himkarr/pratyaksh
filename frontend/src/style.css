@@ -5,13 +5,13 @@
   --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
   /* Official National Portal Color System (Subtle, Restrained, High-Contrast) */
-  --gov-primary: #0a2540;       /* Deep Navy */
-  --gov-header: #0f2942;        /* Header Navy */
-  --gov-secondary: #1e3a5f;     /* Secondary Slate Navy */
-  --gov-accent: #155eef;        /* Corporate Blue (Functional Links/Highlights) */
+  --gov-primary: #172033;       /* Ink navy: used sparingly for hierarchy */
+  --gov-header: #172033;        /* Header navy */
+  --gov-secondary: #273247;     /* Quiet slate navy */
+  --gov-accent: #334155;        /* Restrained interactive accent */
   --gov-subtle: #f1f5f9;        /* Slate 100 */
 
-  --bg-page: #f8fafc;           /* Crisp Slate 50 background */
+  --bg-page: #f6f7f9;           /* Soft neutral canvas */
   --bg-surface: #ffffff;        /* Pure white cards */
   --bg-surface-subtle: #f8fafc; /* Table headers, inner panels */
   --bg-hover: #f1f5f9;
@@ -46,18 +46,18 @@
   /* Form & Focus Tokens */
   --input-bg: #ffffff;
   --input-border: #cbd5e1;
-  --input-focus-border: #155eef;
-  --focus-ring: 0 0 0 3px rgba(21, 94, 239, 0.25);
+  --input-focus-border: #334155;
+  --focus-ring: 0 0 0 3px rgba(51, 65, 85, 0.14);
 
   /* Layout & Geometry */
   --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-full: 9999px;
 
-  --shadow-card: 0 4px 14px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
-  --shadow-elevated: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 3px 10px rgba(15, 23, 42, 0.025);
+  --shadow-elevated: 0 10px 24px rgba(15, 23, 42, 0.09);
 
   --base-font-size: 14.5px;
 }
