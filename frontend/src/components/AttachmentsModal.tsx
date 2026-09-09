@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Image as ImageIcon, FileText, CheckCircle2, ExternalLink, Upload, Printer, Check } from 'lucide-react';
 import { WorkItem, WorkAttachment } from '../data/mpladsData';
 import { useBodyScrollLock } from '../utils/scrollLock';
+import { fileToOptimizedDataUrl } from '../utils/imageUploadHelper';
 
 import { districtContractorSync } from '../api/districtContractorSync';
 
@@ -75,12 +76,27 @@ export function AttachmentsModal({ work, onClose, onAttachmentAdded }: Attachmen
 
   if (!work) return null;
 
-  const handleUploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const isImage = file.type.startsWith("image/");
-    const fileUrl = URL.createObjectURL(file);
+    let fileUrl: string;
+    try {
+      if (isImage) {
+        fileUrl = await fileToOptimizedDataUrl(file);
+      } else {
+        fileUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => resolve("#");
+          reader.readAsDataURL(file);
+        });
+      }
+    } catch {
+      fileUrl = "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=800&q=80";
+    }
+
     const newAtt: WorkAttachment = {
       id: `att-upload-${Date.now()}`,
       type: isImage ? 'image' : 'document',

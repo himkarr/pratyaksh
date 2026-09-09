@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { Camera, FileText, CheckCircle, Upload, MapPin, Check } from "lucide-react";
 import { WorkAttachment } from "../../data/mpladsData";
 import { Card, CardHeader, CardBody, Button, Badge } from "../ui";
+import { fileToOptimizedDataUrl } from "../../utils/imageUploadHelper";
 
 export interface EvidenceSectionProps {
   attachments: WorkAttachment[];
@@ -30,12 +31,27 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const isImage = file.type.startsWith("image/");
-    const fileUrl = URL.createObjectURL(file);
+    let fileUrl: string;
+    try {
+      if (isImage) {
+        fileUrl = await fileToOptimizedDataUrl(file);
+      } else {
+        fileUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => resolve("#");
+          reader.readAsDataURL(file);
+        });
+      }
+    } catch {
+      fileUrl = "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=800&q=80";
+    }
+
     const newAttachment: WorkAttachment = {
       id: `att-upload-${Date.now()}`,
       type: isImage ? "image" : "document",

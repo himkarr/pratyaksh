@@ -6,6 +6,7 @@ import {
 import { CitizenIssue } from "../../data/citizenData";
 import { WorkItem, INITIAL_WORKS } from "../../data/mpladsData";
 import { Modal, Button, Input, Select, Textarea, Alert } from "../ui";
+import { fileToOptimizedDataUrl } from "../../utils/imageUploadHelper";
 
 export interface SubmitIssueModalProps {
   isOpen: boolean;
@@ -93,11 +94,20 @@ export const SubmitIssueModal: React.FC<SubmitIssueModalProps> = ({
     );
   };
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isOptimizingPhoto, setIsOptimizingPhoto] = useState(false);
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setPhotoUrl(previewUrl);
+      setIsOptimizingPhoto(true);
+      try {
+        const dataUrl = await fileToOptimizedDataUrl(file, 1280, 1280, 0.85);
+        setPhotoUrl(dataUrl);
+      } catch (err) {
+        console.error("Failed to process photo:", err);
+      } finally {
+        setIsOptimizingPhoto(false);
+      }
     }
   };
 

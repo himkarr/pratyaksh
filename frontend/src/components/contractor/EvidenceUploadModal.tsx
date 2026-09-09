@@ -17,6 +17,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { ContractorProject, MonitoringScheduleItem, SubmittedFileItem } from "../../data/contractorData";
 import { SubmitStagePayload } from "../../api/contractorApi";
+import { fileToOptimizedDataUrl } from "../../utils/imageUploadHelper";
 
 interface EvidenceUploadModalProps {
   isOpen: boolean;
@@ -113,29 +114,27 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
     }
   };
 
-  const handleCustomPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCustomPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const filesArr = Array.from(e.target.files);
 
-    filesArr.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl) {
-          const newP: SubmittedFileItem = {
-            name: file.name,
-            url: dataUrl,
-            size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-            type: evidenceType.includes("Material") ? "Material Photo" : "Geo-tagged Photo",
-            lat: latitude || 18.5204,
-            lng: longitude || 73.8567,
-            timestamp: new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-          };
-          setPhotos((prev) => [...prev, newP]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of filesArr) {
+      try {
+        const dataUrl = await fileToOptimizedDataUrl(file);
+        const newP: SubmittedFileItem = {
+          name: file.name,
+          url: dataUrl,
+          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+          type: evidenceType.includes("Material") ? "Material Photo" : "Geo-tagged Photo",
+          lat: latitude || 18.5204,
+          lng: longitude || 73.8567,
+          timestamp: new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+        };
+        setPhotos((prev) => [...prev, newP]);
+      } catch (err) {
+        console.warn("Photo upload error:", err);
+      }
+    }
 
     if (e.target) {
       e.target.value = "";

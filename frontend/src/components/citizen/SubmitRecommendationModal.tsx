@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { CitizenIssue, IssuePhoto } from "../../data/citizenData";
 import { Modal, Button, Input, Select, Textarea, Alert } from "../ui";
+import { fileToOptimizedDataUrl } from "../../utils/imageUploadHelper";
 
 export interface SubmitRecommendationModalProps {
   isOpen: boolean;
@@ -159,20 +160,29 @@ export const SubmitRecommendationModal: React.FC<SubmitRecommendationModalProps>
     );
   };
 
-  const handlePhotoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+
+  const handlePhotoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      const newPhoto: IssuePhoto = {
-        id: `photo-${Date.now()}`,
-        url: previewUrl,
-        timestamp: new Date().toLocaleString(),
-        caption: photoCaptionInput.trim() || `Site evidence taken on ${new Date().toLocaleDateString()}`,
-        lat,
-        lng
-      };
-      setPhotos([...photos, newPhoto]);
-      setPhotoCaptionInput("");
+      setIsProcessingPhoto(true);
+      try {
+        const dataUrl = await fileToOptimizedDataUrl(file, 1280, 1280, 0.85);
+        const newPhoto: IssuePhoto = {
+          id: `photo-${Date.now()}`,
+          url: dataUrl,
+          timestamp: new Date().toLocaleString(),
+          caption: photoCaptionInput.trim() || `Site evidence photo taken on ${new Date().toLocaleDateString()}`,
+          lat,
+          lng
+        };
+        setPhotos((prev) => [...prev, newPhoto]);
+        setPhotoCaptionInput("");
+      } catch (err) {
+        console.error("Failed to process photo upload:", err);
+      } finally {
+        setIsProcessingPhoto(false);
+      }
     }
   };
 

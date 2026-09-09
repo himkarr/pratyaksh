@@ -16,6 +16,7 @@ import {
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { WorkItem } from "../../data/mpladsData";
+import { fileToOptimizedDataUrl } from "../../utils/imageUploadHelper";
 
 export interface ProgressUpdateSubmission {
   workId: string;
@@ -73,29 +74,27 @@ export const UpdateProgressModal: React.FC<UpdateProgressModalProps> = ({
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  const handleCustomPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCustomPhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const filesArr = Array.from(e.target.files);
 
-    filesArr.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl) {
-          setPhotos((prev) => [
-            ...prev,
-            {
-              name: file.name,
-              url: dataUrl,
-              lat: 18.5204 + (Math.random() - 0.5) * 0.01,
-              lng: 73.8567 + (Math.random() - 0.5) * 0.01,
-              timestamp: new Date().toLocaleString("en-IN")
-            }
-          ]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of filesArr) {
+      try {
+        const dataUrl = await fileToOptimizedDataUrl(file);
+        setPhotos((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            url: dataUrl,
+            lat: 18.5204 + (Math.random() - 0.5) * 0.01,
+            lng: 73.8567 + (Math.random() - 0.5) * 0.01,
+            timestamp: new Date().toLocaleString("en-IN")
+          }
+        ]);
+      } catch (err) {
+        console.warn("Photo upload error:", err);
+      }
+    }
 
     if (e.target) e.target.value = "";
   };

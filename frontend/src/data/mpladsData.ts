@@ -85,6 +85,8 @@ export interface WorkItem {
   justification?: string;
   districtNotes?: string;
   citizenRequestId?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export const TENURES: Tenure[] = [

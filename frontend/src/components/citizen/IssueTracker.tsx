@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { CitizenIssue } from "../../data/citizenData";
 import { Button, EmptyState } from "../ui";
+import { getCategoryFallbackImage } from "../../utils/imageUploadHelper";
 
 export interface IssueTrackerProps {
   issues: CitizenIssue[];
@@ -486,6 +487,9 @@ export const IssueTracker: React.FC<IssueTrackerProps> = ({
                                 src={photo.url}
                                 alt={photo.caption || "Evidence"}
                                 style={{ width: "100%", height: "95px", objectFit: "cover" }}
+                                onError={(e) => {
+                                  e.currentTarget.src = getCategoryFallbackImage(issue.category);
+                                }}
                               />
                               <div style={{ padding: "4px 6px", fontSize: "0.68rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {photo.caption || "Site Photo"}
