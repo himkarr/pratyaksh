@@ -66,9 +66,9 @@ export const contractorApi = {
   /**
    * Fetch authority-assigned works for the contractor (filtered by vendorId & district)
    */
-  async getContractorProjects(vendorId: string = "VEN-2024-MP-4120"): Promise<ContractorProject[]> {
+  async getContractorProjects(vendorId: string = "VEN-HR-GGM-01"): Promise<ContractorProject[]> {
     const targetVendor = REGISTERED_VENDORS.find(v => v.vendorId === vendorId) || REGISTERED_VENDORS[0];
-    const vendorDistrictLower = (targetVendor.district || "Jabalpur").toLowerCase().trim();
+    const vendorDistrictLower = (targetVendor.district || "Gurugram").toLowerCase().trim();
 
     // 1. Fetch raw live DB projects for contractor's district
     let rawDbProjects: any[] = [];
@@ -85,8 +85,7 @@ export const contractorApi = {
     let datasetToMap = districtFiltered;
     if (districtFiltered.length === 0) {
       if (vendorDistrictLower === "rohtak") datasetToMap = ROHTAK_WORKS as any[];
-      else if (vendorDistrictLower === "gurugram") datasetToMap = GURUGRAM_WORKS as any[];
-      else datasetToMap = JABALPUR_WORKS as any[];
+      else datasetToMap = GURUGRAM_WORKS as any[];
     }
 
     // List of empanelled vendors registered for this vendor's district
@@ -94,12 +93,20 @@ export const contractorApi = {
       (v.district || "").toLowerCase().trim() === vendorDistrictLower
     );
 
-    // Map DB rows to ContractorProject
+    // Map DB rows to ContractorProject with exact authority quota assignments
     const mappedProjects: ContractorProject[] = datasetToMap.map((p: any, idx: number) => {
-      // Find assigned vendor matching DB contractor/tender_reference_no, or distribute evenly
-      let assignedVendor = districtVendors.find(v => v.firmName === (p.tender_reference_no || p.contractor));
-      if (!assignedVendor) {
-        assignedVendor = districtVendors[idx % Math.max(1, districtVendors.length)] || targetVendor;
+      let assignedVendor;
+      if (vendorDistrictLower === "gurugram") {
+        const v1 = districtVendors.find(v => v.vendorId === "VEN-HR-GGM-01") || districtVendors[0];
+        const v2 = districtVendors.find(v => v.vendorId === "VEN-HR-GGM-02") || districtVendors[1] || v1;
+        assignedVendor = (idx % 10 < 7) ? v1 : v2;
+      } else if (vendorDistrictLower === "rohtak") {
+        const v1 = districtVendors.find(v => v.vendorId === "VEN-HR-RTK-01") || districtVendors[0];
+        const v2 = districtVendors.find(v => v.vendorId === "VEN-HR-RTK-02") || districtVendors[1] || v1;
+        assignedVendor = (idx % 10 < 6) ? v1 : v2;
+      } else {
+        assignedVendor = districtVendors.find(v => v.firmName === (p.tender_reference_no || p.contractor)) ||
+                         districtVendors[idx % Math.max(1, districtVendors.length)] || targetVendor;
       }
 
       const workId = p.project_id || p.id || `PROJ-${idx + 1}`;

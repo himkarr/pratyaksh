@@ -1,14 +1,11 @@
 import React from "react";
-import { Building2, Bell, ShieldCheck, UserCheck, RefreshCw, Database } from "lucide-react";
+import { Building2, Bell, Database } from "lucide-react";
 import { ContractorProfile, ContractorNotification } from "../../data/contractorData";
-import { REGISTERED_VENDORS } from "../../api/districtContractorSync";
 
 interface ContractorHeaderBannerProps {
   profile: ContractorProfile;
   notifications: ContractorNotification[];
   onOpenNotifications: () => void;
-  selectedVendorId: string;
-  onSelectVendorId: (vendorId: string) => void;
   assignedProjectCount: number;
 }
 
@@ -16,8 +13,6 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
   profile,
   notifications,
   onOpenNotifications,
-  selectedVendorId,
-  onSelectVendorId,
   assignedProjectCount
 }) => {
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -109,40 +104,7 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
             <span>Circle: <strong>{profile.circle}</strong></span>
             <span>GSTIN: <strong style={{ fontFamily: "monospace" }}>{profile.gstin}</strong></span>
             <span>Nodal Contact: <strong>{profile.nodalOfficer}</strong></span>
-          </div>
-
-          {/* Interactive Contractor Selector Dropdown inside Banner */}
-          <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", fontWeight: 800, color: "#38bdf8" }}>
-              <UserCheck size={16} />
-              <span>Switch Active Contractor Firm:</span>
-            </div>
-
-            <select
-              value={selectedVendorId}
-              onChange={(e) => onSelectVendorId(e.target.value)}
-              style={{
-                background: "#ffffff",
-                color: "#0f172a",
-                border: "1px solid #cbd5e1",
-                borderRadius: "6px",
-                padding: "6px 12px",
-                fontSize: "0.82rem",
-                fontWeight: 800,
-                cursor: "pointer",
-                minWidth: "320px",
-                outline: "none"
-              }}
-            >
-              {REGISTERED_VENDORS.map(v => (
-                <option key={v.vendorId} value={v.vendorId}>
-                  {v.firmName} ({v.vendorId} • {v.district})
-                </option>
-              ))}
-            </select>
-            <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontStyle: "italic" }}>
-              (Select contractor firm to view their specific authority-assigned works)
-            </span>
+            <span>Jurisdiction: <strong>{profile.district}, {profile.state}</strong></span>
           </div>
         </div>
       </div>

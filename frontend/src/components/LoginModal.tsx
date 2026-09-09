@@ -38,9 +38,8 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { id: "admin", name: "Admin (NIC MoSPI)", role: "ministry", email: "admin@nirikshak.gov.in" },
   { id: "mospi_officer", name: "MoSPI National Officer", role: "ministry", email: "national.officer@nirikshak.gov.in" },
   { id: "state_nodal_up", name: "State Nodal Officer (UP)", role: "state_nodal", email: "state.up@nirikshak.gov.in" },
-  { id: "district_jabalpur", name: "District Authority (Jabalpur)", role: "district", email: "district.jabalpur@nirikshak.gov.in" },
-  { id: "district_rohtak", name: "District Authority (Rohtak)", role: "district", email: "district.rohtak@nirikshak.gov.in" },
   { id: "district_gurugram", name: "District Authority (Gurugram)", role: "district", email: "district.gurugram@nirikshak.gov.in" },
+  { id: "district_rohtak", name: "District Authority (Rohtak)", role: "district", email: "district.rohtak@nirikshak.gov.in" },
   { id: "mp_varanasi", name: "Hon'ble MP (Varanasi)", role: "mp", email: "mp.varanasi@nirikshak.gov.in" },
   { id: "field_inspector", name: "Field Quality Inspector", role: "field_officer", email: "field.inspector@nirikshak.gov.in" },
   { id: "ai_analyst", name: "AI Forensic Analyst", role: "ministry", email: "ai.forensics@nirikshak.gov.in" },
@@ -59,7 +58,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
       if (match) return match.id;
     }
     const cur = DEMO_ACCOUNTS.find(d => d.role === user.role);
-    return cur ? cur.id : "district_jabalpur";
+    return cur ? cur.id : "district_gurugram";
   });
 
   const selectedDemo = DEMO_ACCOUNTS.find(d => d.id === selectedDemoId) || DEMO_ACCOUNTS[3];

@@ -30,8 +30,8 @@ export const ContractorDashboard: React.FC = () => {
   const { user } = useRole();
   const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
-  // Selected Vendor Identity state (defaults to Jabalpur Contractor M/s Apex Infra)
-  const [selectedVendorId, setSelectedVendorId] = useState<string>("VEN-2024-MP-4120");
+  // Selected Vendor Identity state (defaults to Gurugram Metropolitan Development Authority)
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("VEN-HR-GGM-01");
 
   // Contractor Data State
   const [profile, setProfile] = useState<ContractorProfile>(DEFAULT_CONTRACTOR_PROFILE);
@@ -148,19 +148,19 @@ export const ContractorDashboard: React.FC = () => {
         }}
         t={t}
         flagCount={projects.filter(p => p.riskIndicator === "Delay Risk" || p.riskIndicator === "Critical Delay").length}
+        selectedVendorId={selectedVendorId}
+        onSelectVendorId={handleVendorIdChange}
       />
 
       {/* 2. Main Portal Container */}
       <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
         <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         
-          {/* Contractor Header Banner with Active Vendor Switcher */}
+          {/* Contractor Header Banner displaying active vendor details */}
           <ContractorHeaderBanner
             profile={profile}
             notifications={notifications}
             onOpenNotifications={() => setIsNotificationsOpen(true)}
-            selectedVendorId={selectedVendorId}
-            onSelectVendorId={handleVendorIdChange}
             assignedProjectCount={projects.length}
           />
 

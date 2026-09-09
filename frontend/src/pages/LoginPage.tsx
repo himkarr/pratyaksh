@@ -46,7 +46,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         setPassword("Mplads@2026!");
         break;
       case "contractor":
-        setUsername("vendor.jabalpur@nirikshak.gov.in");
+        setUsername("vendor.gurugram@nirikshak.gov.in");
         setPassword("Mplads@2026!");
         break;
       case "field_officer":
@@ -54,7 +54,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         setPassword("Mplads@2026!");
         break;
       case "district":
-        setUsername("district.jabalpur@nirikshak.gov.in");
+        setUsername("district.gurugram@nirikshak.gov.in");
         setPassword("Mplads@2026!");
         break;
       case "state_nodal":
@@ -155,7 +155,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 }}
               >
                 <option value="ministry">Ministry of Statistics (MoSPI) / Central Admin</option>
-                <option value="district">District Authority (Jabalpur / Rohtak / Gurugram)</option>
+                <option value="district">District Authority (Gurugram / Rohtak)</option>
                 <option value="mp">Hon'ble Member of Parliament (Varanasi)</option>
                 <option value="citizen">Citizen Transparency Portal</option>
                 <option value="field_officer">Field Quality Inspection Officer</option>
