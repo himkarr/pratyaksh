@@ -23,6 +23,8 @@ import {
 } from '../api/adminDataService';
 
 import { districtContractorSync } from '../api/districtContractorSync';
+import { contractorApi } from '../api/contractorApi';
+import { ContractorProject, EvidenceSubmissionRecord } from '../data/contractorData';
 
 interface WorkDetailModalProps {
   work: WorkItem | null;
@@ -41,6 +43,8 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
   const [dbMilestones, setDbMilestones] = useState<MilestoneRecord[]>([]);
   const [ruleLogs, setRuleLogs] = useState<RuleLogRecord[]>([]);
   const [contractorAttachments, setContractorAttachments] = useState<WorkAttachment[]>([]);
+  const [stageSubmissions, setStageSubmissions] = useState<EvidenceSubmissionRecord[]>([]);
+  const [contractorProject, setContractorProject] = useState<ContractorProject | null>(null);
   const [loadingFinancials, setLoadingFinancials] = useState<boolean>(false);
 
   useEffect(() => {
@@ -52,16 +56,19 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
       adminDataService.getProjectPayments(work.id),
       adminDataService.getProjectMilestones(work.id),
       adminDataService.getProjectRuleLogs(work.id),
-      districtContractorSync.getStageSubmissionsForWork(work.id)
+      districtContractorSync.getStageSubmissionsForWork(work.id),
+      contractorApi.getContractorProject(work.id)
     ])
-      .then(([inst, pay, ms, rules, stageSubmissions]) => {
+      .then(([inst, pay, ms, rules, stageSubs, cProj]) => {
         setInstallments(inst);
         setPayments(pay);
         setDbMilestones(ms);
         setRuleLogs(rules);
+        setStageSubmissions(stageSubs);
+        setContractorProject(cProj);
 
         const loadedAtts: WorkAttachment[] = [];
-        stageSubmissions.forEach(sub => {
+        stageSubs.forEach(sub => {
           (sub.files || []).forEach((file, fIdx) => {
             const isImage = file.type?.includes("Photo") || file.type?.includes("image") || /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name) || (file.url && (file.url.startsWith("http") || file.url.startsWith("data:")));
             loadedAtts.push({
@@ -346,14 +353,17 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
           {activeModalTab === "overview" && (
             <>
               {/* Financial Breakdown Section */}
-              <FinancialSummary project={work} />
+              <FinancialSummary
+                project={work}
+                contractorProject={contractorProject}
+                stageSubmissions={stageSubmissions}
+              />
 
               {/* Statutory 365-Day Timeline Section */}
               <ProjectTimeline
                 project={work}
-                predictedCompletionDate={work.status === 'Completed' ? (work.targetCompletion || '2024-12-31') : '2025-04-18'}
-                elapsedDays={isDelayed ? 320 : 190}
-                delayRatio={isDelayed ? 1.35 : 0.95}
+                contractorProject={contractorProject}
+                stageSubmissions={stageSubmissions}
               />
 
               {/* AI Risk & Anomaly Signals Section */}
