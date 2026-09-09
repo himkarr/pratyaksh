@@ -7,7 +7,7 @@ interface StateCardProps {
   onSelectState: (stateName: string) => void;
 }
 
-export const StateCard: React.FC<StateCardProps> = ({ stateData, onSelectState }) => {
+const StateCardComponent: React.FC<StateCardProps> = ({ stateData, onSelectState }) => {
   const formatCurrency = (amt: number) => {
     if (amt >= 10000000) return `₹${(amt / 10000000).toFixed(2)} Cr`;
     if (amt >= 100000) return `₹${(amt / 100000).toFixed(2)} L`;
@@ -106,4 +106,6 @@ export const StateCard: React.FC<StateCardProps> = ({ stateData, onSelectState }
     </div>
   );
 };
+
+export const StateCard = React.memo(StateCardComponent);
 export default StateCard;

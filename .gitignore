@@ -1,14 +1,67 @@
+# Environment files
 .env
+.env.*
+*.env
 frontend/.env
-# The official source extract is used only for offline ingestion/training.
-mplads_master_project_dataset.csv
+backend/.env
+ai-ml/.env
+
+# Log files
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python & Virtual Environments
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
 .venv/
+venv/
+env/
+ENV/
+ai-ml/env/
+backend/venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node & Frontend
 node_modules/
 dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# AI/ML Datasets & Model Artifacts
+# The official source extract is used only for offline ingestion/training.
+mplads_master_project_dataset.csv
+*_predictions.csv
 ai-ml/data/raw/*
 !ai-ml/data/raw/.gitkeep
+ai-ml/data/processed/*.csv
+ai-ml/data/features/*.csv
 ai-ml/models/*.joblib
 ai-ml/artifacts/
-.pytest_cache/
+
+# OS & Editor files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
