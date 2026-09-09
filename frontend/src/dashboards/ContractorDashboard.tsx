@@ -30,8 +30,26 @@ export const ContractorDashboard: React.FC = () => {
   const { user } = useRole();
   const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
-  // Selected Vendor Identity state (defaults to Gurugram Metropolitan Development Authority)
-  const [selectedVendorId, setSelectedVendorId] = useState<string>("VEN-HR-GGM-01");
+  // Helper to extract active vendor ID from authenticated user
+  const getActiveVendorId = (): string => {
+    if (user && user.role === "contractor" && user.id) {
+      if (user.id.startsWith("USR-")) {
+        return user.id.replace("USR-", "");
+      }
+      return user.id;
+    }
+    return "VEN-HR-GGM-01";
+  };
+
+  // Selected Vendor Identity state
+  const [selectedVendorId, setSelectedVendorId] = useState<string>(getActiveVendorId);
+
+  // Sync selected vendor ID whenever logged-in contractor user changes
+  useEffect(() => {
+    const currentVendorId = getActiveVendorId();
+    setSelectedVendorId(currentVendorId);
+    setSelectedProject(null);
+  }, [user.id, user.role]);
 
   // Contractor Data State
   const [profile, setProfile] = useState<ContractorProfile>(DEFAULT_CONTRACTOR_PROFILE);
