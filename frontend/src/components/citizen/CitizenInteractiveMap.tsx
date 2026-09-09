@@ -81,6 +81,7 @@ const INDIA_GEO_COORDINATES: Record<string, Coordinate> = {
 
   // Haryana
   "rohtak": { lat: 28.8955, lng: 76.6066 },
+  "jind": { lat: 29.3156, lng: 76.3148 },
   "gurugram": { lat: 28.4595, lng: 77.0266 },
   "gurgaon": { lat: 28.4595, lng: 77.0266 },
   "kurukshetra": { lat: 29.9695, lng: 76.8783 },
@@ -203,10 +204,11 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
   // Aliased report problem action
   const reportAction = onReportProblem || onOpenReportModal;
 
-  const normConst = (currentConstituency || "pune").trim().toLowerCase();
+  const normConst = (currentConstituency || "rohtak").trim().toLowerCase();
   const baseCenterCoord = useMemo(() => {
     return INDIA_GEO_COORDINATES[normConst] || 
       Object.entries(INDIA_GEO_COORDINATES).find(([k]) => normConst.includes(k))?.[1] || 
+      INDIA_GEO_COORDINATES["rohtak"] ||
       INDIA_GEO_COORDINATES["pune"];
   }, [normConst]);
 
@@ -263,21 +265,34 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ width: 800, height: 520 });
+  const [containerSize, setContainerSize] = useState({ width: 800, height: 560 });
 
-  // Update container size on resize
+  // Update container size on mount and resize with ResizeObserver
   useEffect(() => {
     const updateSize = () => {
       if (mapContainerRef.current) {
-        setContainerSize({
-          width: mapContainerRef.current.clientWidth || 800,
-          height: mapContainerRef.current.clientHeight || 520,
-        });
+        const w = mapContainerRef.current.clientWidth;
+        const h = mapContainerRef.current.clientHeight;
+        if (w > 0 && h > 0) {
+          setContainerSize({ width: w, height: h });
+        }
       }
     };
     updateSize();
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && mapContainerRef.current) {
+      ro = new ResizeObserver(() => updateSize());
+      ro.observe(mapContainerRef.current);
+    }
+
+    const timer = setTimeout(updateSize, 100);
     window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    return () => {
+      clearTimeout(timer);
+      if (ro) ro.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
   }, [isFullscreen]);
 
   // Sync center when constituency changes
@@ -343,18 +358,14 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
 
   // Robust multi-provider tile URL generator
   const getTileUrl = (provider: BasemapStyle, z: number, x: number, y: number) => {
-    const subdomains = ["a", "b", "c", "d"];
-    const s = subdomains[Math.abs(x + y) % subdomains.length];
     switch (provider) {
       case "satellite":
         return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
       case "street":
-        return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
       case "light":
-        return `https://${s}.basemaps.cartocdn.com/light_all/${z}/${x}/${y}.png`;
       case "voyager":
       default:
-        return `https://${s}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`;
+        return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
     }
   };
 

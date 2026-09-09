@@ -478,10 +478,10 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
       )}
 
       {/* Map View Mode */}
-      {viewMode === "map" && filteredWorks.length > 0 && (
+      {viewMode === "map" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
           <CitizenInteractiveMap
-            works={filteredWorks}
+            works={filteredWorks.length > 0 ? filteredWorks : works}
             currentConstituency={currentConstituency}
             onSelectWork={onSelectWork}
             onReportProblem={onReportProblem}

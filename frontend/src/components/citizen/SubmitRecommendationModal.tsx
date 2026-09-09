@@ -68,8 +68,8 @@ export const SubmitRecommendationModal: React.FC<SubmitRecommendationModalProps>
   isOpen,
   onClose,
   onSubmitted,
-  currentConstituency = "Pune",
-  currentState = "Maharashtra"
+  currentConstituency = "Rohtak",
+  currentState = "Haryana"
 }) => {
   // Form State
   const [title, setTitle] = useState("");

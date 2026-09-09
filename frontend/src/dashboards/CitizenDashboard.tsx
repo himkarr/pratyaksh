@@ -40,9 +40,9 @@ export const CitizenDashboard: React.FC = () => {
   // 4 Core Citizen Portal Actions: "home" | "find_works" | "my_reports" | "notifications"
   const [activeTab, setActiveTab] = useState<"home" | "find_works" | "my_reports" | "notifications">("home");
 
-  // State Management - Default to logged in user's constituency & state
-  const defaultConstituency = user?.constituency || user?.district || "Pune";
-  const defaultState = user?.state || "Maharashtra";
+  // State Management - Default to logged in user's constituency & state (Rohtak, Haryana)
+  const defaultConstituency = user?.constituency || user?.district || "Rohtak";
+  const defaultState = user?.state || "Haryana";
 
   const [currentConstituency, setCurrentConstituency] = useState<string>(defaultConstituency);
   const [currentState, setCurrentState] = useState<string>(defaultState);
@@ -514,14 +514,8 @@ export const CitizenDashboard: React.FC = () => {
             </div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "20px", padding: "4px 10px", fontSize: "0.72rem", color: "#059669", fontWeight: 600 }}>
               <CheckCircle2 size={12} color="#059669" />
-              <span>Verified Profile: {user?.name || "Citizen"}</span>
+              <span>Citizen: <strong>{user?.name || "Rajesh Kumar Sharma"}</strong></span>
             </div>
-            {isLiveConnected && (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "rgba(37, 99, 235, 0.1)", border: "1px solid rgba(37, 99, 235, 0.25)", borderRadius: "20px", padding: "4px 10px", fontSize: "0.72rem", color: "#2563eb", fontWeight: 600 }}>
-                <Database size={11} />
-                <span>Supabase Live Sync Active</span>
-              </div>
-            )}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -584,16 +578,16 @@ export const CitizenDashboard: React.FC = () => {
         {activeTab === "home" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             
-            {/* Modern Civic Action & Overview Banner */}
+            {/* Modern Civic Action & Overview Banner (Light Modern Styled) */}
             <div 
               className="civic-card"
               style={{ 
-                background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)", 
-                color: "#ffffff", 
+                background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)", 
+                color: "var(--text-main, #0f172a)", 
                 padding: "24px 28px", 
                 borderRadius: "14px", 
-                border: "1px solid rgba(255, 255, 255, 0.12)",
-                boxShadow: "0 4px 20px rgba(15, 23, 42, 0.12)",
+                border: "1px solid var(--border-main, #cbd5e1)",
+                boxShadow: "0 4px 20px rgba(15, 23, 42, 0.05)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "18px"
@@ -601,28 +595,28 @@ export const CitizenDashboard: React.FC = () => {
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(255, 255, 255, 0.12)", borderRadius: "20px", padding: "3px 10px", fontSize: "0.72rem", color: "#93c5fd", fontWeight: 700, marginBottom: "8px" }}>
-                    <Landmark size={12} />
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(10, 37, 64, 0.06)", border: "1px solid rgba(10, 37, 64, 0.12)", borderRadius: "20px", padding: "3px 10px", fontSize: "0.72rem", color: "var(--gov-primary, #0a2540)", fontWeight: 700, marginBottom: "8px" }}>
+                    <Landmark size={12} color="var(--gov-accent)" />
                     <span>MPLADS CITIZEN PARTICIPATION & TRANSPARENCY</span>
                   </div>
-                  <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#ffffff", margin: "0 0 4px 0", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
-                    Constituency Civic Action Dashboard
+                  <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 4px 0", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+                    {currentConstituency} Civic Action Hub
                   </h2>
-                  <p style={{ fontSize: "0.84rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: 1.45, margin: 0 }}>
-                    Active oversight and community recommendations for <strong style={{ color: "#fde047" }}>{currentConstituency}</strong> constituency. Submit ground photos with AI OCR geotagging and track project progress in real time.
+                  <p style={{ fontSize: "0.84rem", color: "var(--text-muted, #475569)", maxWidth: "680px", lineHeight: 1.45, margin: 0 }}>
+                    Welcome <strong style={{ color: "var(--gov-primary, #0a2540)" }}>{user?.name || "Rajesh Kumar Sharma"}</strong>. Track sanctioned development works in <strong style={{ color: "#b45309" }}>{currentConstituency}</strong>, submit ground recommendations with AI OCR geotagging, or report local issues directly to authorities.
                   </p>
                 </div>
               </div>
 
               {/* 3 Interactive Quick Civic Action Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
                 
                 {/* Action 1: Propose to MP */}
                 <div 
                   onClick={handleOpenRecommend}
                   style={{
-                    background: "rgba(255, 255, 255, 0.08)",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    background: "linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)",
+                    border: "1px solid #bbf7d0",
                     borderRadius: "10px",
                     padding: "16px",
                     cursor: "pointer",
@@ -630,23 +624,30 @@ export const CitizenDashboard: React.FC = () => {
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    gap: "12px"
+                    gap: "12px",
+                    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.08)"
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.14)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(16, 185, 129, 0.16)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(16, 185, 129, 0.08)";
+                  }}
                 >
                   <div>
-                    <div style={{ display: "inline-flex", background: "rgba(16, 185, 129, 0.2)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
-                      <Sparkles size={18} color="#34d399" />
+                    <div style={{ display: "inline-flex", background: "rgba(16, 185, 129, 0.15)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
+                      <Sparkles size={18} color="#059669" />
                     </div>
-                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#ffffff", margin: "0 0 4px 0" }}>
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gov-primary, #0a2540)", margin: "0 0 4px 0" }}>
                       Propose Project to MP
                     </h4>
-                    <p style={{ fontSize: "0.78rem", color: "#cbd5e1", margin: 0, lineHeight: 1.4 }}>
+                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)", margin: 0, lineHeight: 1.4 }}>
                       Recommend new roads, water kiosks, solar lights or public facilities with photo evidence.
                     </p>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#34d399", fontWeight: 700 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#059669", fontWeight: 700 }}>
                     <span>Submit Proposal</span>
                     <ArrowRight size={13} />
                   </div>
@@ -656,8 +657,8 @@ export const CitizenDashboard: React.FC = () => {
                 <div 
                   onClick={handleOpenGeneralReport}
                   style={{
-                    background: "rgba(255, 255, 255, 0.08)",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    background: "linear-gradient(180deg, #ffffff 0%, #fff7ed 100%)",
+                    border: "1px solid #fed7aa",
                     borderRadius: "10px",
                     padding: "16px",
                     cursor: "pointer",
@@ -665,23 +666,30 @@ export const CitizenDashboard: React.FC = () => {
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    gap: "12px"
+                    gap: "12px",
+                    boxShadow: "0 2px 8px rgba(234, 88, 12, 0.08)"
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.14)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(234, 88, 12, 0.16)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(234, 88, 12, 0.08)";
+                  }}
                 >
                   <div>
-                    <div style={{ display: "inline-flex", background: "rgba(234, 88, 12, 0.2)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
-                      <AlertTriangle size={18} color="#fb923c" />
+                    <div style={{ display: "inline-flex", background: "rgba(234, 88, 12, 0.15)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
+                      <AlertTriangle size={18} color="#ea580c" />
                     </div>
-                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#ffffff", margin: "0 0 4px 0" }}>
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gov-primary, #0a2540)", margin: "0 0 4px 0" }}>
                       Report On-Ground Issue
                     </h4>
-                    <p style={{ fontSize: "0.78rem", color: "#cbd5e1", margin: 0, lineHeight: 1.4 }}>
+                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)", margin: 0, lineHeight: 1.4 }}>
                       Flag delays, construction defects, or damaged works for physical verification by District DM.
                     </p>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#fb923c", fontWeight: 700 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#ea580c", fontWeight: 700 }}>
                     <span>File Incident Report</span>
                     <ArrowRight size={13} />
                   </div>
@@ -691,8 +699,8 @@ export const CitizenDashboard: React.FC = () => {
                 <div 
                   onClick={() => setActiveTab("find_works")}
                   style={{
-                    background: "rgba(255, 255, 255, 0.08)",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    background: "linear-gradient(180deg, #ffffff 0%, #eff6ff 100%)",
+                    border: "1px solid #bfdbfe",
                     borderRadius: "10px",
                     padding: "16px",
                     cursor: "pointer",
@@ -700,23 +708,30 @@ export const CitizenDashboard: React.FC = () => {
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    gap: "12px"
+                    gap: "12px",
+                    boxShadow: "0 2px 8px rgba(37, 99, 235, 0.08)"
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.14)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 6px 16px rgba(37, 99, 235, 0.16)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(37, 99, 235, 0.08)";
+                  }}
                 >
                   <div>
-                    <div style={{ display: "inline-flex", background: "rgba(59, 130, 246, 0.2)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
-                      <Search size={18} color="#60a5fa" />
+                    <div style={{ display: "inline-flex", background: "rgba(37, 99, 235, 0.15)", borderRadius: "8px", padding: "6px", marginBottom: "8px" }}>
+                      <Search size={18} color="#2563eb" />
                     </div>
-                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#ffffff", margin: "0 0 4px 0" }}>
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gov-primary, #0a2540)", margin: "0 0 4px 0" }}>
                       Find Development Works
                     </h4>
-                    <p style={{ fontSize: "0.78rem", color: "#cbd5e1", margin: 0, lineHeight: 1.4 }}>
-                      Explore all sanctioned projects in {currentConstituency}, audit photos, budgets and ratings.
+                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)", margin: 0, lineHeight: 1.4 }}>
+                      Explore all sanctioned projects in {currentConstituency}, interactive map, budgets and ratings.
                     </p>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#60a5fa", fontWeight: 700 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#2563eb", fontWeight: 700 }}>
                     <span>Browse {totalWorksCount} Projects</span>
                     <ArrowRight size={13} />
                   </div>

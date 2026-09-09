@@ -15,7 +15,7 @@ export const CitizenNavbar: React.FC<CitizenNavbarProps> = ({
   activeTab,
   onSelectTab,
   unreadCount = 2,
-  currentConstituency = "Pune"
+  currentConstituency = "Rohtak"
 }) => {
   const { lang } = usePreferences();
   const { user, logout } = useRole();

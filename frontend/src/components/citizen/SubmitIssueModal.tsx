@@ -32,7 +32,7 @@ export const SubmitIssueModal: React.FC<SubmitIssueModalProps> = ({
   onSubmitted,
   initialWork = null,
   worksList = INITIAL_WORKS,
-  currentConstituency = "Pune"
+  currentConstituency = "Rohtak"
 }) => {
   const [selectedWorkId, setSelectedWorkId] = useState<string>(initialWork?.id || "unlisted");
   const [problemType, setProblemType] = useState<string>("Work stopped");
