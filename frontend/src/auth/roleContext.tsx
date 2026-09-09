@@ -42,12 +42,44 @@ export interface User {
 
 const ALL_ROLES_DEFAULT_USERS: User[] = [
   {
-    id: "usr-citizen-01",
-    email: "citizen@nirikshak.gov.in",
-    name: "Citizen Transparency Portal",
+    id: "usr-citizen-rohtak-01",
+    email: "rajesh.sharma@nirikshak.gov.in",
+    name: "Rajesh Kumar Sharma",
     role: "citizen",
-    state: "Madhya Pradesh",
-    district: "Jabalpur"
+    state: "Haryana",
+    district: "Rohtak",
+    constituency: "Rohtak",
+    constituency_code: "HR-ROH-01"
+  },
+  {
+    id: "usr-citizen-rohtak-02",
+    email: "vikas.hooda@nirikshak.gov.in",
+    name: "Vikas Hooda",
+    role: "citizen",
+    state: "Haryana",
+    district: "Rohtak",
+    constituency: "Rohtak",
+    constituency_code: "HR-ROH-01"
+  },
+  {
+    id: "usr-citizen-jind-01",
+    email: "pooja.rani@nirikshak.gov.in",
+    name: "Pooja Rani",
+    role: "citizen",
+    state: "Haryana",
+    district: "Jind",
+    constituency: "Jind",
+    constituency_code: "HR-JIN-01"
+  },
+  {
+    id: "usr-citizen-jind-02",
+    email: "amit.dahiya@nirikshak.gov.in",
+    name: "Amit Dahiya",
+    role: "citizen",
+    state: "Haryana",
+    district: "Jind",
+    constituency: "Jind",
+    constituency_code: "HR-JIN-01"
   },
   {
     id: "usr-mp-01",
