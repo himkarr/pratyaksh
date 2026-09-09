@@ -1,23 +1,15 @@
 /**
  * ============================================================================
  * NATIONAL MPLADS DECISION SUPPORT SYSTEM (SIH26102)
- * COMPONENT: LoginModal (Official Portal Login & Demo Accounts Switcher)
+ * COMPONENT: LoginModal (Official Portal Login & Cascading Account Selector)
  * ============================================================================
- * 
- * DOMAIN CONTEXT:
- * Re-architected to match official e-SAKSHI & Nirikshak portal aesthetic:
- * - Stately serif typography for official portal login header
- * - Quick Demo Accounts grid (Admin, MoSPI National, UP Nodal, Jabalpur DA, MP, Field, AI, Citizen)
- * - Emerald-teal button with crisp border & shadow
- * - Full backward-compatible role switching and API login
  */
 
 import React, { useState, useEffect } from 'react';
 import { 
-  X, Lock, Mail, Eye, EyeOff, ShieldCheck, CheckCircle2, 
-  ChevronUp, ChevronDown 
+  X, Lock, Mail, Eye, EyeOff, ShieldCheck, CheckCircle2, UserCheck
 } from 'lucide-react';
-import { useRole, Role } from '../auth/roleContext';
+import { useRole, Role, ALL_USERS, User } from '../auth/roleContext';
 import { useBodyScrollLock } from '../utils/scrollLock';
 
 interface LoginModalProps {
@@ -26,83 +18,70 @@ interface LoginModalProps {
   initialRole?: Role;
 }
 
-interface DemoAccount {
-  id: string;
-  name: string;
-  role: Role;
-  email: string;
-  subtext?: string;
-}
-
-const DEMO_ACCOUNTS: DemoAccount[] = [
-  { id: "admin", name: "Admin (NIC MoSPI)", role: "ministry", email: "admin@nirikshak.gov.in" },
-  { id: "mospi_officer", name: "MoSPI National Officer", role: "ministry", email: "national.officer@nirikshak.gov.in" },
-  { id: "state_nodal_up", name: "State Nodal Officer (UP)", role: "state_nodal", email: "state.up@nirikshak.gov.in" },
-  { id: "district_gurugram", name: "District Authority (Gurugram)", role: "district", email: "district.gurugram@nirikshak.gov.in" },
-  { id: "district_rohtak", name: "District Authority (Rohtak)", role: "district", email: "district.rohtak@nirikshak.gov.in" },
-  { id: "mp_varanasi", name: "Hon'ble MP (Varanasi)", role: "mp", email: "mp.varanasi@nirikshak.gov.in" },
-  { id: "field_inspector", name: "Field Quality Inspector", role: "field_officer", email: "field.inspector@nirikshak.gov.in" },
-  { id: "ai_analyst", name: "AI Forensic Analyst", role: "ministry", email: "ai.forensics@nirikshak.gov.in" },
-  { id: "citizen_portal", name: "Citizen Transparency Portal", role: "citizen", email: "citizen@nirikshak.gov.in" }
-];
-
 export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
   useBodyScrollLock(isOpen);
 
   if (!isOpen) return null;
 
   const { user, login, setRole } = useRole();
-  const [selectedDemoId, setSelectedDemoId] = useState<string>(() => {
-    if (initialRole) {
-      const match = DEMO_ACCOUNTS.find(d => d.role === initialRole);
-      if (match) return match.id;
-    }
-    const cur = DEMO_ACCOUNTS.find(d => d.role === user.role);
-    return cur ? cur.id : "district_gurugram";
-  });
-
-  const selectedDemo = DEMO_ACCOUNTS.find(d => d.id === selectedDemoId) || DEMO_ACCOUNTS[3];
-  const [email, setEmail] = useState(selectedDemo.email);
+  const [selectedRole, setSelectedRole] = useState<Role>(initialRole || user.role || "ministry");
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("Mplads@2026!");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [isDemoAccordionOpen, setIsDemoAccordionOpen] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const availableProfiles = ALL_USERS.filter((u) => u.role === selectedRole);
+
   useEffect(() => {
     if (isOpen) {
-      const targetRole = initialRole || user.role;
-      const match = DEMO_ACCOUNTS.find(d => d.role === targetRole);
-      if (match) {
-        setSelectedDemoId(match.id);
-        setEmail(match.email);
-        setPassword("Mplads@2026!");
+      const targetRole = initialRole || user.role || "ministry";
+      setSelectedRole(targetRole);
+      const profiles = ALL_USERS.filter((u) => u.role === targetRole);
+      if (profiles.length > 0) {
+        setSelectedProfileId(profiles[0].id);
+        setEmail(profiles[0].email);
       }
     }
   }, [isOpen, initialRole, user.role]);
 
-  const handleSelectDemo = (demo: DemoAccount) => {
-    setSelectedDemoId(demo.id);
-    setEmail(demo.email);
-    setPassword("Mplads@2026!");
+  const handleRoleChange = (role: Role) => {
+    setSelectedRole(role);
+    const profiles = ALL_USERS.filter((u) => u.role === role);
+    if (profiles.length > 0) {
+      setSelectedProfileId(profiles[0].id);
+      setEmail(profiles[0].email);
+    }
+  };
+
+  const handleProfileChange = (profileId: string) => {
+    setSelectedProfileId(profileId);
+    const matched = availableProfiles.find((p) => p.id === profileId);
+    if (matched) {
+      setEmail(matched.email);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    const targetUser = availableProfiles.find((p) => p.id === selectedProfileId) || availableProfiles[0];
     try {
-      await login(email, password);
+      await login(email, password, targetUser);
     } catch {
       // offline fallback
     }
-    setRole(selectedDemo.role);
+    setRole(selectedRole, targetUser);
     setIsSuccess(true);
     setIsLoading(false);
     setTimeout(() => {
       onClose();
     }, 400);
   };
+
+  const selectedProfile = availableProfiles.find((p) => p.id === selectedProfileId) || availableProfiles[0];
 
   return (
     <div 
@@ -186,11 +165,11 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
               Authentication Verified
             </h3>
             <p style={{ fontSize: '0.86rem', color: '#475569', margin: 0 }}>
-              Signing in as <strong>{selectedDemo.name}</strong>...
+              Signing in as <strong>{selectedProfile?.name || "Official User"}</strong>...
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Header / Ministry Branding */}
             <div>
               <div style={{
@@ -204,7 +183,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
               </div>
               <h2 style={{
                 fontFamily: "'Merriweather', 'Playfair Display', Georgia, serif",
-                fontSize: '1.75rem',
+                fontSize: '1.65rem',
                 fontWeight: 800,
                 color: '#0f172a',
                 margin: '4px 0 4px 0',
@@ -214,17 +193,86 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                 Official Portal Login
               </h2>
               <p style={{
-                fontSize: '0.84rem',
+                fontSize: '0.82rem',
                 color: '#64748b',
                 margin: 0
               }}>
-                Securely sign in to the MPLADS Risk Intelligence System.
+                Select your stakeholder role and account profile to sign in.
               </p>
+            </div>
+
+            {/* Stakeholder Role Dropdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
+                Select Stakeholder Role
+              </label>
+              <select
+                value={selectedRole}
+                onChange={(e) => handleRoleChange(e.target.value as Role)}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #0b69a3',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  color: '#0f172a',
+                  background: '#ffffff',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="mp">Member of Parliament</option>
+                <option value="citizen">Citizen Transparency Portal</option>
+                <option value="district">District Authority (DM)</option>
+                <option value="state_nodal">State Nodal Department</option>
+                <option value="contractor">Contractor / Implementing Agency</option>
+                <option value="field_officer">Field Quality Inspection Officer</option>
+                <option value="ministry">Ministry of Statistics (MoSPI)</option>
+              </select>
+            </div>
+
+            {/* Cascading Profile / Account Selector Dropdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <UserCheck size={14} color="#0284c7" />
+                Select Official Profile / Account
+              </label>
+              <select
+                value={selectedProfileId}
+                onChange={(e) => handleProfileChange(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #0284c7',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  color: '#0f172a',
+                  background: '#f8fafc',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {availableProfiles.map((p) => {
+                  let label = p.name;
+                  if (p.role === 'mp') {
+                    label = `Member of Parliament - ${p.constituency} (${p.state})`;
+                  } else if (p.role === 'citizen') {
+                    label = `${p.name} (${p.constituency}, ${p.state})`;
+                  }
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
             {/* Email Field */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '0.80rem', fontWeight: 700, color: '#1e293b' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
                 Official Email / User ID
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -237,10 +285,10 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                   required
                   style={{
                     width: '100%',
-                    padding: '10px 14px 10px 36px',
-                    borderRadius: '10px',
+                    padding: '9px 12px 9px 36px',
+                    borderRadius: '8px',
                     border: '1.5px solid #cbd5e1',
-                    fontSize: '0.86rem',
+                    fontSize: '0.85rem',
                     color: '#0f172a',
                     outline: 'none',
                     background: '#ffffff',
@@ -253,7 +301,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
 
             {/* Password Field */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '0.80rem', fontWeight: 700, color: '#1e293b' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
                 Password
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -266,10 +314,10 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                   required
                   style={{
                     width: '100%',
-                    padding: '10px 36px 10px 36px',
-                    borderRadius: '10px',
+                    padding: '9px 36px 9px 36px',
+                    borderRadius: '8px',
                     border: '1.5px solid #cbd5e1',
-                    fontSize: '0.86rem',
+                    fontSize: '0.85rem',
                     color: '#0f172a',
                     outline: 'none',
                     background: '#ffffff',
@@ -299,7 +347,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
             </div>
 
             {/* Remember Me & Forgot Password */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.80rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer', color: '#334155' }}>
                 <input
                   type="checkbox"
@@ -311,14 +359,14 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
               </label>
               <a
                 href="#forgot"
-                onClick={(e) => { e.preventDefault(); alert("For demo access, choose any demo account below."); }}
+                onClick={(e) => { e.preventDefault(); alert("Please contact MoSPI Nodal Helpdesk to reset credentials."); }}
                 style={{ color: '#0d9488', fontWeight: 700, textDecoration: 'none' }}
               >
                 Forgot password?
               </a>
             </div>
 
-            {/* Secure Sign In Button (Screenshot 1 Style) */}
+            {/* Secure Sign In Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -327,8 +375,8 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                 color: '#0f172a',
                 border: '2px solid #0f172a',
                 borderRadius: '9999px',
-                padding: '11px 20px',
-                fontSize: '0.94rem',
+                padding: '10px 20px',
+                fontSize: '0.92rem',
                 fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
@@ -339,87 +387,21 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                 transition: 'transform 0.1s ease, box-shadow 0.1s ease',
                 marginTop: '2px'
               }}
-              onMouseDown={(e) => {
-                e.currentTarget.style.transform = 'translate(1px, 2px)';
-                e.currentTarget.style.boxShadow = '1px 1px 0px #0f172a';
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '2px 3px 0px #0f172a';
-              }}
             >
               <ShieldCheck size={18} />
               <span>{isLoading ? "Authenticating..." : "Secure Sign In"}</span>
             </button>
-
-            {/* Demo Accounts (Quick Login) Section */}
-            <div style={{ marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setIsDemoAccordionOpen(!isDemoAccordionOpen)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  color: '#475569',
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-              >
-                {isDemoAccordionOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                <span>Demo Accounts (Quick Login)</span>
-              </button>
-
-              {isDemoAccordionOpen && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                  {DEMO_ACCOUNTS.map((demo) => {
-                    const isSelected = selectedDemoId === demo.id;
-                    return (
-                      <button
-                        key={demo.id}
-                        type="button"
-                        onClick={() => handleSelectDemo(demo)}
-                        style={{
-                          background: isSelected ? '#2ca58d' : '#f8f7f2',
-                          color: isSelected ? '#0f172a' : '#1e293b',
-                          border: isSelected ? '1.5px solid #0f172a' : '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          padding: '8px 10px',
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          boxShadow: isSelected ? '1px 2px 0px #0f172a' : 'none',
-                          transition: 'all 0.12s ease',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}
-                        title={demo.name}
-                      >
-                        {demo.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
             {/* Security Notice Box */}
             <div style={{
               background: '#fcfbf7',
               border: '1px solid #e2e8f0',
               borderRadius: '8px',
-              padding: '10px 14px',
+              padding: '8px 12px',
               marginTop: '2px'
             }}>
               <div style={{
-                fontSize: '0.66rem',
+                fontSize: '0.64rem',
                 fontWeight: 800,
                 color: '#1e3a5f',
                 letterSpacing: '0.5px',
@@ -428,7 +410,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                 Security Notice
               </div>
               <p style={{
-                fontSize: '0.72rem',
+                fontSize: '0.70rem',
                 color: '#64748b',
                 margin: '2px 0 0 0',
                 lineHeight: 1.35

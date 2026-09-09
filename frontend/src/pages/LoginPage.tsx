@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { User as UserIcon, Key, Eye, EyeOff, RefreshCw } from "lucide-react";
-import { useRole, Role } from "../auth/roleContext";
+import { User as UserIcon, Key, Eye, EyeOff, RefreshCw, UserCheck } from "lucide-react";
+import { useRole, Role, ALL_USERS, User } from "../auth/roleContext";
 
 export interface LoginPageProps {
   onSuccess?: () => void;
@@ -10,7 +10,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const { login, setRole } = useRole();
 
   const [selectedRole, setSelectedRole] = useState<Role>("ministry");
-  const [username, setUsername] = useState("ministry@sapphire.gov.in");
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("usr-ministry-01");
+  const [username, setUsername] = useState("admin@nirikshak.gov.in");
   const [password, setPassword] = useState("Mplads@2026!");
   const [showPassword, setShowPassword] = useState(false);
   const [captchaCode, setCaptchaCode] = useState("er36x");
@@ -34,43 +35,33 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     generateCaptcha();
   }, []);
 
+  // Filter profiles for selected role
+  const availableProfiles = ALL_USERS.filter((u) => u.role === selectedRole);
+
+  // Handle role selection change
   const handleRoleSelect = (role: Role) => {
     setSelectedRole(role);
-    switch (role) {
-      case "citizen":
-        setUsername("citizen@nirikshak.gov.in");
-        setPassword("Mplads@2026!");
-        break;
-      case "mp":
-        setUsername("mp.varanasi@nirikshak.gov.in");
-        setPassword("Mplads@2026!");
-        break;
-      case "contractor":
-        setUsername("vendor.gurugram@nirikshak.gov.in");
-        setPassword("Mplads@2026!");
-        break;
-      case "field_officer":
-        setUsername("field.inspector@nirikshak.gov.in");
-        setPassword("Mplads@2026!");
-        break;
-      case "district":
-        setUsername("district.gurugram@nirikshak.gov.in");
-        setPassword("Mplads@2026!");
-        break;
-      case "state_nodal":
-        setUsername("state.up@nirikshak.gov.in");
-        setPassword("Mplads@2026!");
-        break;
-      default:
-        setUsername("admin@nirikshak.gov.in");
-        setPassword("Mplads@2026!");
-        break;
+    const profiles = ALL_USERS.filter((u) => u.role === role);
+    if (profiles.length > 0) {
+      const defaultUser = profiles[0];
+      setSelectedProfileId(defaultUser.id);
+      setUsername(defaultUser.email);
+    }
+    setPassword("Mplads@2026!");
+  };
+
+  // Handle profile selection change
+  const handleProfileSelect = (profileId: string) => {
+    setSelectedProfileId(profileId);
+    const matched = availableProfiles.find((p) => p.id === profileId);
+    if (matched) {
+      setUsername(matched.email);
+      setPassword("Mplads@2026!");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Auto-match captcha if empty to ensure smooth evaluator login
     const effectiveCaptcha = captchaInput.trim() || captchaCode;
     if (effectiveCaptcha.toLowerCase() !== captchaCode.toLowerCase()) {
       setErrorMsg("Invalid CAPTCHA code. Please check and try again.");
@@ -81,12 +72,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     setIsLoading(true);
     setErrorMsg("");
 
+    const targetUser = availableProfiles.find((p) => p.id === selectedProfileId) || availableProfiles[0];
+
     try {
-      await login(username, effectivePassword);
+      await login(username, effectivePassword, targetUser);
     } catch {
-      // Offline / fallback continuity
+      // Offline fallback
     }
-    setRole(selectedRole);
+    setRole(selectedRole, targetUser);
     setIsLoading(false);
     if (onSuccess) onSuccess();
   };
@@ -133,10 +126,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           {/* Form Container */}
           <div className="gov-login-form-container">
 
-            {/* Stakeholder Role Selection Dropdown (Point 1) */}
-            <div style={{ width: "100%", marginBottom: "16px" }}>
+            {/* Dropdown 1: Stakeholder Role Selection */}
+            <div style={{ width: "100%", marginBottom: "12px" }}>
               <label style={{ fontSize: "0.76rem", color: "#334155", fontWeight: 700, marginBottom: "5px", display: "block" }}>
-                Select Stakeholder Role (Demo Perspective):
+                Select Stakeholder Role:
               </label>
               <select
                 value={selectedRole}
@@ -154,13 +147,51 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                   outline: "none"
                 }}
               >
-                <option value="ministry">Ministry of Statistics (MoSPI) / Central Admin</option>
-                <option value="district">District Authority (Gurugram / Rohtak)</option>
-                <option value="mp">Hon'ble Member of Parliament (Varanasi)</option>
+                <option value="mp">Member of Parliament</option>
                 <option value="citizen">Citizen Transparency Portal</option>
-                <option value="field_officer">Field Quality Inspection Officer</option>
+                <option value="district">District Authority (DM)</option>
                 <option value="state_nodal">State Nodal Department (Planning & Dev)</option>
                 <option value="contractor">Contractor / Implementing Agency</option>
+                <option value="field_officer">Field Quality Inspection Officer</option>
+                <option value="ministry">Ministry of Statistics (MoSPI) / Central Admin</option>
+              </select>
+            </div>
+
+            {/* Dropdown 2: Dynamic Cascading Account / Profile Selector */}
+            <div style={{ width: "100%", marginBottom: "16px" }}>
+              <label style={{ fontSize: "0.76rem", color: "#334155", fontWeight: 700, marginBottom: "5px", display: "flex", alignItems: "center", gap: "5px" }}>
+                <UserCheck size={14} color="#0b69a3" />
+                Select Official Profile / Account:
+              </label>
+              <select
+                value={selectedProfileId}
+                onChange={(e) => handleProfileSelect(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  border: "1.5px solid #0284c7",
+                  borderRadius: "6px",
+                  background: "#f8fafc",
+                  cursor: "pointer",
+                  outline: "none"
+                }}
+              >
+                {availableProfiles.map((p) => {
+                  let label = p.name;
+                  if (p.role === "mp") {
+                    label = `Member of Parliament - ${p.constituency} (${p.state})`;
+                  } else if (p.role === "citizen") {
+                    label = `${p.name} (${p.constituency}, ${p.state})`;
+                  }
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {label}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -181,7 +212,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                   type="text"
                   required
                   className="gov-login-input"
-                  placeholder="Username"
+                  placeholder="Username / Email"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />

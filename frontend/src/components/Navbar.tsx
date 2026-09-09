@@ -1,31 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  LogIn, 
   LogOut, 
-  UserCheck, 
-  BookOpen, 
   ChevronDown, 
-  Check, 
   User, 
   Landmark, 
   Building2, 
   MapPin, 
   Award, 
-  Shield,
-  Lock,
-  Home,
   ShieldCheck
 } from 'lucide-react';
 import { TranslationDict } from '../data/translations';
 import { useRole, Role } from '../auth/roleContext';
 import { usePreferences } from '../context/PreferencesContext';
-import { REGISTERED_VENDORS } from '../data/contractorData';
 
 interface NavbarProps {
-  activeTab: string;
-  setActiveTab: (tab: any) => void;
-  onOpenPolicy: () => void;
-  onOpenLogin: (initialRole?: Role) => void;
+  activeTab?: string;
+  setActiveTab?: (tab: any) => void;
+  onOpenPolicy?: () => void;
+  onOpenLogin?: (initialRole?: Role) => void;
   t?: TranslationDict;
   flagCount?: number;
   adminHouseFilter?: "both" | "Lok Sabha" | "Rajya Sabha";
@@ -39,7 +31,7 @@ interface NavbarProps {
 
 const ROLES_EN: { id: Role; label: string; desc: string; icon: any }[] = [
   { id: "citizen", label: "Citizen Portal", desc: "Report issues & track local works", icon: User },
-  { id: "mp", label: "Hon'ble MP", desc: "Constituency works & fund burn rate", icon: Landmark },
+  { id: "mp", label: "Member of Parliament", desc: "Constituency works & fund burn rate", icon: Landmark },
   { id: "contractor", label: "Contractor Agency", desc: "Update progress & milestone photos", icon: Building2 },
   { id: "field_officer", label: "Field Inspection Officer", desc: "Ground geotagged verification", icon: MapPin },
   { id: "district", label: "District Authority (DM)", desc: "Sanction works & release tranches", icon: Building2 },
@@ -49,7 +41,7 @@ const ROLES_EN: { id: Role; label: string; desc: string; icon: any }[] = [
 
 const ROLES_HI: { id: Role; label: string; desc: string; icon: any }[] = [
   { id: "citizen", label: "नागरिक पोर्टल", desc: "शिकायत दर्ज करें एवं कार्य ट्रैक करें", icon: User },
-  { id: "mp", label: "माननीय सांसद", desc: "निर्वाचन क्षेत्र कार्य एवं व्यय दर", icon: Landmark },
+  { id: "mp", label: "सांसद", desc: "निर्वाचन क्षेत्र कार्य एवं व्यय दर", icon: Landmark },
   { id: "contractor", label: "संविदा एजेंसी", desc: "कार्य प्रगति एवं फ़ोटो अपलोड", icon: Building2 },
   { id: "field_officer", label: "क्षेत्रीय निरीक्षण अधिकारी", desc: "भू-टैग सत्यापन एवं निरीक्षण", icon: MapPin },
   { id: "district", label: "ज़िला प्राधिकारी (डीएम)", desc: "कार्य स्वीकृति एवं किश्त जारी", icon: Building2 },
@@ -57,8 +49,8 @@ const ROLES_HI: { id: Role; label: string; desc: string; icon: any }[] = [
   { id: "ministry", label: "सांख्यिकी मंत्रालय (MoSPI)", desc: "शीर्ष राष्ट्रीय पर्यवेक्षण", icon: Award }
 ];
 
-export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: propT, adminHouseFilter, onAdminHouseFilterChange, selectedVendorId, onSelectVendorId, selectedDistrict, onSelectDistrict, availableDistricts }: NavbarProps) {
-  const { user, logout, setRole, isAuthenticated } = useRole();
+export function Navbar({ activeTab, setActiveTab, t: propT }: NavbarProps) {
+  const { user, logout } = useRole();
   const { t: prefT, lang } = usePreferences();
   const t = prefT || propT;
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -80,11 +72,42 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
   const currentRoleInfo = rolesList.find(r => r.id === user.role) || rolesList[0];
   const CurrentIcon = currentRoleInfo.icon;
 
-  const handleSelectRole = (roleId: Role) => {
-    setIsRoleDropdownOpen(false);
-    if (roleId === user.role && isAuthenticated) return;
-    // Instant zero-friction role switching for evaluation and stakeholder view
-    setRole(roleId);
+  const getRoleDisplayName = () => {
+    if (user.role === 'mp') {
+      return user.name || "Member of Parliament";
+    }
+    if (user.role === 'citizen') {
+      return user.name || "Citizen";
+    }
+    if (user.role === 'district') {
+      return user.name || `District Authority (${user.district || 'Rohtak'})`;
+    }
+    if (user.role === 'state_nodal') {
+      return user.name || `State Nodal Officer (${user.state || 'Haryana'})`;
+    }
+    if (user.role === 'contractor') {
+      return user.name || `Contractor Agency (${user.district || 'Rohtak'})`;
+    }
+    return user.name || currentRoleInfo.label;
+  };
+
+  const getSubLabel = () => {
+    if (user.role === 'mp') {
+      return `${user.constituency || 'Rohtak'}, ${user.state || 'Haryana'}`;
+    }
+    if (user.role === 'citizen') {
+      return `${user.district || user.constituency || 'Rohtak'}, ${user.state || 'Haryana'}`;
+    }
+    if (user.role === 'district') {
+      return `District: ${user.district || 'Rohtak'}, ${user.state || 'Haryana'}`;
+    }
+    if (user.role === 'state_nodal') {
+      return `State: ${user.state || 'Haryana'}`;
+    }
+    if (user.role === 'contractor') {
+      return `${user.district || 'Rohtak'}, ${user.state || 'Haryana'}`;
+    }
+    return 'MoSPI Central Apex';
   };
 
   return (
@@ -135,178 +158,34 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
           </div>
         </div>
 
-        {/* Center / Right Navigation Controls */}
+        {/* Right Side Navigation Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           
-
-          {/* Quick Nav Links & Top Right House Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600 }}>
-            <button
-              type="button"
-              onClick={() => setActiveTab('dashboard')}
-              style={{
-                background: activeTab === 'dashboard' ? 'rgba(2, 132, 199, 0.12)' : 'transparent',
-                border: 'none',
-                color: activeTab === 'dashboard' ? 'var(--gov-accent, #0284c7)' : 'var(--text-body, #475569)',
-                padding: '5px 10px',
-                borderRadius: '6px',
-                fontWeight: activeTab === 'dashboard' ? 700 : 500,
-                cursor: 'pointer',
-                fontSize: '0.86rem',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {t?.dashboard || (lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard')}
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenPolicy}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-body, #475569)',
-                padding: '5px 10px',
-                borderRadius: '6px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontSize: '0.86rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <BookOpen size={14} />
-              <span>{t?.howItWorks || (lang === 'hi' ? 'दिशानिर्देश' : 'Guidelines')}</span>
-            </button>
-
-            {/* Parliamentary House Filter Dropdown (Top Navbar, right side of How it works) */}
-            {adminHouseFilter !== undefined && onAdminHouseFilterChange && (
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px', 
-                  marginLeft: '4px',
-                  background: 'rgba(241, 245, 249, 0.85)',
-                  padding: '3px 8px',
+          {setActiveTab && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600 }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                style={{
+                  background: activeTab === 'dashboard' ? 'rgba(2, 132, 199, 0.12)' : 'transparent',
+                  border: 'none',
+                  color: activeTab === 'dashboard' ? 'var(--gov-accent, #0284c7)' : 'var(--text-body, #475569)',
+                  padding: '5px 10px',
                   borderRadius: '6px',
-                  border: '1px solid #cbd5e1'
+                  fontWeight: activeTab === 'dashboard' ? 700 : 500,
+                  cursor: 'pointer',
+                  fontSize: '0.86rem',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <Landmark size={14} color="#0284c7" />
-                <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>House:</span>
-                <select
-                  value={adminHouseFilter}
-                  onChange={(e) => onAdminHouseFilterChange(e.target.value as any)}
-                  style={{
-                    padding: "3px 6px",
-                    borderRadius: "4px",
-                    border: "1px solid #94a3b8",
-                    background: "#ffffff",
-                    color: "#0f172a",
-                    fontSize: "0.80rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    outline: "none"
-                  }}
-                  title="Filter Ministry by Parliamentary House"
-                >
-                  <option value="both">Both Houses (Default)</option>
-                  <option value="Lok Sabha">Lok Sabha</option>
-                  <option value="Rajya Sabha">Rajya Sabha</option>
-                </select>
-              </div>
-            )}
-
-            {/* Active Contractor / Vendor Selector Dropdown (Top Navbar) */}
-            {selectedVendorId !== undefined && onSelectVendorId && (
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px', 
-                  marginLeft: '4px',
-                  background: 'rgba(241, 245, 249, 0.9)',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1'
-                }}
-              >
-                <UserCheck size={14} color="#0284c7" />
-                <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Vendor:</span>
-                <select
-                  value={selectedVendorId}
-                  onChange={(e) => onSelectVendorId(e.target.value)}
-                  style={{
-                    padding: "3px 6px",
-                    borderRadius: "4px",
-                    border: "1px solid #94a3b8",
-                    background: "#ffffff",
-                    color: "#0f172a",
-                    fontSize: "0.80rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    outline: "none",
-                    maxWidth: "260px"
-                  }}
-                  title="Switch Active Contractor / Implementing Agency"
-                >
-                  {REGISTERED_VENDORS.map(v => (
-                    <option key={v.vendorId} value={v.vendorId}>
-                      {v.firmName} ({v.vendorId} • {v.district})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Active District Jurisdiction Selector Dropdown (Top Navbar) */}
-            {selectedDistrict !== undefined && onSelectDistrict && (
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px', 
-                  marginLeft: '4px',
-                  background: 'rgba(241, 245, 249, 0.9)',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1'
-                }}
-              >
-                <MapPin size={14} color="#0284c7" />
-                <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>District:</span>
-                <select
-                  value={selectedDistrict}
-                  onChange={(e) => onSelectDistrict(e.target.value)}
-                  style={{
-                    padding: "3px 6px",
-                    borderRadius: "4px",
-                    border: "1px solid #94a3b8",
-                    background: "#ffffff",
-                    color: "#0f172a",
-                    fontSize: "0.80rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    outline: "none"
-                  }}
-                  title="Select District Jurisdiction"
-                >
-                  {(availableDistricts || ["Gurugram", "Rohtak"]).map((d) => (
-                    <option key={d} value={d}>
-                      {d} District
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
+                {t?.dashboard || (lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard')}
+              </button>
+            </div>
+          )}
 
           <div style={{ height: '24px', width: '1px', background: 'var(--border-light, #e2e8f0)' }} />
 
-          {/* Interactive Role Switcher / Profile Dropdown (Screenshots 2 & 5) */}
+          {/* User Identity Profile Pill */}
           <div style={{ position: 'relative' }} ref={dropdownRef}>
             <button
               type="button"
@@ -339,54 +218,54 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
 
               <div style={{ textAlign: 'left' }}>
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                  {lang === 'hi' ? 'वर्तमान भूमिका' : 'CURRENT ROLE'}
+                  {currentRoleInfo.label}
                 </div>
                 <div style={{ fontSize: '0.80rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', lineHeight: 1.1 }}>
-                  {user.role === 'district' ? `District Authority (${user.district || 'Jabalpur'})` : currentRoleInfo.label}
+                  {getRoleDisplayName()}
                 </div>
               </div>
 
               <ChevronDown size={13} color="var(--text-main, #0f172a)" style={{ transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease', marginLeft: '3px' }} />
             </button>
 
-            {/* Account & Profile Menu (Matches CitizenNavbar layout per Point 2) */}
+            {/* Account & Profile Menu (No role switching, strictly user info and logout) */}
             {isRoleDropdownOpen && (
               <div style={{
                 position: 'absolute',
                 top: 'calc(100% + 6px)',
                 right: 0,
-                width: '270px',
+                width: '280px',
                 background: 'var(--bg-surface, #ffffff)',
                 border: '1px solid var(--border-main, #cbd5e1)',
                 borderRadius: '8px',
                 boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.1)',
-                padding: '12px',
+                padding: '14px',
                 zIndex: 1000,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px'
+                gap: '10px'
               }}>
                 {/* User Identity Header */}
-                <div style={{ paddingBottom: '8px', borderBottom: '1px solid var(--border-light, #e2e8f0)' }}>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 800, color: 'var(--gov-primary, #0a2540)', lineHeight: 1.25 }}>
-                    {user.role === 'district' ? (user.name || 'District Magistrate & Collector') : user.name}
+                <div style={{ paddingBottom: '10px', borderBottom: '1px solid var(--border-light, #e2e8f0)' }}>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--gov-primary, #0a2540)', lineHeight: 1.25 }}>
+                    {getRoleDisplayName()}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '2px' }}>
-                    {user.email || `district.${(user.district || 'jabalpur').toLowerCase()}@nirikshak.gov.in`}
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', marginTop: '2px' }}>
+                    {user.email || 'official@nirikshak.gov.in'}
                   </div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--gov-accent, #155eef)', background: 'var(--status-info-bg, #eff6ff)', padding: '2px 7px', borderRadius: '4px', marginTop: '4px' }}>
-                    <ShieldCheck size={11} /> {user.role === 'district' ? `District Authority (${user.district || 'Jabalpur'})` : currentRoleInfo.label}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.70rem', fontWeight: 600, color: 'var(--gov-accent, #155eef)', background: 'var(--status-info-bg, #eff6ff)', padding: '2px 8px', borderRadius: '4px', marginTop: '6px' }}>
+                    <ShieldCheck size={12} /> {currentRoleInfo.label}
                   </div>
                 </div>
 
                 {/* Jurisdiction / Location Scope */}
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <MapPin size={12} color="var(--gov-accent, #155eef)" />
-                  <span>Area: <strong>{user.district ? `${user.district}, ${user.state || ''}` : 'National Apex Scope'}</strong></span>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted, #64748b)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <MapPin size={13} color="var(--gov-accent, #155eef)" />
+                  <span>Area: <strong>{getSubLabel()}</strong></span>
                 </div>
 
-                {/* Redirect to Home / Switch Perspective & Logout (Point 2) */}
-                <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {/* Logout Button (No role switching dropdown in dashboard) */}
+                <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '10px' }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -399,43 +278,17 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      padding: '7px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-main, #cbd5e1)',
-                      background: 'var(--bg-surface-subtle, #f8fafc)',
-                      color: 'var(--gov-accent, #155eef)',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Home size={13} />
-                    <span>Return to Home / Switch Role</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsRoleDropdownOpen(false);
-                      logout();
-                    }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      padding: '7px 10px',
+                      padding: '8px 10px',
                       borderRadius: '6px',
                       border: '1px solid var(--status-danger-border, #fecaca)',
                       background: 'var(--status-danger-bg, #fef2f2)',
                       color: 'var(--status-danger-text, #991b1b)',
-                      fontSize: '0.78rem',
+                      fontSize: '0.80rem',
                       fontWeight: 700,
                       cursor: 'pointer'
                     }}
                   >
-                    <LogOut size={13} />
+                    <LogOut size={14} />
                     <span>Logout</span>
                   </button>
                 </div>

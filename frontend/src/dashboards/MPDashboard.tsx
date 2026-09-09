@@ -95,17 +95,20 @@ export const MPDashboard: React.FC = () => {
   }, []);
 
   // Active MP identity
+  const userConstituency = user.constituency || "Rohtak";
   const matchedLiveMP = liveMps.find(
-    (m) => m.mpId === selectedMPId || m.name.toLowerCase().includes(selectedMPId.toLowerCase()) || m.constituency.toLowerCase() === selectedMPId.toLowerCase()
+    (m) => m.constituency.toLowerCase() === userConstituency.toLowerCase()
+  ) || liveMps.find(
+    (m) => m.mpId.toLowerCase() === userConstituency.toLowerCase() || m.name.toLowerCase().includes(userConstituency.toLowerCase())
   );
-  const mpName = matchedLiveMP?.name || user.name || "Hon'ble Member of Parliament";
-  const constituency = matchedLiveMP?.constituency || user.constituency || "Constituency";
-  const mpState = matchedLiveMP?.state || user.state || "National";
+  const mpName = user.name || "Member of Parliament";
+  const constituency = user.constituency || matchedLiveMP?.constituency || "Rohtak";
+  const mpState = user.state || matchedLiveMP?.state || "Haryana";
   const mpHouse = matchedLiveMP?.house || "Lok Sabha";
-  const constituencyCode = matchedLiveMP 
+  const constituencyCode = user.constituency_code || (matchedLiveMP 
     ? `${mpState.slice(0, 2).toUpperCase()}-${constituency.slice(0, 4).toUpperCase()}-01` 
-    : (user.constituency_code || "CODE");
-  const district = constituency;
+    : "HR-ROH-01");
+  const district = user.district || constituency;
 
   // Filtered Constituency Projects (Scoped to MP from Supabase live projects)
   const constituencyWorks: WorkItem[] = useMemo(() => {
@@ -430,35 +433,6 @@ export const MPDashboard: React.FC = () => {
           </div>
           
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <select 
-              style={{ 
-                padding: "8px 12px", 
-                borderRadius: "8px", 
-                border: "1px solid #cbd5e1", 
-                background: "#ffffff", 
-                color: "#0f172a", 
-                fontSize: "0.82rem", 
-                fontWeight: 600,
-                cursor: "pointer",
-                maxWidth: "260px"
-              }} 
-              value={selectedMPId} 
-              onChange={(e) => setSelectedMPId(e.target.value)}
-            >
-              {liveMps.length > 0 ? (
-                liveMps.slice(0, 40).map((m) => (
-                  <option key={m.mpId} value={m.mpId}>
-                    {m.name} ({m.constituency}, {m.state})
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="Pune">Murlidhar Mohol (Pune)</option>
-                  <option value="Varanasi">Narendra Modi (Varanasi)</option>
-                  <option value="New Delhi">Bansuri Swaraj (New Delhi)</option>
-                </>
-              )}
-            </select>
             <Button 
               variant="primary" 
               size="lg" 
@@ -835,9 +809,6 @@ export const MPDashboard: React.FC = () => {
               <div style={{ display: "flex", gap: "8px" }}>
                 <Button variant="secondary" size="sm" onClick={() => window.print()} icon={<FileText size={13} />}>
                   Print Statement
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setIsPolicyOpen(true)} icon={<Landmark size={13} />}>
-                  e-SAKSHI Guidelines
                 </Button>
               </div>
             </div>
