@@ -16,9 +16,10 @@ import {
   INITIAL_NOTIFICATIONS,
   REGISTERED_VENDORS
 } from '../data/contractorData';
-import { JABALPUR_WORKS } from '../data/mpladsData';
+import { JABALPUR_WORKS, ROHTAK_WORKS, GURUGRAM_WORKS } from '../data/mpladsData';
 import { calculateMonitoringSchedule } from '../utils/aiTimelineGenerator';
 import { saveEvidenceToSupabase } from './supabaseSync';
+import { adminDataService } from './adminDataService';
 
 export interface SubmitStagePayload {
   physicalProgressPercent: number;
@@ -33,48 +34,8 @@ export interface SubmitStagePayload {
   notes: string;
 }
 
-function buildJabalpurContractorProjects(): ContractorProject[] {
-  return JABALPUR_WORKS.map(work => {
-    const vendor = REGISTERED_VENDORS.find(v => v.firmName === work.contractor) || REGISTERED_VENDORS[1];
-    const calculatedSchedule = calculateMonitoringSchedule({
-      workId: work.id,
-      officialStartDate: work.dateSanctioned || "2024-04-01",
-      officialExpectedCompletionDate: work.targetCompletion || "2025-03-31",
-      category: work.category || "Roads"
-    });
-
-    return {
-      id: work.id,
-      title: work.title,
-      category: (work.category as any) || "Roads",
-      state: work.state,
-      district: work.district,
-      constituency: work.constituency || "Jabalpur (PC-13)",
-      mpName: work.mpName || "Shri Ashish Dubey",
-      implementingAuthority: work.agency || `Office of District Magistrate, Jabalpur`,
-      contractorName: vendor.firmName,
-      vendorId: vendor.vendorId,
-      sanctionAmountRs: (work.sanctionedAmt || 0.10) * 10000000,
-      recommendedAmountRs: (work.recommendedAmt || 0.10) * 10000000,
-      utilizedAmountRs: (work.expenditureAmt || 0) * 10000000,
-      remainingAmountRs: ((work.sanctionedAmt || 0.10) - (work.expenditureAmt || 0)) * 10000000,
-      physicalProgress: work.physicalProgress || 0,
-      officialStartDate: work.dateSanctioned || "2024-04-01",
-      officialExpectedCompletionDate: work.targetCompletion || "2025-03-31",
-      currentWorkStatus: work.status === "Completed" ? "Completed" : "InProgress",
-      monitoringStatus: "Active Monitoring",
-      nextRequiredSubmission: calculatedSchedule.stages[0]?.stageName || "Initial Work Evidence",
-      nextSubmissionDueDate: calculatedSchedule.stages[0]?.scheduledEndDate || work.targetCompletion || "2025-03-31",
-      riskIndicator: (work.physicalProgress || 0) < 30 ? "Delay Risk" : "Low Risk",
-      checkpointActions: [],
-      schedule: calculatedSchedule.stages,
-      submissionRecords: []
-    };
-  });
-}
-
-// In-memory store for session state (scoped strictly to Jabalpur District Authority assigned works)
-let localProjects: ContractorProject[] = buildJabalpurContractorProjects();
+// In-memory store for mutated session state
+let localProjects: ContractorProject[] = [];
 let localNotifications: ContractorNotification[] = [...INITIAL_NOTIFICATIONS];
 
 import { districtContractorSync } from './districtContractorSync';
@@ -103,62 +64,110 @@ export const contractorApi = {
   },
 
   /**
-   * Fetch authority-assigned works for the contractor (filtered by vendorId)
+   * Fetch authority-assigned works for the contractor (filtered by vendorId & district)
    */
-  async getContractorProjects(vendorId?: string): Promise<ContractorProject[]> {
-    const districtWorks = districtContractorSync.getWorks();
-    districtWorks.forEach(work => {
-      const existingIdx = localProjects.findIndex(p => p.id === work.id);
-      const vendor = REGISTERED_VENDORS.find(v => v.firmName === work.contractor) || REGISTERED_VENDORS[0];
-      
-      if (existingIdx >= 0) {
-        localProjects[existingIdx].contractorName = vendor.firmName;
-        localProjects[existingIdx].vendorId = vendor.vendorId;
-      } else {
-        const calculatedSchedule = calculateMonitoringSchedule({
-          workId: work.id,
-          officialStartDate: work.dateSanctioned || "2024-04-01",
-          officialExpectedCompletionDate: work.targetCompletion || "2025-03-31",
-          category: work.category || "Roads"
-        });
+  async getContractorProjects(vendorId: string = "VEN-2024-MP-4120"): Promise<ContractorProject[]> {
+    const targetVendor = REGISTERED_VENDORS.find(v => v.vendorId === vendorId) || REGISTERED_VENDORS[0];
+    const vendorDistrictLower = (targetVendor.district || "Jabalpur").toLowerCase().trim();
 
-        localProjects.unshift({
-          id: work.id,
-          title: work.title,
-          category: (work.category as any) || "Roads",
-          state: work.state,
-          district: work.district,
-          constituency: work.constituency || "Jabalpur (PC-13)",
-          mpName: work.mpName || "Shri Ashish Dubey",
-          implementingAuthority: work.agency || `Office of District Magistrate, ${work.district}`,
-          contractorName: vendor.firmName,
-          vendorId: vendor.vendorId,
-          sanctionAmountRs: (work.sanctionedAmt || 0.10) * 10000000,
-          recommendedAmountRs: (work.recommendedAmt || 0.10) * 10000000,
-          utilizedAmountRs: (work.expenditureAmt || 0) * 10000000,
-          remainingAmountRs: ((work.sanctionedAmt || 0.10) - (work.expenditureAmt || 0)) * 10000000,
-          physicalProgress: work.physicalProgress || 0,
-          officialStartDate: work.dateSanctioned || "2024-04-01",
-          officialExpectedCompletionDate: work.targetCompletion || "2025-03-31",
-          currentWorkStatus: work.status === "Completed" ? "Completed" : "InProgress",
-          monitoringStatus: "Active Monitoring",
-          nextRequiredSubmission: calculatedSchedule.stages[0]?.stageName || "Initial Work Evidence",
-          nextSubmissionDueDate: calculatedSchedule.stages[0]?.scheduledEndDate || work.targetCompletion || "2025-03-31",
-          riskIndicator: (work.physicalProgress || 0) < 30 ? "Delay Risk" : "Low Risk",
-          checkpointActions: [],
-          schedule: calculatedSchedule.stages,
-          submissionRecords: []
-        });
+    // 1. Fetch raw live DB projects for contractor's district
+    let rawDbProjects: any[] = [];
+    try {
+      rawDbProjects = await adminDataService.getProjectsByDistrict(targetVendor.district);
+    } catch (e) {
+      console.warn("Using local fallback projects for contractor API:", e);
+    }
+
+    // 2. Filter raw DB projects strictly by vendor's district
+    const districtFiltered = rawDbProjects;
+
+    // Determine district works fallback if DB query returns empty array
+    let datasetToMap = districtFiltered;
+    if (districtFiltered.length === 0) {
+      if (vendorDistrictLower === "rohtak") datasetToMap = ROHTAK_WORKS as any[];
+      else if (vendorDistrictLower === "gurugram") datasetToMap = GURUGRAM_WORKS as any[];
+      else datasetToMap = JABALPUR_WORKS as any[];
+    }
+
+    // List of empanelled vendors registered for this vendor's district
+    const districtVendors = REGISTERED_VENDORS.filter(v => 
+      (v.district || "").toLowerCase().trim() === vendorDistrictLower
+    );
+
+    // Map DB rows to ContractorProject
+    const mappedProjects: ContractorProject[] = datasetToMap.map((p: any, idx: number) => {
+      // Find assigned vendor matching DB contractor/tender_reference_no, or distribute evenly
+      let assignedVendor = districtVendors.find(v => v.firmName === (p.tender_reference_no || p.contractor));
+      if (!assignedVendor) {
+        assignedVendor = districtVendors[idx % Math.max(1, districtVendors.length)] || targetVendor;
+      }
+
+      const workId = p.project_id || p.id || `PROJ-${idx + 1}`;
+      const existingLocal = localProjects.find(lp => lp.id === workId);
+      if (existingLocal) {
+        return {
+          ...existingLocal,
+          vendorId: assignedVendor.vendorId,
+          contractorName: assignedVendor.firmName
+        };
+      }
+
+      const calculatedSchedule = calculateMonitoringSchedule({
+        workId: workId,
+        officialStartDate: p.start_date || p.dateSanctioned || "2024-04-01",
+        officialExpectedCompletionDate: p.expected_completion_date || p.targetCompletion || "2025-03-31",
+        category: p.category || "Roads"
+      });
+
+      const sanctionedRs = Number(p.sanctioned_amount || (p.sanctionedAmt || 0.10) * 10000000);
+      const utilizedRs = Number(p.utilized_amount || (p.expenditureAmt || 0) * 10000000);
+      const remainingRs = Math.max(0, sanctionedRs - utilizedRs);
+
+      return {
+        id: workId,
+        title: p.project_name || p.title || "MPLADS Infrastructure Development Work",
+        category: (p.category as any) || "Roads",
+        state: p.state || targetVendor.state,
+        district: p.district || targetVendor.district,
+        constituency: p.constituency || `${targetVendor.district} (PC-01)`,
+        mpName: p.mp_name || p.mpName || "District Parliamentary MP",
+        implementingAuthority: p.agency || p.implementing_agency_name || `Office of District Magistrate & Collector (IDA), ${targetVendor.district}`,
+        contractorName: assignedVendor.firmName,
+        vendorId: assignedVendor.vendorId,
+        sanctionAmountRs: sanctionedRs,
+        recommendedAmountRs: Number(p.recommended_amount || sanctionedRs),
+        utilizedAmountRs: utilizedRs,
+        remainingAmountRs: remainingRs,
+        physicalProgress: p.progress_percentage ?? p.physicalProgress ?? 35,
+        officialStartDate: p.start_date || p.dateSanctioned || "2024-04-01",
+        officialExpectedCompletionDate: p.expected_completion_date || p.targetCompletion || "2025-03-31",
+        currentWorkStatus: p.status === "Completed" ? "Completed" : "InProgress",
+        monitoringStatus: "Active Monitoring",
+        nextRequiredSubmission: calculatedSchedule.stages[0]?.stageName || "Initial Work Evidence",
+        nextSubmissionDueDate: calculatedSchedule.stages[0]?.scheduledEndDate || p.expected_completion_date || "2025-03-31",
+        riskIndicator: (p.progress_percentage || 0) < 30 ? "Delay Risk" : "Low Risk",
+        checkpointActions: [],
+        schedule: calculatedSchedule.stages,
+        submissionRecords: []
+      };
+    });
+
+    // Synchronize localProjects array
+    mappedProjects.forEach(mp => {
+      const idx = localProjects.findIndex(lp => lp.id === mp.id);
+      if (idx >= 0) {
+        localProjects[idx] = mp;
+      } else {
+        localProjects.push(mp);
       }
     });
 
-    if (!vendorId) return Promise.resolve([...localProjects]);
-
-    const vendor = REGISTERED_VENDORS.find(v => v.vendorId === vendorId);
-    const filtered = localProjects.filter(p => 
-      p.vendorId === vendorId || (vendor && p.contractorName === vendor.firmName)
+    // Filter strictly for the requested vendorId / contractor firmName!
+    const vendorProjects = localProjects.filter(p => 
+      p.vendorId === targetVendor.vendorId || p.contractorName === targetVendor.firmName
     );
-    return Promise.resolve(filtered);
+
+    return Promise.resolve(vendorProjects);
   },
 
   /**

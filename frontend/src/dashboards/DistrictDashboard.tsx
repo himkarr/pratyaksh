@@ -32,7 +32,7 @@ import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Modal } from "../components/ui";
 
-import { WorkItem } from "../data/mpladsData";
+import { WorkItem, ROHTAK_WORKS, GURUGRAM_WORKS, JABALPUR_WORKS } from "../data/mpladsData";
 import { ContractorsManagementTab } from "../components/district/ContractorsManagementTab";
 import { CreateWorkModal } from "../components/district/CreateWorkModal";
 import { usePreferences } from "../context/PreferencesContext";
@@ -101,45 +101,82 @@ export const DistrictDashboard: React.FC = () => {
   useEffect(() => {
     async function loadLiveDistrictProjects() {
       try {
-        const liveProjs = await adminDataService.getRawProjects();
+        const liveProjs = await adminDataService.getProjectsByDistrict(districtName);
         if (liveProjs && liveProjs.length > 0) {
-          const districtFiltered = liveProjs.filter((p) => {
-            const pDist = (p.district || "").toLowerCase();
-            const pState = (p.state || "").toLowerCase();
-            return pDist.includes(districtName.toLowerCase()) || 
-                   pState.includes(stateName.toLowerCase());
+          const targetDistLower = districtName.toLowerCase().trim();
+          const districtFiltered = liveProjs;
+
+          // Define local empanelled contractors by district for clean display
+          const rohtakContractors = [
+            "M/s Haryana Civil Infra Services",
+            "M/s Rohtak Development & Builders Ltd.",
+            "M/s Apex North Infrastructure Pvt Ltd."
+          ];
+          const gurugramContractors = [
+            "M/s Millennium City Builders & Engineers",
+            "M/s Gurugram Urban Infra Project Ltd.",
+            "M/s Cyber City Infrastructure Pvt Ltd."
+          ];
+          const jabalpurContractors = [
+            "M/s Apex Infra & Construction Ltd.",
+            "M/s Jabalpur Rural Infra Developers",
+            "M/s Mahakaushal Engineering Works"
+          ];
+
+          const activeContractors = targetDistLower === "rohtak"
+            ? rohtakContractors
+            : targetDistLower === "gurugram"
+            ? gurugramContractors
+            : jabalpurContractors;
+
+          let datasetToMap = districtFiltered;
+          if (districtFiltered.length === 0) {
+            if (targetDistLower === "rohtak") datasetToMap = ROHTAK_WORKS as any[];
+            else if (targetDistLower === "gurugram") datasetToMap = GURUGRAM_WORKS as any[];
+            else datasetToMap = JABALPUR_WORKS as any[];
+          }
+
+          const mapped: WorkItem[] = datasetToMap.map((p: any, idx: number) => {
+            const agency = p.implementing_agencies?.agency_name 
+              || p.agency 
+              || p.implementing_agency_name 
+              || `Office of District Magistrate & Collector (IDA), ${p.district || districtName}`;
+            
+            const contractor = (p.tender_reference_no && !p.tender_reference_no.includes("NIT") && !p.tender_reference_no.includes("MP-18LS")) 
+              ? p.tender_reference_no 
+              : (p.contractor && !p.contractor.includes("Empaneled")) 
+              ? p.contractor 
+              : activeContractors[idx % activeContractors.length];
+
+            return {
+              id: p.project_id || p.id || `LIVE-${districtName.toUpperCase()}-${idx + 1}`,
+              title: p.project_name || p.title || "MPLADS Infrastructure Development Work",
+              house: "Lok Sabha",
+              state: p.state || stateName,
+              district: p.district || districtName,
+              constituency: p.constituency || `${p.district || districtName} (PC-01)`,
+              constituency_code: "DIST-01",
+              mpName: p.mp_name || "District Parliamentary MP",
+              category: p.category || "Community Asset",
+              sectorName: p.category || "Infrastructure",
+              recommendedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+              sanctionedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
+              expenditureAmt: Number(p.utilized_amount || 0) / 10000000,
+              physicalProgress: p.progress_percentage ?? (p.status === "Completed" ? 100 : p.status === "InProgress" ? 45 : 15),
+              financialProgress: Math.round(
+                ((Number(p.utilized_amount || 0)) / Math.max(1, Number(p.sanctioned_amount || 1))) * 100
+              ) || (p.status === "Completed" ? 100 : 20),
+              dateSanctioned: p.start_date || "2024-04-01",
+              targetCompletion: p.expected_completion_date || "2025-06-30",
+              status: (p.status || "Sanctioned") as any,
+              agency: agency,
+              contractor: contractor,
+              rating: 4.8,
+              reviewsCount: 3,
+              attachments: [],
+              reviews: []
+            };
           });
-
-          const datasetToUse = districtFiltered.length >= 5 ? districtFiltered : liveProjs.slice(0, 80);
-
-          const mapped: WorkItem[] = datasetToUse.map((p, idx) => ({
-            id: p.project_id || p.id || `LIVE-DIST-${idx}`,
-            title: p.project_name || p.title || "MPLADS Infrastructure Work",
-            house: "Lok Sabha",
-            state: p.state || stateName,
-            district: p.district || districtName,
-            constituency: p.district || districtName,
-            constituency_code: "DIST-01",
-            mpName: "District Parliamentary MP",
-            category: p.category || "Community Asset",
-            sectorName: p.category || "Infrastructure",
-            recommendedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
-            sanctionedAmt: Number(p.sanctioned_amount || 1000000) / 10000000,
-            expenditureAmt: Number(p.utilized_amount || 400000) / 10000000,
-            physicalProgress: p.progress_percentage || (p.status === "Completed" ? 100 : 45),
-            financialProgress: Math.round(
-              ((Number(p.utilized_amount || 0)) / Math.max(1, Number(p.sanctioned_amount || 1))) * 100
-            ) || 40,
-            dateSanctioned: p.start_date || "2024-04-01",
-            targetCompletion: p.expected_completion_date || "2025-06-30",
-            status: (p.status || "Sanctioned") as any,
-            agency: "District Public Works & Rural Engineering",
-            contractor: "Empaneled Implementing Agency",
-            rating: 4.8,
-            reviewsCount: 1,
-            attachments: [],
-            reviews: []
-          }));
 
           setProjects(mapped);
           setIsLiveConnected(true);
@@ -692,7 +729,7 @@ export const DistrictDashboard: React.FC = () => {
                         {/* 2. Implementing Agency & Block */}
                         <td style={{ padding: "14px 18px", verticalAlign: "middle" }}>
                           <div style={{ fontWeight: 600, color: "var(--text-main)", fontSize: "0.80rem" }}>
-                            {work.agency || "Jabalpur Rural Engineering Services"}
+                            {work.agency || `Office of District Magistrate & Collector (IDA), ${districtName}`}
                           </div>
                           <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
                             {work.constituency ? `${work.constituency}` : `${districtName}`}, {work.state || stateName}

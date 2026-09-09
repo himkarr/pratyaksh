@@ -58,12 +58,14 @@ export interface SupabaseProjectRow {
 }
 
 /**
- * Seed / Upsert Jabalpur Official Projects into Supabase `projects` table
+ * Seed / Upsert Official District Projects (Jabalpur, Rohtak, Gurugram) into Supabase `projects` table
  */
 export async function seedJabalpurProjectsToSupabase(): Promise<void> {
   try {
-    const { JABALPUR_WORKS } = await import('../data/mpladsData');
-    for (const work of JABALPUR_WORKS) {
+    const { JABALPUR_WORKS, ROHTAK_WORKS, GURUGRAM_WORKS } = await import('../data/mpladsData');
+    const allDistrictWorks = [...JABALPUR_WORKS, ...ROHTAK_WORKS, ...GURUGRAM_WORKS];
+
+    for (const work of allDistrictWorks) {
       const payload: SupabaseProjectRow = {
         project_id: work.id,
         project_name: work.title,
@@ -86,9 +88,9 @@ export async function seedJabalpurProjectsToSupabase(): Promise<void> {
         body: JSON.stringify(payload)
       });
     }
-    console.log("Successfully seeded/synced Jabalpur official projects to Supabase database.");
+    console.log("Successfully seeded/synced Jabalpur, Rohtak, and Gurugram official projects to Supabase database.");
   } catch (err) {
-    console.warn("Failed to seed Jabalpur projects to Supabase:", err);
+    console.warn("Failed to seed district projects to Supabase:", err);
   }
 }
 
@@ -97,35 +99,35 @@ export async function seedJabalpurProjectsToSupabase(): Promise<void> {
  */
 export async function fetchProjectsFromSupabase(districtName: string = "Jabalpur"): Promise<WorkItem[]> {
   try {
-    const resp = await fetch(`${SUPABASE_REST_URL}/projects?district=ilike.*${encodeURIComponent(districtName)}*&select=*`, {
+    const resp = await fetch(`${SUPABASE_REST_URL}/projects?district=ilike.*${encodeURIComponent(districtName)}*&select=*,implementing_agencies(agency_name)`, {
       headers: getHeaders(),
       signal: AbortSignal.timeout(4000)
     });
 
     if (resp.ok) {
-      const rows: SupabaseProjectRow[] = await resp.json();
+      const rows: any[] = await resp.json();
       if (rows && rows.length > 0) {
         return rows.map(r => ({
           id: r.project_id,
           title: r.project_name,
           house: "Lok Sabha",
-          state: r.state || "Madhya Pradesh",
-          district: r.district || "Jabalpur",
-          constituency: "Jabalpur (PC-13)",
-          constituency_code: "MP-JBL-13",
-          mpName: "Shri Ashish Dubey",
+          state: r.state || (districtName.toLowerCase() === "jabalpur" ? "Madhya Pradesh" : "Haryana"),
+          district: r.district || districtName,
+          constituency: `${r.district || districtName} (PC-01)`,
+          constituency_code: "DIST-01",
+          mpName: "District Parliamentary MP",
           category: r.category || "Roads",
           sectorName: r.category || "Roads",
           recommendedAmt: (r.sanctioned_amount || 10000000) / 10000000,
           sanctionedAmt: (r.sanctioned_amount || 10000000) / 10000000,
           expenditureAmt: (r.utilized_amount || 0) / 10000000,
           physicalProgress: r.progress_percentage || 0,
-          financialProgress: r.progress_percentage || 0,
+          financialProgress: Math.round(((r.utilized_amount || 0) / Math.max(1, r.sanctioned_amount || 1)) * 100) || 0,
           dateSanctioned: r.start_date || "2024-04-01",
           targetCompletion: r.expected_completion_date || "2025-03-31",
           status: (r.status as any) || "Ongoing",
-          agency: `Office of District Magistrate, ${r.district || "Jabalpur"}`,
-          contractor: r.tender_reference_no || "M/s Apex Infra & Construction Ltd.",
+          agency: r.implementing_agencies?.agency_name || r.agency || `Office of District Magistrate & Collector (IDA), ${r.district || districtName}`,
+          contractor: r.tender_reference_no || "Empaneled Implementing Agency",
           rating: 4.8,
           reviewsCount: 12,
           attachments: [],

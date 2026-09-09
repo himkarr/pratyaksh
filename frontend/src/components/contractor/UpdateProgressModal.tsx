@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   Camera, 
   Upload, 
@@ -49,6 +49,8 @@ export const UpdateProgressModal: React.FC<UpdateProgressModalProps> = ({
   const [stageName, setStageName] = useState<string>("Structural Execution Phase");
   const [notes, setNotes] = useState<string>("");
   
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   // Camera & GPS State
   const [photos, setPhotos] = useState<Array<{ name: string; url: string; lat?: number; lng?: number; timestamp: string }>>([
     {
@@ -71,7 +73,34 @@ export const UpdateProgressModal: React.FC<UpdateProgressModalProps> = ({
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  const handleAddPhoto = () => {
+  const handleCustomPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const filesArr = Array.from(e.target.files);
+
+    filesArr.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (dataUrl) {
+          setPhotos((prev) => [
+            ...prev,
+            {
+              name: file.name,
+              url: dataUrl,
+              lat: 18.5204 + (Math.random() - 0.5) * 0.01,
+              lng: 73.8567 + (Math.random() - 0.5) * 0.01,
+              timestamp: new Date().toLocaleString("en-IN")
+            }
+          ]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (e.target) e.target.value = "";
+  };
+
+  const handleAddSamplePhoto = () => {
     setIsCapturingGps(true);
     setTimeout(() => {
       const newPhoto = {
@@ -81,9 +110,9 @@ export const UpdateProgressModal: React.FC<UpdateProgressModalProps> = ({
         lng: 73.8567 + (Math.random() - 0.5) * 0.01,
         timestamp: new Date().toLocaleString("en-IN")
       };
-      setPhotos([...photos, newPhoto]);
+      setPhotos((prev) => [...prev, newPhoto]);
       setIsCapturingGps(false);
-    }, 800);
+    }, 400);
   };
 
   const handleAddDocument = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -293,16 +322,36 @@ export const UpdateProgressModal: React.FC<UpdateProgressModalProps> = ({
                 </div>
               </div>
 
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={handleAddPhoto}
-                disabled={isCapturingGps}
-                icon={isCapturingGps ? <RefreshCw size={13} className="spin" /> : <Camera size={13} />}
-              >
-                {isCapturingGps ? "Acquiring GPS..." : "Capture Photo (Camera)"}
-              </Button>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={photoInputRef}
+                  onChange={handleCustomPhotoSelect}
+                  style={{ display: "none" }}
+                />
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => photoInputRef.current?.click()}
+                  icon={<Upload size={13} />}
+                >
+                  Upload Photo
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleAddSamplePhoto}
+                  disabled={isCapturingGps}
+                  icon={isCapturingGps ? <RefreshCw size={13} className="spin" /> : <Camera size={13} />}
+                >
+                  {isCapturingGps ? "Acquiring..." : "Sample"}
+                </Button>
+              </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "10px", marginTop: "10px" }}>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   Camera, 
   Upload, 
@@ -49,6 +49,8 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   const [locationText, setLocationText] = useState<string>(`Haveli Circle, ${project.district} (18.5204° N, 73.8567° E)`);
   const [isAcquiringGps, setIsAcquiringGps] = useState<boolean>(false);
   const [gpsAcquiredTime, setGpsAcquiredTime] = useState<string>(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // File Upload Lists
   const [photos, setPhotos] = useState<SubmittedFileItem[]>([
@@ -111,7 +113,36 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
     }
   };
 
-  const handleAddPhoto = () => {
+  const handleCustomPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const filesArr = Array.from(e.target.files);
+
+    filesArr.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (dataUrl) {
+          const newP: SubmittedFileItem = {
+            name: file.name,
+            url: dataUrl,
+            size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+            type: evidenceType.includes("Material") ? "Material Photo" : "Geo-tagged Photo",
+            lat: latitude || 18.5204,
+            lng: longitude || 73.8567,
+            timestamp: new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+          };
+          setPhotos((prev) => [...prev, newP]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (e.target) {
+      e.target.value = "";
+    }
+  };
+
+  const handleAddSamplePhoto = () => {
     const newP: SubmittedFileItem = {
       name: `Site_Photo_${stage.stageId}_${photos.length + 1}.jpg`,
       url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80",
@@ -121,22 +152,28 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
       lng: longitude || 73.8567,
       timestamp: new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
     };
-    setPhotos([...photos, newP]);
+    setPhotos((prev) => [...prev, newP]);
   };
 
   const handleAddDocumentFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const f = e.target.files[0];
-      setDocuments([
-        ...documents,
-        {
-          name: f.name,
-          url: "#",
-          size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
-          type: docTypeInput,
-          timestamp: new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-        }
-      ]);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = (event.target?.result as string) || "#";
+        setDocuments((prev) => [
+          ...prev,
+          {
+            name: f.name,
+            url: dataUrl,
+            size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+            type: docTypeInput,
+            timestamp: new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+          }
+        ]);
+      };
+      reader.readAsDataURL(f);
+      e.target.value = "";
     }
   };
 
@@ -331,7 +368,15 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                 <span>1. Geo-Tagged Stage Photographs ({photos.length})</span>
               </div>
 
-              <div style={{ display: "flex", gap: "6px" }}>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={photoInputRef}
+                  onChange={handleCustomPhotoUpload}
+                  style={{ display: "none" }}
+                />
                 <Button
                   variant="secondary"
                   size="sm"
@@ -340,17 +385,27 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                   disabled={isAcquiringGps}
                   icon={isAcquiringGps ? <RefreshCw size={13} className="spin" /> : <MapPin size={13} />}
                 >
-                  {isAcquiringGps ? "Acquiring GPS..." : "📍 Acquire Live GPS Location"}
+                  {isAcquiringGps ? "Acquiring GPS..." : "📍 GPS"}
                 </Button>
 
                 <Button
                   variant="primary"
                   size="sm"
                   type="button"
-                  onClick={handleAddPhoto}
+                  onClick={() => photoInputRef.current?.click()}
+                  icon={<Upload size={13} />}
+                >
+                  Upload Photo
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  onClick={handleAddSamplePhoto}
                   icon={<Plus size={13} />}
                 >
-                  Add Photo
+                  Sample
                 </Button>
               </div>
             </div>

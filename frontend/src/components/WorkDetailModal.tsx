@@ -22,6 +22,8 @@ import {
   RuleLogRecord,
 } from '../api/adminDataService';
 
+import { districtContractorSync } from '../api/districtContractorSync';
+
 interface WorkDetailModalProps {
   work: WorkItem | null;
   onClose: () => void;
@@ -38,24 +40,42 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
   const [payments, setPayments] = useState<PaymentTransactionRecord[]>([]);
   const [dbMilestones, setDbMilestones] = useState<MilestoneRecord[]>([]);
   const [ruleLogs, setRuleLogs] = useState<RuleLogRecord[]>([]);
+  const [contractorAttachments, setContractorAttachments] = useState<WorkAttachment[]>([]);
   const [loadingFinancials, setLoadingFinancials] = useState<boolean>(false);
 
   useEffect(() => {
     if (!work?.id) return;
     setLoadingFinancials(true);
+    
     Promise.all([
       adminDataService.getProjectInstallments(work.id),
       adminDataService.getProjectPayments(work.id),
       adminDataService.getProjectMilestones(work.id),
       adminDataService.getProjectRuleLogs(work.id),
+      districtContractorSync.getStageSubmissionsForWork(work.id)
     ])
-      .then(([inst, pay, ms, rules]) => {
+      .then(([inst, pay, ms, rules, stageSubmissions]) => {
         setInstallments(inst);
         setPayments(pay);
         setDbMilestones(ms);
         setRuleLogs(rules);
+
+        const loadedAtts: WorkAttachment[] = [];
+        stageSubmissions.forEach(sub => {
+          (sub.files || []).forEach((file, fIdx) => {
+            const isImage = file.type?.includes("Photo") || file.type?.includes("image") || /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name) || (file.url && (file.url.startsWith("http") || file.url.startsWith("data:")));
+            loadedAtts.push({
+              id: `contractor-ev-${sub.id}-${fIdx}`,
+              type: isImage ? 'image' : 'document',
+              title: `${sub.checkpointActionName || sub.workStage} — ${file.name}`,
+              stage: `Uploaded by ${sub.contractorName || 'Contractor'} (${sub.verificationStatus || 'Submitted'})`,
+              url: file.url || "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=800&q=80"
+            });
+          });
+        });
+        setContractorAttachments(loadedAtts);
       })
-      .catch((err) => console.warn("Failed to load project financials:", err))
+      .catch((err) => console.warn("Failed to load project financials or evidence:", err))
       .finally(() => setLoadingFinancials(false));
   }, [work?.id]);
 
@@ -457,9 +477,9 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
               {/* Contractor Profile & Stage Submissions Inspection Section */}
               <ContractorInspectionPanel work={work} />
 
-              {/* Geotagged Evidence Section with Direct Upload */}
+              {/* Geotagged Evidence Section with Direct Upload & Contractor Evidence */}
               <EvidenceSection
-                attachments={work.attachments || []}
+                attachments={[...contractorAttachments, ...(work.attachments || [])]}
                 canUpload={true}
                 onAttachmentAdded={handleAttachmentAdded}
               />
