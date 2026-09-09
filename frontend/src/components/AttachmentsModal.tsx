@@ -16,6 +16,7 @@ interface AttachmentsModalProps {
   work: WorkItem | null;
   onClose: () => void;
   onAttachmentAdded?: (workId: string, attachment: WorkAttachment) => void;
+  canUpload?: boolean;
 }
 
 const DEFAULT_FALLBACK_ATT: WorkAttachment = {
@@ -26,7 +27,7 @@ const DEFAULT_FALLBACK_ATT: WorkAttachment = {
   url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18f15f6?w=800&auto=format&fit=crop&q=60'
 };
 
-export function AttachmentsModal({ work, onClose, onAttachmentAdded }: AttachmentsModalProps) {
+export function AttachmentsModal({ work, onClose, onAttachmentAdded, canUpload = false }: AttachmentsModalProps) {
   useBodyScrollLock(!!work);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +41,7 @@ export function AttachmentsModal({ work, onClose, onAttachmentAdded }: Attachmen
 
       const initialAtts = (work.attachments && work.attachments.length > 0)
         ? [...work.attachments]
-        : [DEFAULT_FALLBACK_ATT];
+        : [];
 
       try {
         const stageSubmissions = await districtContractorSync.getStageSubmissionsForWork(work.id);
@@ -61,12 +62,12 @@ export function AttachmentsModal({ work, onClose, onAttachmentAdded }: Attachmen
 
         const combined = [...contractorAtts, ...initialAtts];
         setLocalAttachments(combined);
-        setSelectedAttachment(combined[0] || DEFAULT_FALLBACK_ATT);
+        setSelectedAttachment(combined[0] || null as any);
         setUploadNotice(null);
       } catch (err) {
         console.warn("Using default attachments fallback:", err);
         setLocalAttachments(initialAtts);
-        setSelectedAttachment(initialAtts[0] || DEFAULT_FALLBACK_ATT);
+        setSelectedAttachment(initialAtts[0] || null as any);
       }
     }
 
@@ -277,19 +278,38 @@ export function AttachmentsModal({ work, onClose, onAttachmentAdded }: Attachmen
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="gov-btn gov-btn-primary no-print"
-              style={{ fontSize: '0.74rem', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <Upload size={12} />
-              <span>Upload Evidence</span>
-            </button>
+            {canUpload && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="gov-btn gov-btn-primary no-print"
+                style={{ fontSize: '0.74rem', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Upload size={12} />
+                <span>Upload Evidence</span>
+              </button>
+            )}
           </div>
 
           {/* Active View */}
-          {selectedAttachment && (
+          {localAttachments.length === 0 ? (
+            <div style={{
+              padding: '44px 20px',
+              textAlign: 'center',
+              background: 'var(--bg-surface-subtle)',
+              borderRadius: 'var(--radius-xs)',
+              border: '1px dashed var(--border-main)',
+              color: 'var(--text-muted)'
+            }}>
+              <ImageIcon size={40} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+              <h4 style={{ fontSize: '0.96rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+                No Geotagged Evidence Uploaded
+              </h4>
+              <p style={{ fontSize: '0.80rem', margin: 0 }}>
+                No stage evidence photos or measurement documents have been submitted for this work order yet.
+              </p>
+            </div>
+          ) : selectedAttachment ? (
             <div style={{
               background: 'var(--bg-surface-subtle)',
               borderRadius: 'var(--radius-xs)',
@@ -337,7 +357,7 @@ export function AttachmentsModal({ work, onClose, onAttachmentAdded }: Attachmen
                 </div>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -480,7 +480,7 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
               {/* Geotagged Evidence Section with Direct Upload & Contractor Evidence */}
               <EvidenceSection
                 attachments={[...contractorAttachments, ...(work.attachments || [])]}
-                canUpload={true}
+                canUpload={false}
                 onAttachmentAdded={handleAttachmentAdded}
               />
             </>
