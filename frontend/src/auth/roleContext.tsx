@@ -84,6 +84,22 @@ const ALL_ROLES_DEFAULT_USERS: User[] = [
     district: "Jabalpur"
   },
   {
+    id: "usr-district-rohtak",
+    email: "district.rohtak@nirikshak.gov.in",
+    name: "Shri Ajay Kumar, IAS",
+    role: "district",
+    state: "Haryana",
+    district: "Rohtak"
+  },
+  {
+    id: "usr-district-gurugram",
+    email: "district.gurugram@nirikshak.gov.in",
+    name: "Shri Nishant Kumar Yadav, IAS",
+    role: "district",
+    state: "Haryana",
+    district: "Gurugram"
+  },
+  {
     id: "usr-state-01",
     email: "state.up@nirikshak.gov.in",
     name: "State Nodal Officer (UP)",

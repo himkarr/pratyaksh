@@ -155,7 +155,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 }}
               >
                 <option value="ministry">Ministry of Statistics (MoSPI) / Central Admin</option>
-                <option value="district">District Authority (Jabalpur, Madhya Pradesh)</option>
+                <option value="district">District Authority (Jabalpur / Rohtak / Gurugram)</option>
                 <option value="mp">Hon'ble Member of Parliament (Varanasi)</option>
                 <option value="citizen">Citizen Transparency Portal</option>
                 <option value="field_officer">Field Quality Inspection Officer</option>

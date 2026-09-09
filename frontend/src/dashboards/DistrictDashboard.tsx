@@ -68,11 +68,35 @@ export const DistrictDashboard: React.FC = () => {
   // Action Notice Toast State
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // District Authority Identity
-  const collectorName = user.role === "district" ? "Smt. G. Srijana, IAS" : (user.name || "District Magistrate & Collector");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => user.district || "Jabalpur");
+
+  // Dynamic District Authority Identity based on selected district
+  const collectorName = useMemo(() => {
+    const dLower = selectedDistrict.toLowerCase();
+    if (dLower === "rohtak") return "Shri Ajay Kumar, IAS";
+    if (dLower === "gurugram") return "Shri Nishant Kumar Yadav, IAS";
+    if (dLower === "jabalpur") return "Smt. G. Srijana, IAS";
+    return user.role === "district" ? (user.name || "District Magistrate & Collector") : "District Magistrate & Collector";
+  }, [selectedDistrict, user.name, user.role]);
+
   const collectorDesignation = "District Magistrate & Collector";
-  const districtName = user.district || "Jabalpur";
-  const stateName = user.state || "Madhya Pradesh";
+  const districtName = selectedDistrict || user.district || "Jabalpur";
+  const stateName = useMemo(() => {
+    const dLower = selectedDistrict.toLowerCase();
+    if (dLower === "rohtak" || dLower === "gurugram") return "Haryana";
+    if (dLower === "jabalpur") return "Madhya Pradesh";
+    return user.state || "Madhya Pradesh";
+  }, [selectedDistrict, user.state]);
+
+  // Available districts dynamically discovered from datasets + default Rohtak & Gurugram
+  const availableDistricts = useMemo(() => {
+    const dists = new Set<string>(["Jabalpur", "Rohtak", "Gurugram"]);
+    if (user.district) dists.add(user.district);
+    projects.forEach((p) => {
+      if (p.district && p.district.trim()) dists.add(p.district.trim());
+    });
+    return Array.from(dists).sort();
+  }, [projects, user.district]);
 
   useEffect(() => {
     async function loadLiveDistrictProjects() {
@@ -172,18 +196,7 @@ export const DistrictDashboard: React.FC = () => {
     return "Routine quarterly statutory audit";
   };
 
-  // Available districts dynamically discovered from Supabase datasets
-  const availableDistricts = useMemo(() => {
-    const dists = new Set<string>();
-    if (user.district) dists.add(user.district);
-    projects.forEach((p) => {
-      if (p.district && p.district.trim()) dists.add(p.district.trim());
-    });
-    if (dists.size === 0) dists.add("Jabalpur");
-    return Array.from(dists).sort();
-  }, [projects, user.district]);
 
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => user.district || "Jabalpur");
 
   // All Projects in Selected District Jurisdiction (falls back gracefully to all if none in specific district)
   const projectsInDistrict = useMemo(() => {

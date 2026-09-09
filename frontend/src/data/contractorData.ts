@@ -66,6 +66,36 @@ export const REGISTERED_VENDORS: VendorDetails[] = [
     status: "Empanelled & Active"
   },
   {
+    vendorId: "VEN-2024-HR-5011",
+    firmName: "M/s Haryana Civil Infra Services",
+    registrationClass: "Class A (Apex)",
+    contactPerson: "Er. Surender Malik",
+    phone: "+91 98120 44556",
+    email: "info@haryanacivilinfra.in",
+    gstin: "06AAACH5512K1Z9",
+    district: "Rohtak",
+    state: "Haryana",
+    activeWorksCount: 3,
+    completedWorksCount: 11,
+    performanceRating: 4.8,
+    status: "Empanelled & Active"
+  },
+  {
+    vendorId: "VEN-2024-HR-7022",
+    firmName: "M/s Millennium City Builders & Engineers",
+    registrationClass: "Class A (Apex)",
+    contactPerson: "Er. Vikas Rao",
+    phone: "+91 99990 12345",
+    email: "contact@millenniumcitybuilders.com",
+    gstin: "06AACCM7712L1Z4",
+    district: "Gurugram",
+    state: "Haryana",
+    activeWorksCount: 4,
+    completedWorksCount: 16,
+    performanceRating: 4.9,
+    status: "Empanelled & Active"
+  },
+  {
     vendorId: "VEN-2024-MH-3312",
     firmName: "M/s Maharashtra Rural Roadbuilders",
     registrationClass: "Class A (Apex)",
@@ -207,6 +237,11 @@ export interface ContractorProject {
   checkpointActions: CheckpointAction[];
   schedule: MonitoringScheduleItem[];
   submissionRecords: EvidenceSubmissionRecord[];
+
+  // Completion Certificate Request Metadata
+  completionCertificateStatus?: 'Not Requested' | 'Requested' | 'Under Scrutiny' | 'Approved' | 'Issued';
+  completionCertificateRequestedDate?: string;
+  completionCertificateRemarks?: string;
 }
 
 export const DEFAULT_CONTRACTOR_PROFILE: ContractorProfile = {

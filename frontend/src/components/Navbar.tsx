@@ -212,7 +212,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                   {lang === 'hi' ? 'वर्तमान भूमिका' : 'CURRENT ROLE'}
                 </div>
                 <div style={{ fontSize: '0.80rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', lineHeight: 1.1 }}>
-                  {user.role === 'district' ? 'District Authority (Jabalpur)' : currentRoleInfo.label}
+                  {user.role === 'district' ? `District Authority (${user.district || 'Jabalpur'})` : currentRoleInfo.label}
                 </div>
               </div>
 
@@ -239,13 +239,13 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                 {/* User Identity Header */}
                 <div style={{ paddingBottom: '8px', borderBottom: '1px solid var(--border-light, #e2e8f0)' }}>
                   <div style={{ fontSize: '0.86rem', fontWeight: 800, color: 'var(--gov-primary, #0a2540)', lineHeight: 1.25 }}>
-                    {user.role === 'district' ? 'Smt. G. Srijana, IAS' : user.name}
+                    {user.role === 'district' ? (user.name || 'District Magistrate & Collector') : user.name}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '2px' }}>
-                    {user.email || 'district.jabalpur@nirikshak.gov.in'}
+                    {user.email || `district.${(user.district || 'jabalpur').toLowerCase()}@nirikshak.gov.in`}
                   </div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--gov-accent, #155eef)', background: 'var(--status-info-bg, #eff6ff)', padding: '2px 7px', borderRadius: '4px', marginTop: '4px' }}>
-                    <ShieldCheck size={11} /> {user.role === 'district' ? 'District Authority (Jabalpur)' : currentRoleInfo.label}
+                    <ShieldCheck size={11} /> {user.role === 'district' ? `District Authority (${user.district || 'Jabalpur'})` : currentRoleInfo.label}
                   </div>
                 </div>
 
