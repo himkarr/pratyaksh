@@ -432,6 +432,32 @@ class AdminDataService {
   }
 
   /**
+   * Fetch all raw projects for a specific district directly from Supabase DB
+   */
+  async getProjectsByDistrict(districtName: string): Promise<any[]> {
+    try {
+      const resp = await fetch(
+        `${SUPABASE_REST_URL}/projects?district=ilike.*${encodeURIComponent(districtName)}*&select=*,implementing_agencies(agency_name)&order=created_at.desc&limit=2500`,
+        { headers: this.getHeaders(), signal: AbortSignal.timeout(4000) }
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((p: any) => ({
+            ...p,
+            agency: p.implementing_agencies?.agency_name || p.agency || p.implementing_agency_name || `Office of District Magistrate & Collector, ${p.district || districtName}`
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch projects for district ${districtName}:`, e);
+    }
+    const all = await this.getRawProjects();
+    const dLower = districtName.toLowerCase().trim();
+    return all.filter(p => (p.district || "").toLowerCase().trim() === dLower || (p.district || "").toLowerCase().trim().includes(dLower));
+  }
+
+  /**
    * Initializes store with real initial dataset records (no synthetic dummy projects)
    */
   private initializeCanonicalStore() {

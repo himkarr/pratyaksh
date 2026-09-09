@@ -12,11 +12,15 @@ import {
   X,
   ExternalLink,
   Camera,
-  Check
+  Check,
+  Calendar,
+  Layers
 } from "lucide-react";
 import { WorkItem } from "../../data/mpladsData";
 import { districtContractorSync, VendorDetails } from "../../api/districtContractorSync";
-import { EvidenceSubmissionRecord, ContractorProject } from "../../data/contractorData";
+import { EvidenceSubmissionRecord, ContractorProject, MonitoringScheduleItem } from "../../data/contractorData";
+import { contractorApi } from "../../api/contractorApi";
+import { calculateMonitoringSchedule } from "../../utils/aiTimelineGenerator";
 import { Button } from "../ui/Button";
 
 interface ContractorInspectionPanelProps {
@@ -31,6 +35,8 @@ export const ContractorInspectionPanel: React.FC<ContractorInspectionPanelProps>
   const [vendor, setVendor] = useState<VendorDetails | null>(null);
   const [contractorProject, setContractorProject] = useState<ContractorProject | null>(null);
   const [submissions, setSubmissions] = useState<EvidenceSubmissionRecord[]>([]);
+  const [schedule, setSchedule] = useState<MonitoringScheduleItem[]>([]);
+  const [selectedPreviewImage, setSelectedPreviewImage] = useState<{ url: string; title: string } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Sign-off modal state
@@ -59,6 +65,20 @@ export const ContractorInspectionPanel: React.FC<ContractorInspectionPanelProps>
       }
       const subs = await districtContractorSync.getStageSubmissionsForWork(work.id);
       setSubmissions(subs);
+
+      const proj = await contractorApi.getContractorProject(work.id);
+      let sch: MonitoringScheduleItem[] = [];
+      if (proj && proj.schedule && proj.schedule.length > 0) {
+        sch = proj.schedule;
+      } else {
+        sch = calculateMonitoringSchedule({
+          workId: work.id,
+          officialStartDate: work.dateSanctioned || "2024-01-01",
+          officialExpectedCompletionDate: work.targetCompletion || "2025-03-31",
+          category: work.category || "General"
+        }).stages;
+      }
+      setSchedule(sch);
     } catch (err) {
       console.error("Error loading contractor inspection data:", err);
     } finally {
@@ -106,10 +126,61 @@ export const ContractorInspectionPanel: React.FC<ContractorInspectionPanelProps>
       setRemarks("");
       await loadContractorData();
       setTimeout(() => setSignoffNotice(null), 4000);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error verifying submission:", err);
     } finally {
       setIsSubmittingSignoff(false);
+    }
+  };
+
+  const getTimelinessInfo = (uploadTimestampStr: string, targetEndDateStr?: string) => {
+    if (!targetEndDateStr) {
+      return { status: "ON TIME SUBMISSION", isLate: false, daysLate: 0, badgeClass: "gov-badge-success" };
+    }
+
+    let uploadDate: Date | null = null;
+    const d = new Date(uploadTimestampStr);
+    if (!isNaN(d.getTime())) {
+      uploadDate = d;
+    } else {
+      const match = uploadTimestampStr.match(/(\d{1,2})[\/\s-]([A-Za-z0-9]+)[\/\s-](\d{4})/);
+      if (match) {
+        const day = parseInt(match[1], 10);
+        const monthStr = match[2];
+        const year = parseInt(match[3], 10);
+        let month = parseInt(monthStr, 10) - 1;
+        if (isNaN(month)) {
+          month = new Date(`${monthStr} 1, 2000`).getMonth();
+        }
+        uploadDate = new Date(year, month, day);
+      }
+    }
+
+    const targetDate = new Date(targetEndDateStr);
+    if (!uploadDate || isNaN(uploadDate.getTime()) || isNaN(targetDate.getTime())) {
+      return { status: "ON TIME SUBMISSION", isLate: false, daysLate: 0, badgeClass: "gov-badge-success" };
+    }
+
+    const uploadMidnight = new Date(uploadDate.getFullYear(), uploadDate.getMonth(), uploadDate.getDate());
+    const targetMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+    const diffMs = uploadMidnight.getTime() - targetMidnight.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) {
+      return {
+        status: `DELAYED SUBMISSION (${diffDays} Day${diffDays > 1 ? 's' : ''} Late)`,
+        isLate: true,
+        daysLate: diffDays,
+        badgeClass: "gov-badge-danger"
+      };
+    } else {
+      return {
+        status: "ON TIME SUBMISSION",
+        isLate: false,
+        daysLate: 0,
+        badgeClass: "gov-badge-success"
+      };
     }
   };
 
@@ -148,15 +219,15 @@ export const ContractorInspectionPanel: React.FC<ContractorInspectionPanelProps>
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", borderBottom: "1px solid var(--border-light)", paddingBottom: "10px", marginBottom: "10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ background: "rgba(10, 37, 64, 0.08)", padding: "8px", borderRadius: "6px" }}>
-              <UserCheck size={20} color="var(--gov-primary)" />
+            <div style={{ background: "var(--gov-primary)", color: "#fff", width: "36px", height: "36px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Building2 size={18} />
             </div>
             <div>
-              <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0 }}>
-                Assigned Contractor / Vendor Profile
-              </h4>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                Official Implementing Agency & Field Execution Firm
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--gov-primary)" }}>
+                Official Empanelled Executing Contractor
+              </div>
+              <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                Contractor assignment & milestone verification portal for District Magistrate & Nodal Officer
               </div>
             </div>
           </div>
@@ -199,6 +270,96 @@ export const ContractorInspectionPanel: React.FC<ContractorInspectionPanelProps>
         )}
       </div>
 
+      {/* SECTION A: OFFICIAL MILESTONE SCHEDULE & TIMELINESS MONITOR */}
+      <div className="gov-card" style={{ padding: "16px 18px", background: "var(--bg-surface)", border: "1px solid var(--border-main)" }}>
+        <div style={{ borderBottom: "1px solid var(--border-light)", paddingBottom: "10px", marginBottom: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+          <div>
+            <h4 style={{ fontSize: "0.98rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+              <Layers size={18} color="var(--gov-accent)" />
+              Official Milestone Schedule & Upload Timeliness Monitor
+            </h4>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>
+              Designated stage timeline targets vs contractor upload timestamps & on-time verification
+            </div>
+          </div>
+
+          <span className="gov-badge gov-badge-info" style={{ fontSize: "0.72rem", padding: "4px 8px" }}>
+            {schedule.length} Milestones Defined
+          </span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {schedule.map((st, idx) => {
+            const matchingSub = submissions.find(s => s.checkpointActionId === st.stageId || s.checkpointActionName.toLowerCase() === st.stageName.toLowerCase()) || st.submissionRecord;
+            const isSubmitted = !!matchingSub;
+            const timeliness = matchingSub ? getTimelinessInfo(matchingSub.uploadTimestamp, st.scheduledEndDate) : null;
+
+            return (
+              <div
+                key={st.stageId || idx}
+                style={{
+                  border: `1px solid ${isSubmitted ? (timeliness?.isLate ? "var(--status-danger-border)" : "var(--status-success-border)") : "var(--border-main)"}`,
+                  borderRadius: "6px",
+                  padding: "10px 14px",
+                  background: isSubmitted ? (timeliness?.isLate ? "#fff5f5" : "#f0fdf4") : "#f8fafc",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "10px"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "50%",
+                    background: isSubmitted ? (timeliness?.isLate ? "#ef4444" : "#10b981") : "#94a3b8",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 800,
+                    fontSize: "0.75rem"
+                  }}>
+                    {idx + 1}
+                  </div>
+
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: "0.86rem", color: "var(--text-main)" }}>
+                      {st.stageName} <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>(Target: {st.targetProgressPercent}%)</span>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Calendar size={12} color="var(--gov-accent)" />
+                      <span>Scheduled Window: <strong>{st.scheduledStartDate} – {st.scheduledEndDate}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  {matchingSub ? (
+                    <>
+                      <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                        Uploaded: <strong>{matchingSub.uploadTimestamp}</strong>
+                      </span>
+                      <span className={`gov-badge ${timeliness?.badgeClass}`} style={{ fontWeight: 800, fontSize: "0.68rem" }}>
+                        {timeliness?.isLate ? <AlertTriangle size={11} /> : <CheckCircle2 size={11} />}
+                        {timeliness?.status}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.68rem" }}>
+                      <Clock size={11} />
+                      PENDING CONTRACTOR UPLOAD
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Timeline-Based Contractor Stage Evidence & Image Gallery */}
       <div className="gov-card" style={{ padding: "16px 18px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid var(--border-light)", paddingBottom: "10px" }}>
@@ -223,47 +384,76 @@ export const ContractorInspectionPanel: React.FC<ContractorInspectionPanelProps>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {submissions.map((rec, stageIdx) => (
-              <div 
-                key={rec.id}
-                style={{
-                  background: "#f8fafc",
-                  border: "1px solid var(--border-main)",
-                  borderRadius: "8px",
-                  padding: "14px 16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px"
-                }}
-              >
-                {/* Stage Header Strip */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", borderBottom: "1px solid var(--border-light)", paddingBottom: "8px" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="gov-badge gov-badge-primary" style={{ fontSize: "0.70rem", fontWeight: 800 }}>
-                        Stage {stageIdx + 1}
-                      </span>
-                      <span style={{ fontSize: "0.90rem", fontWeight: 800, color: "var(--text-main)" }}>
-                        {rec.checkpointActionName}
-                      </span>
+            {submissions.map((rec, stageIdx) => {
+              const matchedStage = schedule.find(s => s.stageId === rec.checkpointActionId || s.stageName.toLowerCase() === rec.checkpointActionName.toLowerCase()) || schedule[stageIdx];
+              const timeliness = getTimelinessInfo(rec.uploadTimestamp, matchedStage?.scheduledEndDate);
+
+              return (
+                <div 
+                  key={rec.id}
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid var(--border-main)",
+                    borderRadius: "8px",
+                    padding: "14px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px"
+                  }}
+                >
+                  {/* Stage Header Strip */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", borderBottom: "1px solid var(--border-light)", paddingBottom: "8px" }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span className="gov-badge gov-badge-primary" style={{ fontSize: "0.70rem", fontWeight: 800 }}>
+                          Stage {stageIdx + 1}
+                        </span>
+                        <span style={{ fontSize: "0.90rem", fontWeight: 800, color: "var(--text-main)" }}>
+                          {rec.checkpointActionName}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                        {rec.evidenceType} • Uploaded on <strong>{rec.uploadTimestamp}</strong>
+                      </div>
                     </div>
-                    <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                      {rec.evidenceType} • Uploaded on <strong>{rec.uploadTimestamp}</strong>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span className="gov-badge gov-badge-info" style={{ fontWeight: 800 }}>
+                        {rec.physicalProgressPercent}% Physical Progress
+                      </span>
+                      <span className={`gov-badge ${
+                        rec.verificationStatus === "Verified" ? "gov-badge-success" :
+                        rec.verificationStatus === "Rejected" ? "gov-badge-danger" : "gov-badge-warning"
+                      }`} style={{ fontWeight: 800 }}>
+                        {rec.verificationStatus}
+                      </span>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span className="gov-badge gov-badge-info" style={{ fontWeight: 800 }}>
-                      {rec.physicalProgressPercent}% Physical Progress
-                    </span>
-                    <span className={`gov-badge ${
-                      rec.verificationStatus === "Verified" ? "gov-badge-success" :
-                      rec.verificationStatus === "Rejected" ? "gov-badge-danger" : "gov-badge-warning"
-                    }`} style={{ fontWeight: 800 }}>
-                      {rec.verificationStatus}
-                    </span>
+                  {/* Milestone Timeliness & Scheduled Target Audit Banner */}
+                  <div style={{
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    background: timeliness.isLate ? "#fef2f2" : "#f0fdf4",
+                    border: `1px solid ${timeliness.isLate ? "#fecaca" : "#bbf7d0"}`,
+                    color: timeliness.isLate ? "#991b1b" : "#166534",
+                    fontSize: "0.76rem",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "8px"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {timeliness.isLate ? <AlertTriangle size={15} color="#dc2626" /> : <CheckCircle2 size={15} color="#16a34a" />}
+                      <span>Milestone Timeliness Audit: <strong>{timeliness.status}</strong></span>
+                    </div>
+
+                    <div style={{ fontSize: "0.72rem" }}>
+                      Designated Stage Window: <strong>{matchedStage?.scheduledStartDate || "Start Date"} – {matchedStage?.scheduledEndDate || "Target Date"}</strong>
+                    </div>
                   </div>
-                </div>
 
                 {/* Geotag & Material Details */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", fontSize: "0.78rem" }}>
@@ -369,7 +559,8 @@ export const ContractorInspectionPanel: React.FC<ContractorInspectionPanelProps>
                   </button>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
       </div>
@@ -506,6 +697,56 @@ export const ContractorInspectionPanel: React.FC<ContractorInspectionPanelProps>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Lightbox Image Preview Modal */}
+      {selectedPreviewImage && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(15, 23, 42, 0.85)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setSelectedPreviewImage(null)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "12px",
+              padding: "16px",
+              maxWidth: "700px",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              position: "relative"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "var(--gov-primary)" }}>
+                📷 {selectedPreviewImage.title}
+              </h4>
+              <button
+                onClick={() => setSelectedPreviewImage(null)}
+                style={{ background: "#f1f5f9", border: "none", borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <X size={16} color="#64748b" />
+              </button>
+            </div>
+
+            <img
+              src={selectedPreviewImage.url}
+              alt={selectedPreviewImage.title}
+              style={{ maxWidth: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: "8px", border: "1px solid var(--border-main)" }}
+            />
           </div>
         </div>
       )}

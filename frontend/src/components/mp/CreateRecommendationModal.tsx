@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { Plus, X, Landmark, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Plus, X, Landmark, FileText, CheckCircle2, AlertCircle, Sparkles, Image as ImageIcon } from "lucide-react";
 import { Modal, Button, Input } from "../ui";
 import { MPRecommendation } from "../../data/mpData";
+import { CitizenIssue } from "../../data/citizenData";
 
 interface CreateRecommendationModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface CreateRecommendationModalProps {
   constituencyCode?: string;
   district?: string;
   initialCitizenId?: string;
+  initialCitizenIssue?: CitizenIssue | null;
 }
 
 const CATEGORIES = [
@@ -32,7 +34,8 @@ export const CreateRecommendationModal: React.FC<CreateRecommendationModalProps>
   constituency = "Pune",
   constituencyCode = "MH-PUNE-01",
   district = "Pune",
-  initialCitizenId = ""
+  initialCitizenId = "",
+  initialCitizenIssue = null
 }) => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<MPRecommendation["category"]>("Drinking Water");
@@ -44,6 +47,31 @@ export const CreateRecommendationModal: React.FC<CreateRecommendationModalProps>
   const [errorMsg, setErrorMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    if (initialCitizenIssue) {
+      setTitle(initialCitizenIssue.proposedWork || initialCitizenIssue.title || "");
+      const mapCat = (c: string): MPRecommendation["category"] => {
+        if (c.toLowerCase().includes("road")) return "Roads";
+        if (c.toLowerCase().includes("water")) return "Drinking Water";
+        if (c.toLowerCase().includes("solar")) return "Renewable Energy";
+        if (c.toLowerCase().includes("school") || c.toLowerCase().includes("education")) return "Education";
+        if (c.toLowerCase().includes("health")) return "Health";
+        return "Community Assets";
+      };
+      setCategory(mapCat(initialCitizenIssue.category));
+      setLocation(initialCitizenIssue.locationName || "");
+      setCitizenRequestId(initialCitizenIssue.id);
+      
+      const citizenEvidenceText = initialCitizenIssue.currentSituation 
+        ? `Adopting public demand from Citizen Proposal #${initialCitizenIssue.id}. Current Ground Reality: ${initialCitizenIssue.currentSituation}. Beneficiaries: ${initialCitizenIssue.estimatedBeneficiaries || "Local Community"}.`
+        : `Adopting citizen demand from #${initialCitizenIssue.id}: ${initialCitizenIssue.description}`;
+      setJustification(citizenEvidenceText);
+      setEstimatedCost("0.60");
+    } else if (initialCitizenId) {
+      setCitizenRequestId(initialCitizenId);
+    }
+  }, [initialCitizenIssue, initialCitizenId, isOpen]);
 
   const resetForm = () => {
     setTitle("");
@@ -140,6 +168,24 @@ export const CreateRecommendationModal: React.FC<CreateRecommendationModalProps>
             </div>
           </div>
 
+          {/* Citizen Evidence Banner if adopted */}
+          {initialCitizenIssue && (
+            <div style={{ background: "rgba(5, 150, 105, 0.08)", border: "1px solid rgba(5, 150, 105, 0.3)", borderRadius: "6px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "10px" }}>
+              <Sparkles size={18} color="#059669" style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: "0.78rem", color: "var(--text-main)" }}>
+                <strong>Adopting Citizen Proposal #{initialCitizenIssue.id}</strong>
+                {initialCitizenIssue.photos && initialCitizenIssue.photos.length > 0 && (
+                  <span style={{ color: "#059669", marginLeft: "6px", fontWeight: 600 }}>
+                    &bull; {initialCitizenIssue.photos.length} Site Evidence Photo(s) Attached
+                  </span>
+                )}
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Submitted by {initialCitizenIssue.submittedBy || "Resident Citizen"} from {initialCitizenIssue.locationName}
+                </div>
+              </div>
+            </div>
+          )}
+
           {errorMsg && (
             <div style={{ padding: "8px 12px", background: "var(--status-danger-bg)", border: "1px solid var(--status-danger-border)", color: "var(--status-danger-text)", borderRadius: "var(--radius-xs)", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "6px" }}>
               <AlertCircle size={14} />
@@ -227,16 +273,16 @@ export const CreateRecommendationModal: React.FC<CreateRecommendationModalProps>
 
           <div className="gov-form-group">
             <label className="gov-label">
-              Link Citizen Public Grievance (Optional)
+              Link Citizen Public Grievance / Proposal (Optional)
             </label>
             <input
               type="text"
               className="gov-input"
-              placeholder="e.g. ISSUE-MH-2024-001"
+              placeholder="e.g. REC-CIT-2024-819"
               value={citizenRequestId}
               onChange={(e) => setCitizenRequestId(e.target.value)}
             />
-            <span className="gov-form-hint">If this recommendation addresses a submitted citizen grievance</span>
+            <span className="gov-form-hint">If this recommendation addresses a submitted citizen grievance or proposal</span>
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>

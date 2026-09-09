@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Search, Filter, Landmark, MapPin, Calendar, Clock, 
   ArrowRight, LayoutGrid, List, Map as MapIcon,
-  IndianRupee, Building, CheckCircle2
+  IndianRupee, Building, CheckCircle2, ChevronLeft, ChevronRight,
+  ChevronsLeft, ChevronsRight, Plus, Sparkles
 } from "lucide-react";
 import { WorkItem } from "../../data/mpladsData";
 import { Input, Select, Button } from "../ui";
@@ -12,13 +13,22 @@ export interface CitizenProjectSearchProps {
   works: WorkItem[];
   onSelectWork: (work: WorkItem) => void;
   onReportProblem?: (work: WorkItem) => void;
+  onOpenRecommendModal?: () => void;
   currentConstituency?: string;
 }
+
+const PAGE_SIZE_OPTIONS = [
+  { value: "10", label: "10 per page" },
+  { value: "15", label: "15 per page" },
+  { value: "20", label: "20 per page" },
+  { value: "50", label: "50 per page" }
+];
 
 export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({ 
   works, 
   onSelectWork,
   onReportProblem,
+  onOpenRecommendModal,
   currentConstituency = "Pune"
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,25 +36,85 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
 
-  const filteredWorks = works.filter((w) => {
-    const matchesSearch =
-      w.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      w.constituency.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      w.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (w.category && w.category.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [jumpPageInput, setJumpPageInput] = useState("");
 
-    const matchesSector =
-      selectedSector === "all" ||
-      (w.category && w.category.toLowerCase().includes(selectedSector.toLowerCase())) ||
-      (w.sectorName && w.sectorName.toLowerCase().includes(selectedSector.toLowerCase()));
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedSector, selectedStatus, pageSize]);
 
-    const matchesStatus =
-      selectedStatus === "all" ||
-      (selectedStatus === "Ongoing" && (w.status === "Ongoing" || w.status === "Sanctioned")) ||
-      w.status === selectedStatus;
+  const filteredWorks = useMemo(() => {
+    return works.filter((w) => {
+      const matchesSearch =
+        w.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        w.constituency.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        w.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (w.category && w.category.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    return matchesSearch && matchesSector && matchesStatus;
-  });
+      const matchesSector =
+        selectedSector === "all" ||
+        (w.category && w.category.toLowerCase().includes(selectedSector.toLowerCase())) ||
+        (w.sectorName && w.sectorName.toLowerCase().includes(selectedSector.toLowerCase()));
+
+      const matchesStatus =
+        selectedStatus === "all" ||
+        (selectedStatus === "Ongoing" && (w.status === "Ongoing" || w.status === "Sanctioned")) ||
+        w.status === selectedStatus;
+
+      return matchesSearch && matchesSector && matchesStatus;
+    });
+  }, [works, searchTerm, selectedSector, selectedStatus]);
+
+  // Pagination Calculations
+  const totalItems = filteredWorks.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  
+  const startIndex = (safePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedWorks = filteredWorks.slice(startIndex, endIndex);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      window.scrollTo({ top: 120, behavior: "smooth" });
+    }
+  };
+
+  const handleJumpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const p = parseInt(jumpPageInput, 10);
+    if (!isNaN(p) && p >= 1 && p <= totalPages) {
+      handlePageChange(p);
+      setJumpPageInput("");
+    }
+  };
+
+  // Generate pagination pill items with smart ellipsis
+  const paginationItems = useMemo(() => {
+    const items: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) items.push(i);
+    } else {
+      items.push(1);
+      if (safePage > 3) {
+        items.push("...");
+      }
+      const start = Math.max(2, safePage - 1);
+      const end = Math.min(totalPages - 1, safePage + 1);
+      for (let i = start; i <= end; i++) {
+        items.push(i);
+      }
+      if (safePage < totalPages - 2) {
+        items.push("...");
+      }
+      items.push(totalPages);
+    }
+    return items;
+  }, [totalPages, safePage]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -96,6 +166,54 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
           gap: 14px;
         }
 
+        .citizen-pagination-bar {
+          background: var(--bg-surface);
+          border: 1px solid var(--border-main);
+          border-radius: var(--radius-sm);
+          padding: 12px 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
+          box-sizing: border-box;
+        }
+
+        .citizen-page-btn {
+          min-width: 32px;
+          height: 32px;
+          padding: 0 6px;
+          border-radius: 6px;
+          border: 1px solid var(--border-main);
+          background: var(--bg-surface);
+          color: var(--text-main);
+          font-size: 0.78rem;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .citizen-page-btn:hover:not(:disabled) {
+          border-color: var(--gov-accent);
+          background: var(--status-info-bg);
+          color: var(--gov-accent);
+        }
+
+        .citizen-page-btn.active {
+          background: var(--gov-primary);
+          color: #ffffff;
+          border-color: var(--gov-primary);
+          font-weight: 700;
+        }
+
+        .citizen-page-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
         @media (max-width: 960px) {
           .citizen-search-cards-grid {
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -115,8 +233,55 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
             grid-template-columns: 1fr !important;
             gap: 10px;
           }
+          .citizen-pagination-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+          }
         }
       `}</style>
+
+      {/* Top Banner: Propose Recommendation to MP */}
+      {onOpenRecommendModal && (
+        <div 
+          style={{
+            background: "linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(10, 37, 64, 0.06) 100%)",
+            border: "1px solid rgba(5, 150, 105, 0.3)",
+            borderRadius: "var(--radius-sm)",
+            padding: "14px 18px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: "240px", flex: 1 }}>
+            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "rgba(5, 150, 105, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669", flexShrink: 0 }}>
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--gov-primary)" }}>
+                Need a new development project in your area?
+              </div>
+              <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                Submit a work recommendation request with photo evidence for the Hon'ble MP to sponsor under MPLADS.
+              </div>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={onOpenRecommendModal}
+            icon={<Plus size={14} />}
+            style={{ background: "#059669", borderColor: "#047857", fontWeight: 700, whiteSpace: "nowrap" }}
+          >
+            Propose Work Recommendation
+          </Button>
+        </div>
+      )}
 
       {/* Search & Filter Header */}
       <div className="citizen-search-header">
@@ -238,17 +403,47 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
         </div>
       </div>
 
-      {/* Result Count Bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.80rem", color: "var(--text-muted)", padding: "0 4px" }}>
-        <span>Showing <strong>{filteredWorks.length}</strong> public development works</span>
-        {searchTerm && (
-          <button
-            onClick={() => { setSearchTerm(""); setSelectedSector("all"); setSelectedStatus("all"); }}
-            style={{ background: "none", border: "none", color: "var(--gov-accent)", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}
-          >
-            Clear filters
-          </button>
-        )}
+      {/* Result Count Bar & Page Size Selector */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.80rem", color: "var(--text-muted)", padding: "0 4px", flexWrap: "wrap", gap: "8px" }}>
+        <div>
+          Showing <strong>{totalItems === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of <strong>{totalItems}</strong> public development works
+          {totalPages > 1 && <span> &bull; Page {safePage} of {totalPages}</span>}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {searchTerm && (
+            <button
+              onClick={() => { setSearchTerm(""); setSelectedSector("all"); setSelectedStatus("all"); }}
+              style={{ background: "none", border: "none", color: "var(--gov-accent)", cursor: "pointer", fontWeight: 600, fontSize: "0.78rem" }}
+            >
+              Clear filters
+            </button>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>Show:</span>
+            <select
+              value={String(pageSize)}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              style={{
+                padding: "3px 8px",
+                borderRadius: "4px",
+                border: "1px solid var(--border-main)",
+                background: "var(--bg-surface)",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "var(--text-main)",
+                cursor: "pointer"
+              }}
+            >
+              {PAGE_SIZE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Empty State */}
@@ -267,11 +462,18 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
             No Development Works Found
           </h4>
           <p style={{ fontSize: "0.80rem", color: "var(--text-muted)", maxWidth: "400px", margin: "0 auto 12px auto" }}>
-            No development works match your search criteria. Try using different keywords or resetting filters.
+            No development works match your search criteria. Try using different keywords or propose this work to your MP.
           </p>
-          <Button variant="secondary" size="sm" onClick={() => { setSearchTerm(""); setSelectedSector("all"); setSelectedStatus("all"); }}>
-            Reset Filters
-          </Button>
+          <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
+            <Button variant="secondary" size="sm" onClick={() => { setSearchTerm(""); setSelectedSector("all"); setSelectedStatus("all"); }}>
+              Reset Filters
+            </Button>
+            {onOpenRecommendModal && (
+              <Button variant="primary" size="sm" onClick={onOpenRecommendModal} icon={<Plus size={14} />}>
+                Propose New Recommendation
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -287,10 +489,10 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
         </div>
       )}
 
-      {/* Grid Cards View: Maximum 3 Columns Layout on Desktop, 1 Column on Mobile */}
-      {viewMode === "grid" && (
+      {/* Grid Cards View: Displays Paginated Slice (10-20 items per page) */}
+      {viewMode === "grid" && paginatedWorks.length > 0 && (
         <div className="citizen-search-cards-grid">
-          {filteredWorks.map((work) => {
+          {paginatedWorks.map((work) => {
             const sanctioned = work.sanctionedAmt || work.recommendedAmt || 0;
             const spent = work.expenditureAmt || 0;
             const progress = work.physicalProgress || 0;
@@ -404,10 +606,10 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
         </div>
       )}
 
-      {/* Compact List View */}
-      {viewMode === "list" && (
+      {/* Compact List View: Displays Paginated Slice */}
+      {viewMode === "list" && paginatedWorks.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {filteredWorks.map((work) => {
+          {paginatedWorks.map((work) => {
             const sanctioned = work.sanctionedAmt || work.recommendedAmt || 0;
             const spent = work.expenditureAmt || 0;
             const progress = work.physicalProgress || 0;
@@ -460,6 +662,115 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls Bar */}
+      {totalPages > 1 && (
+        <div className="citizen-pagination-bar">
+          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span>Showing Page <strong>{safePage}</strong> of <strong>{totalPages}</strong></span>
+            <span>({totalItems} total projects)</span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
+            {/* First Button */}
+            <button
+              type="button"
+              className="citizen-page-btn"
+              onClick={() => handlePageChange(1)}
+              disabled={safePage <= 1}
+              title="First Page"
+            >
+              <ChevronsLeft size={14} />
+            </button>
+
+            {/* Prev Button */}
+            <button
+              type="button"
+              className="citizen-page-btn"
+              onClick={() => handlePageChange(safePage - 1)}
+              disabled={safePage <= 1}
+              title="Previous Page"
+            >
+              <ChevronLeft size={14} />
+            </button>
+
+            {/* Page Number Pills */}
+            {paginationItems.map((item, idx) => {
+              if (item === "...") {
+                return (
+                  <span key={`dots-${idx}`} style={{ padding: "0 4px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    ...
+                  </span>
+                );
+              }
+              const pageNum = Number(item);
+              const isActive = pageNum === safePage;
+              return (
+                <button
+                  key={`page-${pageNum}`}
+                  type="button"
+                  className={`citizen-page-btn ${isActive ? "active" : ""}`}
+                  onClick={() => handlePageChange(pageNum)}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            {/* Next Button */}
+            <button
+              type="button"
+              className="citizen-page-btn"
+              onClick={() => handlePageChange(safePage + 1)}
+              disabled={safePage >= totalPages}
+              title="Next Page"
+            >
+              <ChevronRight size={14} />
+            </button>
+
+            {/* Last Button */}
+            <button
+              type="button"
+              className="citizen-page-btn"
+              onClick={() => handlePageChange(totalPages)}
+              disabled={safePage >= totalPages}
+              title="Last Page"
+            >
+              <ChevronsRight size={14} />
+            </button>
+
+            {/* Quick Jump Input */}
+            {totalPages > 5 && (
+              <form onSubmit={handleJumpSubmit} style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginLeft: "6px" }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  placeholder="Go to"
+                  value={jumpPageInput}
+                  onChange={(e) => setJumpPageInput(e.target.value)}
+                  style={{
+                    width: "48px",
+                    height: "30px",
+                    padding: "0 6px",
+                    borderRadius: "4px",
+                    border: "1px solid var(--border-main)",
+                    fontSize: "0.74rem",
+                    textAlign: "center"
+                  }}
+                />
+                <button
+                  type="submit"
+                  className="citizen-page-btn"
+                  style={{ height: "30px", fontSize: "0.72rem", padding: "0 8px" }}
+                >
+                  Go
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       )}
     </div>

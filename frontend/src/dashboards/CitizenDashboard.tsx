@@ -10,7 +10,10 @@ import { LoginModal } from "../components/LoginModal";
 import { Button } from "../components/ui";
 import { 
   CitizenIssue, 
-  INITIAL_CITIZEN_ISSUES 
+  INITIAL_CITIZEN_ISSUES,
+  getCitizenSubmissions,
+  saveCitizenSubmission,
+  syncCitizenSubmissionsFromSupabase
 } from "../data/citizenData";
 import { 
   ALL_WORKS, 
@@ -19,6 +22,7 @@ import {
 import { usePreferences } from "../context/PreferencesContext";
 import { 
   SubmitIssueModal, 
+  SubmitRecommendationModal,
   IssueTracker, 
   CitizenProjectSearch, 
   CitizenNotifications,
@@ -37,12 +41,13 @@ export const CitizenDashboard: React.FC = () => {
   // State Management
   const [currentConstituency, setCurrentConstituency] = useState<string>("Pune");
   const [currentState, setCurrentState] = useState<string>("Maharashtra");
-  const [issues, setIssues] = useState<CitizenIssue[]>(INITIAL_CITIZEN_ISSUES);
+  const [issues, setIssues] = useState<CitizenIssue[]>(() => getCitizenSubmissions());
   const [works, setWorks] = useState<WorkItem[]>(ALL_WORKS);
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   
   // Modals State
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
+  const [isRecommendOpen, setIsRecommendOpen] = useState(false);
   const [reportTargetWork, setReportTargetWork] = useState<WorkItem | null>(null);
   const [selectedWork, setSelectedWork] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
@@ -52,11 +57,19 @@ export const CitizenDashboard: React.FC = () => {
   // Search query on Home hero
   const [homeSearchQuery, setHomeSearchQuery] = useState("");
 
-  // Hydrate projects from live Supabase
+  // Hydrate projects & citizen issues from live Supabase
   useEffect(() => {
-    async function loadCitizenProjects() {
+    async function loadCitizenData() {
       try {
-        const liveProjs = await adminDataService.getRawProjects();
+        const [liveProjs, liveIssues] = await Promise.all([
+          adminDataService.getRawProjects(),
+          syncCitizenSubmissionsFromSupabase(currentConstituency)
+        ]);
+
+        if (liveIssues && liveIssues.length > 0) {
+          setIssues(liveIssues);
+        }
+
         if (liveProjs && liveProjs.length > 0) {
           const mapped: WorkItem[] = liveProjs.map((p, idx) => ({
             id: p.project_id || p.id || `CW-${idx}`,
@@ -94,8 +107,8 @@ export const CitizenDashboard: React.FC = () => {
         console.warn("CitizenDashboard live fetch fallback:", err);
       }
     }
-    loadCitizenProjects();
-  }, []);
+    loadCitizenData();
+  }, [currentConstituency]);
 
   // Available constituencies extracted dynamically
   const availableAreas = useMemo(() => {
@@ -126,12 +139,18 @@ export const CitizenDashboard: React.FC = () => {
   const completedWorksCount = displayWorks.filter((w) => w.status === "Completed").length;
   const delayedWorksCount = displayWorks.filter((w) => w.status === "Delayed").length;
 
-  // Recent 3 citizen reports for home preview
+  // Recent 3 citizen submissions for home preview
   const recentReports = issues.slice(0, 3);
 
   // Handlers
   const handleIssueSubmitted = (newIssue: CitizenIssue) => {
-    setIssues([newIssue, ...issues]);
+    const updated = saveCitizenSubmission(newIssue);
+    setIssues(updated);
+  };
+
+  const handleRecommendationSubmitted = (newRec: CitizenIssue) => {
+    const updated = saveCitizenSubmission(newRec);
+    setIssues(updated);
   };
 
   const handleOpenReportWithWork = (work: WorkItem) => {
@@ -142,6 +161,10 @@ export const CitizenDashboard: React.FC = () => {
   const handleOpenGeneralReport = () => {
     setReportTargetWork(null);
     setIsSubmitOpen(true);
+  };
+
+  const handleOpenRecommend = () => {
+    setIsRecommendOpen(true);
   };
 
   const handleHomeSearchSubmit = (e: React.FormEvent) => {
@@ -166,6 +189,16 @@ export const CitizenDashboard: React.FC = () => {
   };
 
   const getReportStageBadge = (issue: CitizenIssue) => {
+    if (issue.type === "work_recommendation") {
+      switch (issue.status) {
+        case "RECOMMENDED_BY_MP":
+          return <span className="gov-badge gov-badge-success">MP Recommended</span>;
+        case "UNDER_REVIEW":
+          return <span className="gov-badge gov-badge-info">MP Reviewing</span>;
+        default:
+          return <span className="gov-badge gov-badge-neutral">Submitted</span>;
+      }
+    }
     switch (issue.status) {
       case "RESOLVED":
         return <span className="gov-badge gov-badge-success">Resolved</span>;
@@ -273,7 +306,7 @@ export const CitizenDashboard: React.FC = () => {
           gap: 10px;
           align-items: center;
           width: 100%;
-          max-width: 760px;
+          max-width: 860px;
         }
 
         .citizen-hero-input-wrap {
@@ -284,7 +317,7 @@ export const CitizenDashboard: React.FC = () => {
 
         .citizen-hero-btn-group {
           display: flex;
-          gap: 10px;
+          gap: 8px;
           flex-wrap: wrap;
         }
 
@@ -524,7 +557,7 @@ export const CitizenDashboard: React.FC = () => {
             className={`civic-tab-btn ${activeTab === "my_reports" ? "active" : ""}`}
           >
             <FileText size={15} />
-            <span>My Reports</span>
+            <span>My Reports & Recommendations</span>
             <span className="civic-tab-badge">{issues.length}</span>
           </button>
         </div>
@@ -555,11 +588,11 @@ export const CitizenDashboard: React.FC = () => {
                   Find development works near you
                 </h2>
                 <p style={{ fontSize: "0.86rem", color: "#cbd5e1", maxWidth: "660px", lineHeight: 1.45, margin: 0 }}>
-                  Search approved MPLADS community projects in your area, track execution progress, or submit an inquiry for local infrastructure.
+                  Search approved MPLADS community projects, propose new project recommendations to your Hon'ble MP with photo evidence, or report on-ground issues.
                 </p>
               </div>
 
-              {/* Single Search Field + Find Works & Report Buttons */}
+              {/* Single Search Field + Find Works, Propose Recommendation & Report Buttons */}
               <form onSubmit={handleHomeSearchSubmit} className="citizen-hero-form">
                 <div className="citizen-hero-input-wrap">
                   <Search size={16} color="var(--text-muted)" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
@@ -597,11 +630,22 @@ export const CitizenDashboard: React.FC = () => {
                     type="button"
                     variant="primary"
                     size="md"
+                    onClick={handleOpenRecommend}
+                    icon={<Sparkles size={14} />}
+                    style={{ background: "#059669", borderColor: "#047857", borderRadius: "8px", fontWeight: 700 }}
+                  >
+                    Propose to MP
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
                     onClick={handleOpenGeneralReport}
                     icon={<AlertTriangle size={14} />}
                     style={{ background: "#ea580c", borderColor: "#c2410c", borderRadius: "8px", fontWeight: 700 }}
                   >
-                    Report an Issue
+                    Report Issue
                   </Button>
                 </div>
               </form>
@@ -735,15 +779,15 @@ export const CitizenDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Compact Recent Reports Section */}
+            {/* Compact Recent Reports & Proposals Section */}
             <div className="civic-card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                 <div>
                   <h3 style={{ fontSize: "1.02rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0 }}>
-                    Recent Problem Reports
+                    Recent Citizen Submissions & Demands
                   </h3>
                   <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                    Latest updates on citizen reported infrastructure issues
+                    Latest proposals and problem reports submitted by residents
                   </span>
                 </div>
 
@@ -759,51 +803,60 @@ export const CitizenDashboard: React.FC = () => {
 
               {recentReports.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "16px 10px", color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                  No problem reports submitted yet.
+                  No proposals or reports submitted yet.
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {recentReports.map((report) => (
-                    <div
-                      key={report.id}
-                      onClick={() => setActiveTab("my_reports")}
-                      style={{
-                        padding: "12px 14px",
-                        borderRadius: "var(--radius-xs)",
-                        border: "1px solid var(--border-light)",
-                        background: "var(--bg-surface-subtle)",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: "8px",
-                        cursor: "pointer",
-                        transition: "background 0.15s ease",
-                        boxSizing: "border-box"
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-surface-subtle)"}
-                    >
-                      <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px", flexWrap: "wrap" }}>
-                          <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--gov-primary)" }}>
-                            #{report.id}
-                          </span>
-                          <span style={{ fontSize: "0.70rem", color: "var(--text-muted)" }}>
-                            &bull; {report.locationName} &bull; {report.dateSubmitted}
-                          </span>
+                  {recentReports.map((report) => {
+                    const isRec = report.type === "work_recommendation";
+                    return (
+                      <div
+                        key={report.id}
+                        onClick={() => setActiveTab("my_reports")}
+                        style={{
+                          padding: "12px 14px",
+                          borderRadius: "var(--radius-xs)",
+                          border: "1px solid var(--border-light)",
+                          borderLeft: isRec ? "4px solid #059669" : "4px solid #d97706",
+                          background: "var(--bg-surface-subtle)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                          cursor: "pointer",
+                          transition: "background 0.15s ease",
+                          boxSizing: "border-box"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-surface-subtle)"}
+                      >
+                        <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "0.74rem", fontWeight: 700, color: isRec ? "#059669" : "var(--gov-primary)", fontFamily: "monospace" }}>
+                              #{report.id}
+                            </span>
+                            {isRec && (
+                              <span className="gov-badge gov-badge-success" style={{ fontSize: "0.62rem", background: "rgba(5, 150, 105, 0.12)", color: "#047857" }}>
+                                MP Proposal
+                              </span>
+                            )}
+                            <span style={{ fontSize: "0.70rem", color: "var(--text-muted)" }}>
+                              &bull; {report.locationName} &bull; {report.dateSubmitted}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.84rem", fontWeight: 600, color: "var(--text-main)", wordBreak: "break-word" }}>
+                            {report.title}
+                          </div>
                         </div>
-                        <div style={{ fontSize: "0.84rem", fontWeight: 600, color: "var(--text-main)", wordBreak: "break-word" }}>
-                          {report.title}
-                        </div>
-                      </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                        {getReportStageBadge(report)}
-                        <ChevronRight size={15} color="var(--text-muted)" />
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                          {getReportStageBadge(report)}
+                          <ChevronRight size={15} color="var(--text-muted)" />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -819,6 +872,7 @@ export const CitizenDashboard: React.FC = () => {
             works={displayWorks}
             onSelectWork={(work) => setSelectedWork(work)}
             onReportProblem={handleOpenReportWithWork}
+            onOpenRecommendModal={handleOpenRecommend}
             currentConstituency={currentConstituency}
           />
         )}
@@ -830,6 +884,7 @@ export const CitizenDashboard: React.FC = () => {
           <IssueTracker
             issues={issues}
             onOpenReportModal={handleOpenGeneralReport}
+            onOpenRecommendModal={handleOpenRecommend}
           />
         )}
 
@@ -847,7 +902,16 @@ export const CitizenDashboard: React.FC = () => {
       {/* CITIZEN MODALS */}
       {/* ========================================================================= */}
 
-      {/* 1. Report a Problem Modal */}
+      {/* 1. Propose Work Recommendation to MP Modal */}
+      <SubmitRecommendationModal
+        isOpen={isRecommendOpen}
+        onClose={() => setIsRecommendOpen(false)}
+        onSubmitted={handleRecommendationSubmitted}
+        currentConstituency={currentConstituency}
+        currentState={currentState}
+      />
+
+      {/* 2. Report a Problem Modal */}
       <SubmitIssueModal
         isOpen={isSubmitOpen}
         onClose={() => setIsSubmitOpen(false)}
@@ -857,20 +921,20 @@ export const CitizenDashboard: React.FC = () => {
         currentConstituency={currentConstituency}
       />
 
-      {/* 2. Public Work Details Modal (includes "Report a Problem with this Work") */}
+      {/* 3. Public Work Details Modal */}
       <CitizenWorkDetailModal
         work={selectedWork}
         onClose={() => setSelectedWork(null)}
         onReportProblem={handleOpenReportWithWork}
       />
 
-      {/* 3. Guidelines & Policy Modal */}
+      {/* 4. Guidelines & Policy Modal */}
       <PolicyModal
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
       />
 
-      {/* 4. Stakeholder Login Modal */}
+      {/* 5. Stakeholder Login Modal */}
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}

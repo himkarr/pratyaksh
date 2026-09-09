@@ -1,4 +1,5 @@
 export * from "./SubmitIssueModal";
+export * from "./SubmitRecommendationModal";
 export * from "./IssueTracker";
 export * from "./CitizenProjectSearch";
 export * from "./CitizenNotifications";

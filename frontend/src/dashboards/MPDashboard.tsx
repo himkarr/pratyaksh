@@ -30,9 +30,9 @@ import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Card, CardHeader, CardBody } from "../components/ui";
 import { CreateRecommendationModal } from "../components/mp/CreateRecommendationModal";
 
-import { MPRecommendation, INITIAL_MP_RECOMMENDATIONS } from "../data/mpData";
+import { MPRecommendation, INITIAL_MP_RECOMMENDATIONS, syncMPRecommendationsFromSupabase, saveMPRecommendation, getMPRecommendations } from "../data/mpData";
 import { ALL_WORKS, WorkItem } from "../data/mpladsData";
-import { INITIAL_CITIZEN_ISSUES, CitizenIssue } from "../data/citizenData";
+import { INITIAL_CITIZEN_ISSUES, CitizenIssue, syncCitizenSubmissionsFromSupabase, getCitizenSubmissions, updateCitizenSubmissionStatus } from "../data/citizenData";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { adminDataService, MPSummary } from "../api/adminDataService";
@@ -45,7 +45,8 @@ export const MPDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"my_recommendations" | "constituency_works" | "fund_details" | "citizen_reports" | "risk_alerts">("my_recommendations");
 
   // Data States
-  const [recommendations, setRecommendations] = useState<MPRecommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<MPRecommendation[]>(() => getMPRecommendations());
+  const [citizenIssues, setCitizenIssues] = useState<CitizenIssue[]>(() => getCitizenSubmissions());
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -67,9 +68,11 @@ export const MPDashboard: React.FC = () => {
   useEffect(() => {
     async function loadLiveData() {
       try {
-        const [mpsList, projs] = await Promise.all([
+        const [mpsList, projs, recs, issuesList] = await Promise.all([
           adminDataService.getMPSummaries(),
-          adminDataService.getRawProjects()
+          adminDataService.getRawProjects(),
+          syncMPRecommendationsFromSupabase(),
+          syncCitizenSubmissionsFromSupabase()
         ]);
         if (mpsList && mpsList.length > 0) {
           setLiveMps(mpsList);
@@ -77,6 +80,12 @@ export const MPDashboard: React.FC = () => {
         }
         if (projs && projs.length > 0) {
           setLiveProjects(projs);
+        }
+        if (recs && recs.length > 0) {
+          setRecommendations(recs);
+        }
+        if (issuesList && issuesList.length > 0) {
+          setCitizenIssues(issuesList);
         }
       } catch (err) {
         console.warn("Could not load live MP data from Supabase:", err);
@@ -150,33 +159,23 @@ export const MPDashboard: React.FC = () => {
     });
   }, [liveProjects, matchedLiveMP, constituencyCode, constituency, district, mpHouse, mpName, mpState]);
 
-  const filteredInitialRecs = useMemo(() => {
-    return INITIAL_MP_RECOMMENDATIONS.filter((rec) => {
-      return rec.constituency_code === constituencyCode || 
-        (rec.constituency && constituency && rec.constituency.toLowerCase() === constituency.toLowerCase());
-    });
-  }, [constituencyCode, constituency]);
-
-  // Filter user-added recommendations for the active constituency
-  const filteredUserRecs = useMemo(() => {
-    return recommendations.filter((rec) => {
-      return rec.constituency_code === constituencyCode || 
-        (rec.constituency && constituency && rec.constituency.toLowerCase() === constituency.toLowerCase());
-    });
-  }, [recommendations, constituencyCode, constituency]);
-
-  // Combine user-added recommendations with filtered initial recommendations
   const displayedRecommendations = useMemo(() => {
-    return [...filteredUserRecs, ...filteredInitialRecs];
-  }, [filteredUserRecs, filteredInitialRecs]);
-
-  // Filter citizen issues for the selected constituency
-  const filteredCitizenIssues = useMemo(() => {
-    return INITIAL_CITIZEN_ISSUES.filter((issue) => {
-      return (issue.constituency && constituency && issue.constituency.toLowerCase() === constituency.toLowerCase()) ||
-        (district && issue.district && issue.district.toLowerCase() === district.toLowerCase());
+    return recommendations.filter((rec) => {
+      return !constituency || rec.constituency_code === constituencyCode || 
+        (rec.constituency && rec.constituency.toLowerCase() === constituency.toLowerCase()) ||
+        (rec.district && rec.district.toLowerCase() === district.toLowerCase()) ||
+        recommendations.length <= 10;
     });
-  }, [constituency, district]);
+  }, [recommendations, constituencyCode, constituency, district]);
+
+  // Filter citizen issues for the selected constituency from live Supabase list
+  const filteredCitizenIssues = useMemo(() => {
+    return citizenIssues.filter((issue) => {
+      return (issue.constituency && constituency && issue.constituency.toLowerCase() === constituency.toLowerCase()) ||
+        (district && issue.district && issue.district.toLowerCase() === district.toLowerCase()) ||
+        citizenIssues.length <= 5;
+    });
+  }, [citizenIssues, constituency, district]);
 
   // High Risk Projects
   const highRiskWorks = useMemo(() => {
@@ -184,8 +183,19 @@ export const MPDashboard: React.FC = () => {
   }, [constituencyWorks]);
 
   // Handlers
-  const handleRecommendationSubmitted = (newRec: MPRecommendation) => {
-    setRecommendations([newRec, ...recommendations]);
+  const handleRecommendationSubmitted = async (newRec: MPRecommendation) => {
+    const updated = await saveMPRecommendation(newRec);
+    setRecommendations(updated);
+
+    if (newRec.citizenRequestId) {
+      const updatedIssues = updateCitizenSubmissionStatus(
+        newRec.citizenRequestId,
+        "RECOMMENDED_BY_MP",
+        newRec.id,
+        `Hon'ble MP ${mpName} has formally submitted recommendation proposal under MPLADS.`
+      );
+      setCitizenIssues(updatedIssues);
+    }
   };
 
   const handleAdoptCitizenIssue = (issueId: string) => {

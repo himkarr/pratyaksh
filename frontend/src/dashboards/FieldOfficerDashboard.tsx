@@ -32,6 +32,12 @@ import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { adminDataService } from "../api/adminDataService";
+import { 
+  completeVerificationInSupabase, 
+  updateProjectProgressInSupabase,
+  logAuditEventInSupabase,
+  ensureUUID 
+} from "../api/supabaseSync";
 
 export const FieldOfficerDashboard: React.FC = () => {
   const { user } = useRole();
@@ -173,7 +179,7 @@ export const FieldOfficerDashboard: React.FC = () => {
   }, [verificationQueue]);
 
   // Handlers
-  const handleReportSubmitted = (report: VerificationReportSubmission) => {
+  const handleReportSubmitted = async (report: VerificationReportSubmission) => {
     setVerificationRecords([report, ...verificationRecords.filter((r) => r.workId !== report.workId)]);
     
     // Update local work status if flagged
@@ -181,6 +187,31 @@ export const FieldOfficerDashboard: React.FC = () => {
       setProjects((prev) =>
         prev.map((p) => (p.id === report.workId ? { ...p, status: "Delayed" } : p))
       );
+    }
+
+    try {
+      await Promise.all([
+        completeVerificationInSupabase(ensureUUID(report.workId), {
+          verification_report: report.verificationNotes,
+          gps_lat: report.fieldPhotos[0]?.lat || 18.5204,
+          gps_long: report.fieldPhotos[0]?.lng || 73.8567,
+          status: report.verificationStatus === "VERIFIED" ? "Completed" : "Under Scrutiny"
+        }),
+        updateProjectProgressInSupabase(
+          ensureUUID(report.workId),
+          report.verifiedPhysicalProgress,
+          undefined,
+          report.verificationStatus === "FLAGGED" ? "Delayed" : undefined
+        ),
+        logAuditEventInSupabase(
+          "FIELD_INSPECTION_SUBMITTED",
+          "verification_requests",
+          ensureUUID(report.workId),
+          report
+        )
+      ]);
+    } catch (err) {
+      console.warn("Supabase field inspection sync failed:", err);
     }
   };
 
