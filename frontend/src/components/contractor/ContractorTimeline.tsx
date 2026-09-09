@@ -1,5 +1,5 @@
 import React from "react";
-import { Clock, CheckCircle2, AlertCircle, ArrowDown, Upload, FileText, MapPin, ShieldCheck } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, ArrowDown, Upload, FileText, MapPin, ShieldCheck, Award, FileCheck, Lock } from "lucide-react";
 import { ContractorProject, MonitoringScheduleItem } from "../../data/contractorData";
 import { calculateMonitoringSchedule } from "../../utils/aiTimelineGenerator";
 import { Button } from "../ui/Button";
@@ -7,11 +7,13 @@ import { Button } from "../ui/Button";
 interface ContractorTimelineProps {
   project: ContractorProject;
   onSubmitStageEvidence?: (stage: MonitoringScheduleItem) => void;
+  onRequestCompletionCertificate?: (project: ContractorProject) => void;
 }
 
 export const ContractorTimeline: React.FC<ContractorTimelineProps> = ({ 
   project,
-  onSubmitStageEvidence 
+  onSubmitStageEvidence,
+  onRequestCompletionCertificate
 }) => {
   const scheduleData = project.schedule && project.schedule.length > 0 
     ? project.schedule 
@@ -26,6 +28,22 @@ export const ContractorTimeline: React.FC<ContractorTimelineProps> = ({
     if (amtRs >= 10000000) return `₹${(amtRs / 10000000).toFixed(2)} Cr`;
     return `₹${(amtRs / 100000).toFixed(2)} Lakh`;
   };
+
+  // Determine if the last stage has been submitted or completed
+  const lastStage = scheduleData.length > 0 ? scheduleData[scheduleData.length - 1] : null;
+  const isLastStageSubmitted = lastStage ? (
+    lastStage.status === "COMPLETED" || 
+    lastStage.submissionStatus === "Submitted" || 
+    lastStage.submissionStatus === "Verified" || 
+    !!lastStage.submissionRecord ||
+    project.physicalProgress >= 100 ||
+    project.currentWorkStatus === "Completed"
+  ) : false;
+
+  const isCertRequested = project.completionCertificateStatus === "Requested" || 
+                          project.completionCertificateStatus === "Under Scrutiny";
+  const isCertApprovedOrIssued = project.completionCertificateStatus === "Approved" || 
+                                 project.completionCertificateStatus === "Issued";
 
   return (
     <div className="gov-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -66,7 +84,6 @@ export const ContractorTimeline: React.FC<ContractorTimelineProps> = ({
         {scheduleData.map((stage, idx) => {
           const isCompleted = stage.status === "COMPLETED";
           const isCurrent = stage.status === "IN_PROGRESS";
-          const isLast = idx === scheduleData.length - 1;
           const rec = stage.submissionRecord;
 
           return (
@@ -209,14 +226,138 @@ export const ContractorTimeline: React.FC<ContractorTimelineProps> = ({
               </div>
 
               {/* Connecting Down Arrow */}
-              {!isLast && (
-                <div style={{ display: "flex", justifyContent: "flex-start", paddingLeft: "24px", margin: "3px 0" }}>
-                  <ArrowDown size={18} color="var(--border-dark)" />
-                </div>
-              )}
+              <div style={{ display: "flex", justifyContent: "flex-start", paddingLeft: "24px", margin: "3px 0" }}>
+                <ArrowDown size={18} color="var(--border-dark)" />
+              </div>
             </div>
           );
         })}
+
+        {/* ========================================================================= */}
+        {/* FINAL MILESTONE: REQUEST OFFICIAL WORK COMPLETION CERTIFICATE            */}
+        {/* ========================================================================= */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "16px",
+            padding: "18px",
+            borderRadius: "var(--radius-xs)",
+            border: isCertApprovedOrIssued
+              ? "1.5px solid #10b981"
+              : isCertRequested
+                ? "1.5px solid #3b82f6"
+                : isLastStageSubmitted
+                  ? "1.5px solid #059669"
+                  : "1px solid var(--border-light)",
+            background: isCertApprovedOrIssued
+              ? "rgba(16, 185, 129, 0.08)"
+              : isCertRequested
+                ? "rgba(59, 130, 246, 0.08)"
+                : isLastStageSubmitted
+                  ? "rgba(5, 150, 105, 0.06)"
+                  : "var(--bg-surface-subtle)"
+          }}
+        >
+          {/* Milestone Icon */}
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "50%",
+              background: isCertApprovedOrIssued
+                ? "#10b981"
+                : isCertRequested
+                  ? "#3b82f6"
+                  : isLastStageSubmitted
+                    ? "#059669"
+                    : "#94a3b8",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0
+            }}
+          >
+            {isCertApprovedOrIssued || isCertRequested ? <Award size={20} /> : <FileCheck size={20} />}
+          </div>
+
+          {/* Milestone Content & Action Button */}
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <h4 style={{ fontSize: "1.0rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0 }}>
+                    Final Milestone: Work Completion Certificate
+                  </h4>
+                  {isCertRequested && (
+                    <span className="gov-badge gov-badge-info" style={{ fontSize: "0.68rem" }}>
+                      REQUEST SUBMITTED
+                    </span>
+                  )}
+                  {isCertApprovedOrIssued && (
+                    <span className="gov-badge gov-badge-success" style={{ fontSize: "0.68rem" }}>
+                      ISSUED BY DISTRICT AUTHORITY
+                    </span>
+                  )}
+                  {isLastStageSubmitted && !isCertRequested && !isCertApprovedOrIssued && (
+                    <span className="gov-badge gov-badge-success" style={{ fontSize: "0.68rem" }}>
+                      READY FOR REQUEST
+                    </span>
+                  )}
+                </div>
+
+                <p style={{ fontSize: "0.78rem", color: "var(--text-body)", margin: "6px 0 0 0", lineHeight: 1.45 }}>
+                  {isCertApprovedOrIssued
+                    ? `Official Completion Certificate has been verified and issued by the District Magistrate & Collector.`
+                    : isCertRequested
+                      ? `Completion Certificate request recorded on ${project.completionCertificateRequestedDate || "recent date"}. Under verification by District Collectorate.`
+                      : isLastStageSubmitted
+                        ? `All ${scheduleData.length} monitoring stages completed and final stage evidence submitted! You are eligible to request the official Work Completion Certificate.`
+                        : `Complete and submit stage evidence for the final stage (${lastStage?.stageName || `Stage ${scheduleData.length}`}) to enable the Completion Certificate request button.`
+                  }
+                </p>
+              </div>
+
+              {/* Action Button */}
+              <div style={{ marginTop: "4px" }}>
+                {isCertRequested || isCertApprovedOrIssued ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onRequestCompletionCertificate?.(project)}
+                    icon={<Award size={14} />}
+                    style={{
+                      borderColor: isCertApprovedOrIssued ? "#10b981" : "#3b82f6",
+                      color: isCertApprovedOrIssued ? "#047857" : "#1d4ed8",
+                      fontWeight: 700,
+                      background: "#ffffff"
+                    }}
+                  >
+                    {isCertApprovedOrIssued ? "View Issued Certificate" : "View Certificate Request Details"}
+                  </Button>
+                ) : (
+                  <Button
+                    variant={isLastStageSubmitted ? "primary" : "secondary"}
+                    size="sm"
+                    disabled={!isLastStageSubmitted}
+                    onClick={() => isLastStageSubmitted && onRequestCompletionCertificate?.(project)}
+                    icon={isLastStageSubmitted ? <Award size={14} /> : <Lock size={14} />}
+                    style={{
+                      background: isLastStageSubmitted ? "linear-gradient(135deg, #059669 0%, #10b981 100%)" : undefined,
+                      borderColor: isLastStageSubmitted ? "#059669" : undefined,
+                      color: isLastStageSubmitted ? "#ffffff" : undefined,
+                      fontWeight: 700,
+                      boxShadow: isLastStageSubmitted ? "0 4px 12px rgba(16, 185, 129, 0.25)" : undefined
+                    }}
+                  >
+                    {isLastStageSubmitted ? "Request Completion Certificate" : "Request Completion Certificate (Locked)"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { ContractorProject, MonitoringScheduleItem } from "../../data/contractor
 import { SubmitStagePayload } from "../../api/contractorApi";
 import { ContractorTimeline } from "./ContractorTimeline";
 import { EvidenceUploadModal } from "./EvidenceUploadModal";
+import { RequestCompletionCertificateModal } from "./RequestCompletionCertificateModal";
 import { SubmissionHistory } from "./SubmissionHistory";
 import { Button } from "../ui/Button";
 
@@ -15,14 +16,17 @@ interface ContractorProjectDetailProps {
     stageId: string, 
     payload: SubmitStagePayload
   ) => void;
+  onRequestCompletionCertificate?: (workId: string, remarks: string) => void;
 }
 
 export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = ({
   project,
   onBack,
-  onSubmitStageEvidence
+  onSubmitStageEvidence,
+  onRequestCompletionCertificate
 }) => {
   const [selectedStage, setSelectedStage] = useState<MonitoringScheduleItem | null>(null);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
 
   const calculateDaysRemaining = (completionDateStr: string, currentStatus: string) => {
     if (currentStatus === "Completed") return 0;
@@ -224,6 +228,7 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
         <ContractorTimeline
           project={project}
           onSubmitStageEvidence={(stage) => setSelectedStage(stage)}
+          onRequestCompletionCertificate={() => setIsCertModalOpen(true)}
         />
       </div>
 
@@ -245,6 +250,18 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
         stage={selectedStage}
         onSubmitSuccess={(stageId, payload) => {
           onSubmitStageEvidence(project.id, stageId, payload);
+        }}
+      />
+
+      {/* WORK COMPLETION CERTIFICATE REQUEST MODAL */}
+      <RequestCompletionCertificateModal
+        isOpen={isCertModalOpen}
+        onClose={() => setIsCertModalOpen(false)}
+        project={project}
+        onRequestSubmitted={(workId, remarks) => {
+          if (onRequestCompletionCertificate) {
+            onRequestCompletionCertificate(workId, remarks);
+          }
         }}
       />
     </div>

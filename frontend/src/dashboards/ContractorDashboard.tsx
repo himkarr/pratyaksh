@@ -104,6 +104,21 @@ export const ContractorDashboard: React.FC = () => {
     }
   };
 
+  const handleRequestCompletionCertificate = async (workId: string, remarks: string) => {
+    try {
+      const updatedProj = await contractorApi.requestCompletionCertificate(workId, remarks);
+      handleUpdateProject(updatedProj);
+      const [notifs, refreshedProjects] = await Promise.all([
+        contractorApi.getNotifications(),
+        contractorApi.getContractorProjects(selectedVendorId)
+      ]);
+      setNotifications(notifs);
+      setProjects(refreshedProjects);
+    } catch (err) {
+      console.error("Error requesting completion certificate:", err);
+    }
+  };
+
   const handleMarkAllNotificationsRead = async () => {
     await contractorApi.markNotificationsRead();
     const updatedNotifs = await contractorApi.getNotifications();
@@ -160,6 +175,7 @@ export const ContractorDashboard: React.FC = () => {
               project={selectedProject}
               onBack={() => setSelectedProject(null)}
               onSubmitStageEvidence={handleSubmitStageEvidence}
+              onRequestCompletionCertificate={handleRequestCompletionCertificate}
             />
           ) : (
             /* CONTRACTOR DASHBOARD MAIN VIEW */

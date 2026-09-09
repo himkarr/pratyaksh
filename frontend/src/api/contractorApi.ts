@@ -326,6 +326,41 @@ export const contractorApi = {
   },
 
   /**
+   * Request Official Work Completion Certificate from District Authority
+   */
+  async requestCompletionCertificate(workId: string, remarks?: string): Promise<ContractorProject> {
+    const projIdx = localProjects.findIndex(p => p.id === workId);
+    if (projIdx === -1) {
+      throw new Error(`Project #${workId} not found`);
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const project = localProjects[projIdx];
+
+    const updatedProj: ContractorProject = {
+      ...project,
+      completionCertificateStatus: 'Requested',
+      completionCertificateRequestedDate: todayStr,
+      completionCertificateRemarks: remarks || "All physical stages completed & certified geotagged evidence uploaded."
+    };
+
+    localProjects[projIdx] = updatedProj;
+
+    // Add notification
+    localNotifications.unshift({
+      id: `notif-cert-${Date.now().toString().slice(-4)}`,
+      workId,
+      title: "Completion Certificate Requested",
+      message: `Request for Work Completion Certificate for Work #${workId} submitted to District Magistrate & Collector on ${todayStr}.`,
+      date: todayStr,
+      type: "success",
+      read: false
+    });
+
+    return Promise.resolve(updatedProj);
+  },
+
+  /**
    * Mark notifications as read
    */
   async markNotificationsRead(): Promise<void> {
