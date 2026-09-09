@@ -184,10 +184,10 @@ export interface ContractorProject {
   officialExpectedCompletionDate: string; // Expected completion date / official timeline
   
   currentWorkStatus: 'Sanctioned' | 'InProgress' | 'Completed' | 'Delayed';
-  monitoringStatus: 'Active Monitoring' | 'Action Pending' | 'Pending First Submission' | 'Under Scrutiny' | 'Completed';
+  monitoringStatus: 'Active Monitoring' | 'Action Pending' | 'Pending First Submission' | 'Under Scrutiny' | 'Completed' | 'Expenditure Anomaly (Over Budget)';
   nextRequiredSubmission: string;
   nextSubmissionDueDate: string;
-  riskIndicator: 'Low Risk' | 'Delay Risk' | 'Critical Delay' | 'Not available';
+  riskIndicator: 'Low Risk' | 'Delay Risk' | 'Critical Delay' | 'Not available' | 'High Anomaly Risk';
   
   checkpointActions: CheckpointAction[];
   schedule: MonitoringScheduleItem[];

@@ -164,14 +164,29 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
 
           <div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 700 }}>CURRENT EXPENDITURE</div>
-            <div style={{ fontWeight: 700, color: project.utilizedAmountRs !== null ? "var(--status-success-text)" : "var(--text-muted)", marginTop: "2px" }}>
+            <div style={{ 
+              fontWeight: 800, 
+              color: (project.utilizedAmountRs && project.sanctionAmountRs && project.utilizedAmountRs > project.sanctionAmountRs)
+                ? "#dc2626"
+                : project.utilizedAmountRs !== null ? "var(--status-success-text)" : "var(--text-muted)", 
+              marginTop: "2px" 
+            }}>
               {formatCurrency(project.utilizedAmountRs)}
+              {(project.utilizedAmountRs && project.sanctionAmountRs && project.utilizedAmountRs > project.sanctionAmountRs) && (
+                <span style={{ fontSize: "0.68rem", background: "#fee2e2", color: "#b91c1c", padding: "1px 6px", borderRadius: "4px", marginLeft: "6px", fontWeight: 800 }}>
+                  ANOMALY OVERRUN
+                </span>
+              )}
             </div>
           </div>
 
           <div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 700 }}>AMOUNT REMAINING</div>
-            <div style={{ fontWeight: 700, color: project.remainingAmountRs !== null ? "var(--text-main)" : "var(--text-muted)", marginTop: "2px" }}>
+            <div style={{ 
+              fontWeight: 700, 
+              color: (project.utilizedAmountRs && project.sanctionAmountRs && project.utilizedAmountRs > project.sanctionAmountRs) ? "#dc2626" : (project.remainingAmountRs !== null ? "var(--text-main)" : "var(--text-muted)"), 
+              marginTop: "2px" 
+            }}>
               {formatCurrency(project.remainingAmountRs)}
             </div>
           </div>
@@ -183,6 +198,18 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
             </div>
           </div>
         </div>
+
+        {(project.utilizedAmountRs && project.sanctionAmountRs && project.utilizedAmountRs > project.sanctionAmountRs) && (
+          <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "8px", padding: "12px 16px", display: "flex", alignItems: "center", gap: "12px", color: "#991b1b" }}>
+            <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: "0.85rem" }}>EXPENDITURE ANOMALY DETECTED</div>
+              <div style={{ fontSize: "0.78rem", marginTop: "2px" }}>
+                Total cumulative stage expenditure (<strong>{formatCurrency(project.utilizedAmountRs)}</strong>) has exceeded the total sanctioned outlay (<strong>{formatCurrency(project.sanctionAmountRs)}</strong>) by <strong>{formatCurrency(project.utilizedAmountRs - project.sanctionAmountRs)}</strong>. Flagged for District Audit Inquiry.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
