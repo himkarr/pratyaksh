@@ -13,7 +13,7 @@
  * - Multi-module routing: Overview, Browse States, Browse MPs, Compare, Works Registry, AI Governance
  */
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useDeferredValue, useCallback } from "react";
 import {
   Activity,
   Building2,
@@ -52,6 +52,9 @@ import {
   List,
   Lightbulb,
   CheckCircle,
+  FolderTree,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -83,6 +86,7 @@ import { CompareView } from "../components/admin/compare/CompareView";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { WorkItem } from "../data/mpladsData";
+import { TableColumnHeader } from "../components/common/TableColumnHeader";
 
 interface ProjectGroup {
   key: string;
@@ -182,15 +186,28 @@ export const MinistryDashboard: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Projects Registry filters
+  // Admin Panel House Filter: "both" (default), "Lok Sabha", "Rajya Sabha"
+  const [adminHouseFilter, setAdminHouseFilter] = useState<"both" | "Lok Sabha" | "Rajya Sabha">("both");
+
+  // Projects Registry filters & grouping
   const [projectSearch, setProjectSearch] = useState<string>("");
+  const deferredProjectSearch = useDeferredValue(projectSearch);
   const [selectedStateFilter, setSelectedStateFilter] = useState<string>("all");
+  const [selectedDistrictFilter, setSelectedDistrictFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<string>("all");
-  const [projectsPage, setProjectsPage] = useState<number>(1);
-  const [projectViewMode, setProjectViewMode] = useState<"grouped" | "grid" | "list">("grouped");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
+  const [projectSortField, setProjectSortField] = useState<string>("cost");
+  const [projectSortOrder, setProjectSortOrder] = useState<"asc" | "desc">("desc");
+  const [groupByDistrict, setGroupByDistrict] = useState<boolean>(true);
+  const [projectViewMode, setProjectViewMode] = useState<"grid" | "list">("grid");
   const [expandedProjectGroups, setExpandedProjectGroups] = useState<Set<string>>(new Set());
+  const [projectsPage, setProjectsPage] = useState<number>(1);
   const PROJECTS_PER_PAGE = 24;
+
+  // Audit Ledger sorting
+  const [ledgerSortField, setLedgerSortField] = useState<string>("time");
+  const [ledgerSortOrder, setLedgerSortOrder] = useState<"asc" | "desc">("desc");
 
   // AI Governance & ML calibration
   const [isRetraining, setIsRetraining] = useState<boolean>(false);
@@ -235,43 +252,268 @@ export const MinistryDashboard: React.FC = () => {
     return `₹${amt.toLocaleString("en-IN")}`;
   };
 
-  // De-duplicate on the client before filtering. It protects the registry from repeated
-  // records returned by a source while retaining a deterministic project identity.
+  // Helpers for filtering and status normalisation
+  const normalizeStatus = (status: string | undefined): string => {
+    const s = (status || "").trim().toLowerCase();
+    if (s === "in progress" || s === "ongoing" || s === "in_progress" || s === "inprogress") return "In Progress";
+    if (s === "completed") return "Completed";
+    if (s === "delayed") return "Delayed";
+    if (s === "sanctioned") return "Sanctioned";
+    if (s === "recommended") return "Recommended";
+    return status || "Sanctioned";
+  };
+
+  const isProjectHighRisk = (p: any): boolean => {
+    if (!p) return false;
+    if (p.is_flagged || p.isFlagged) return true;
+    const score = Number(p.latest_risk_score ?? p.riskScore ?? p.risk_score ?? 0);
+    if (score > 50) return true;
+    const level = String(p.risk_level ?? p.riskLevel ?? "").toUpperCase();
+    if (level === "HIGH" || level === "CRITICAL") return true;
+    const status = String(p.status ?? "").toLowerCase();
+    if (status === "delayed") return true;
+    return false;
+  };
+
+  // Filtered MPs based on Admin House Filter
+  const displayedMps = useMemo(() => {
+    if (adminHouseFilter === "both") return mps;
+    return mps.filter((m) => m.house === adminHouseFilter);
+  }, [mps, adminHouseFilter]);
+
+  // De-duplicate on the client before filtering & apply house filter
   const uniqueProjects = useMemo(() => {
     const seen = new Set<string>();
     return projects.filter((project) => {
+      if (adminHouseFilter !== "both") {
+        const h = project.house || "Lok Sabha";
+        if (h !== adminHouseFilter) return false;
+      }
       const identity = getProjectIdentity(project);
       if (seen.has(identity)) return false;
       seen.add(identity);
       return true;
     });
-  }, [projects]);
+  }, [projects, adminHouseFilter]);
+
+  // Dynamically computed State Summaries strictly from live Supabase projects & filtered MPs
+  const displayedStates = useMemo(() => {
+    const stateMap = new Map<string, {
+      state: string;
+      projectCount: number;
+      totalAllocated: number;
+      totalExpenditure: number;
+      districts: Set<string>;
+      mps: Set<string>;
+      statusCounts: { Completed: number; InProgress: number; Sanctioned: number; Proposed: number; Delayed: number };
+    }>();
+
+    uniqueProjects.forEach((p) => {
+      const s = (p.state || "National").trim();
+      if (!stateMap.has(s)) {
+        stateMap.set(s, {
+          state: s,
+          projectCount: 0,
+          totalAllocated: 0,
+          totalExpenditure: 0,
+          districts: new Set(),
+          mps: new Set(),
+          statusCounts: { Completed: 0, InProgress: 0, Sanctioned: 0, Proposed: 0, Delayed: 0 },
+        });
+      }
+      const entry = stateMap.get(s)!;
+      entry.projectCount += 1;
+      entry.totalAllocated += Number(p.sanctioned_amount) || 0;
+      entry.totalExpenditure += Number(p.utilized_amount) || 0;
+      if (p.district) entry.districts.add(p.district);
+      if (p.mp_id) entry.mps.add(p.mp_id);
+
+      const norm = normalizeStatus(p.status);
+      if (norm === "Completed") entry.statusCounts.Completed++;
+      else if (norm === "In Progress") entry.statusCounts.InProgress++;
+      else if (norm === "Delayed") entry.statusCounts.Delayed++;
+      else if (norm === "Proposed") entry.statusCounts.Proposed++;
+      else entry.statusCounts.Sanctioned++;
+    });
+
+    const result: StateSummary[] = Array.from(stateMap.values()).map((s) => {
+      const utilPct = s.totalAllocated > 0 ? Math.round((s.totalExpenditure / s.totalAllocated) * 100) : 0;
+      return {
+        state: s.state,
+        mpCount: s.mps.size || displayedMps.filter((m) => m.state.toLowerCase() === s.state.toLowerCase()).length,
+        projectCount: s.projectCount,
+        totalAllocated: s.totalAllocated,
+        totalExpenditure: s.totalExpenditure,
+        utilizationPercentage: utilPct,
+        rank: 1,
+        statusCounts: s.statusCounts,
+        districtsCount: Math.max(s.districts.size, 1),
+      };
+    });
+
+    result.sort((a, b) => b.totalAllocated - a.totalAllocated);
+    result.forEach((s, idx) => {
+      s.rank = idx + 1;
+    });
+
+    return result;
+  }, [uniqueProjects, displayedMps]);
+
+  // Dynamically computed National Stats strictly from live Supabase projects & filtered MPs
+  const displayedNationalStats = useMemo(() => {
+    let totalSanctioned = 0;
+    let totalUtilized = 0;
+    let flaggedCount = 0;
+    const statusCounts = { Completed: 0, InProgress: 0, Sanctioned: 0, Proposed: 0, Delayed: 0 };
+
+    uniqueProjects.forEach((p) => {
+      totalSanctioned += Number(p.sanctioned_amount) || 0;
+      totalUtilized += Number(p.utilized_amount) || 0;
+      if (isProjectHighRisk(p)) flaggedCount++;
+      const st = normalizeStatus(p.status);
+      if (st === "Completed") statusCounts.Completed++;
+      else if (st === "In Progress") statusCounts.InProgress++;
+      else if (st === "Delayed") statusCounts.Delayed++;
+      else if (st === "Proposed") statusCounts.Proposed++;
+      else statusCounts.Sanctioned++;
+    });
+
+    const utilPct = totalSanctioned > 0 ? Math.round((totalUtilized / totalSanctioned) * 100) : 0;
+
+    return {
+      totalWorks: uniqueProjects.length,
+      totalSanctioned,
+      totalUtilized,
+      nationalUtilization: utilPct,
+      activeStatesCount: displayedStates.length,
+      activeMPsCount: displayedMps.length,
+      flaggedWorksCount: flaggedCount,
+      statusBreakdown: statusCounts,
+    };
+  }, [uniqueProjects, displayedStates, displayedMps]);
+
+  // Dynamically extract states with exact counts from loaded projects
+  const availableStates = useMemo(() => {
+    const counts = new Map<string, number>();
+    uniqueProjects.forEach((p) => {
+      const st = (p.state || "").trim();
+      if (st) counts.set(st, (counts.get(st) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
+  }, [uniqueProjects]);
+
+  // Dynamically extract districts based on selected state
+  const availableDistricts = useMemo(() => {
+    const set = new Set<string>();
+    uniqueProjects.forEach((p) => {
+      if (selectedStateFilter !== "all") {
+        if ((p.state || "").trim().toLowerCase() !== selectedStateFilter.toLowerCase()) return;
+      }
+      if (p.district) set.add(p.district.trim());
+    });
+    return Array.from(set).sort();
+  }, [uniqueProjects, selectedStateFilter]);
+
+  // Dynamically extract categories with exact counts from loaded projects
+  const availableCategories = useMemo(() => {
+    const counts = new Map<string, number>();
+    uniqueProjects.forEach((p) => {
+      const cat = (p.category || p.sector_name || "Community Asset").trim();
+      if (cat) counts.set(cat, (counts.get(cat) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
+  }, [uniqueProjects]);
 
   // Filtered unique projects for registry
   const filteredProjects = useMemo(() => {
     return uniqueProjects.filter((p) => {
-      const pState = p.state || "";
-      const pStatus = p.status || "Sanctioned";
-      const isHighRisk = p.is_flagged || (p.latest_risk_score || 0) > 50;
+      const pState = (p.state || "").trim();
+      const pDistrict = (p.district || "").trim();
+      const pStatus = normalizeStatus(p.status);
+      const pCategory = (p.category || p.sector_name || "Community Asset").trim();
+      const isHighRisk = isProjectHighRisk(p);
 
-      if (selectedStateFilter !== "all" && pState !== selectedStateFilter) return false;
+      if (selectedStateFilter !== "all" && pState.toLowerCase() !== selectedStateFilter.toLowerCase()) return false;
+      if (selectedDistrictFilter !== "all" && pDistrict.toLowerCase() !== selectedDistrictFilter.toLowerCase()) return false;
       if (selectedStatusFilter !== "all" && pStatus !== selectedStatusFilter) return false;
+      if (selectedCategoryFilter !== "all" && pCategory.toLowerCase() !== selectedCategoryFilter.toLowerCase()) return false;
       if (selectedRiskFilter === "HIGH" && !isHighRisk) return false;
       if (selectedRiskFilter === "LOW" && isHighRisk) return false;
 
-      if (projectSearch.trim()) {
-        const q = projectSearch.toLowerCase();
-        const title = (p.project_name || p.title || "").toLowerCase();
-        const id = (p.project_id || p.id || "").toLowerCase();
-        const dist = (p.district || "").toLowerCase();
-        const cat = (p.category || "").toLowerCase();
-        if (!title.includes(q) && !id.includes(q) && !dist.includes(q) && !cat.includes(q)) {
-          return false;
-        }
+      if (deferredProjectSearch.trim()) {
+        const q = deferredProjectSearch.toLowerCase().trim();
+        const title = String(p.project_name || p.title || "").toLowerCase();
+        const id = String(p.project_id || p.id || "").toLowerCase();
+        const dist = String(p.district || "").toLowerCase();
+        const st = String(p.state || "").toLowerCase();
+        const cat = String(p.category || p.sector_name || "").toLowerCase();
+        const mp = String(p.mp_name || p.mpName || "").toLowerCase();
+        const ag = String(p.implementing_agency || p.agency || "").toLowerCase();
+        const con = String(p.contractor || p.contractor_name || "").toLowerCase();
+        const stat = String(p.status || "").toLowerCase();
+
+        const matches =
+          title.includes(q) ||
+          id.includes(q) ||
+          dist.includes(q) ||
+          st.includes(q) ||
+          cat.includes(q) ||
+          mp.includes(q) ||
+          ag.includes(q) ||
+          con.includes(q) ||
+          stat.includes(q);
+
+        if (!matches) return false;
       }
       return true;
     });
-  }, [uniqueProjects, selectedStateFilter, selectedStatusFilter, selectedRiskFilter, projectSearch]);
+  }, [
+    uniqueProjects,
+    selectedStateFilter,
+    selectedDistrictFilter,
+    selectedStatusFilter,
+    selectedCategoryFilter,
+    selectedRiskFilter,
+    deferredProjectSearch,
+  ]);
+
+  // Sort filtered projects
+  const sortedFilteredProjects = useMemo(() => {
+    return [...filteredProjects].sort((a, b) => {
+      let diff = 0;
+      if (projectSortField === "title") {
+        const nameA = a.project_name || a.title || "";
+        const nameB = b.project_name || b.title || "";
+        diff = nameA.localeCompare(nameB);
+      } else if (projectSortField === "location") {
+        const locA = `${a.state || ""} ${a.district || ""}`;
+        const locB = `${b.state || ""} ${b.district || ""}`;
+        diff = locA.localeCompare(locB);
+      } else if (projectSortField === "category") {
+        diff = (a.category || "").localeCompare(b.category || "");
+      } else if (projectSortField === "cost") {
+        diff = getProjectBudget(a) - getProjectBudget(b);
+      } else if (projectSortField === "status") {
+        diff = (a.status || "").localeCompare(b.status || "");
+      } else if (projectSortField === "risk") {
+        diff = (isProjectHighRisk(a) ? 1 : 0) - (isProjectHighRisk(b) ? 1 : 0);
+      }
+      return projectSortOrder === "desc" ? -diff : diff;
+    });
+  }, [filteredProjects, projectSortField, projectSortOrder]);
+
+  const handleProjectSort = (field: string) => {
+    if (projectSortField === field) {
+      setProjectSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setProjectSortField(field);
+      setProjectSortOrder("desc");
+    }
+  };
 
   // A geographic group is the compact navigation unit: it exposes unique locations first,
   // then reveals the individual works only when the user asks for them.
@@ -283,9 +525,9 @@ export const MinistryDashboard: React.FC = () => {
       const district = project.district || "Unassigned District";
       const key = `${state}::${district}`.toLowerCase();
       const current = groups.get(key);
-      const isHighRisk = project.is_flagged || (project.latest_risk_score || 0) > 50;
-      const status = project.status || "Sanctioned";
-      const category = project.category || "Community Asset";
+      const isHighRisk = isProjectHighRisk(project);
+      const status = normalizeStatus(project.status);
+      const category = project.category || project.sector_name || "Community Asset";
 
       if (current) {
         current.projects.push(project);
@@ -315,25 +557,53 @@ export const MinistryDashboard: React.FC = () => {
       .sort((a, b) => a.state.localeCompare(b.state) || a.district.localeCompare(b.district));
   }, [filteredProjects]);
 
-  const projectPageSize = projectViewMode === "grouped" ? 12 : PROJECTS_PER_PAGE;
-  const totalProjectPages = Math.max(1, Math.ceil((projectViewMode === "grouped" ? projectGroups.length : filteredProjects.length) / projectPageSize));
+  // Page size adapts: 12 cards/page for Grid Grouped, 15 rows/page for List Grouped, 24 for Flat
+  const projectPageSize = groupByDistrict ? (projectViewMode === "grid" ? 12 : 15) : PROJECTS_PER_PAGE;
+  const totalProjectPages = Math.max(
+    1,
+    Math.ceil((groupByDistrict ? projectGroups.length : filteredProjects.length) / projectPageSize)
+  );
 
   const pagedProjects = useMemo(() => {
     const start = (projectsPage - 1) * projectPageSize;
-    return filteredProjects.slice(start, start + projectPageSize);
-  }, [filteredProjects, projectPageSize, projectsPage]);
+    return sortedFilteredProjects.slice(start, start + projectPageSize);
+  }, [sortedFilteredProjects, projectPageSize, projectsPage]);
 
   const pagedProjectGroups = useMemo(() => {
     const start = (projectsPage - 1) * projectPageSize;
     return projectGroups.slice(start, start + projectPageSize);
   }, [projectGroups, projectPageSize, projectsPage]);
 
+  // Reset page to 1 when filters, search, grouping, or view mode changes
   useEffect(() => {
-    setProjectsPage((page) => Math.min(page, totalProjectPages));
+    setProjectsPage(1);
+  }, [
+    selectedStateFilter,
+    selectedStatusFilter,
+    selectedCategoryFilter,
+    selectedRiskFilter,
+    projectSearch,
+    groupByDistrict,
+    projectViewMode,
+  ]);
+
+  useEffect(() => {
+    setProjectsPage((page) => Math.min(Math.max(1, page), totalProjectPages));
   }, [totalProjectPages]);
 
-  const setRegistryView = (view: "grouped" | "grid" | "list") => {
-    setProjectViewMode(view);
+  const hasActiveFilters =
+    projectSearch.trim() !== "" ||
+    selectedStateFilter !== "all" ||
+    selectedStatusFilter !== "all" ||
+    selectedCategoryFilter !== "all" ||
+    selectedRiskFilter !== "all";
+
+  const resetFilters = () => {
+    setProjectSearch("");
+    setSelectedStateFilter("all");
+    setSelectedStatusFilter("all");
+    setSelectedCategoryFilter("all");
+    setSelectedRiskFilter("all");
     setProjectsPage(1);
   };
 
@@ -357,13 +627,13 @@ export const MinistryDashboard: React.FC = () => {
 
   // Top states for Recharts chart
   const topStatesChartData = useMemo(() => {
-    return states.slice(0, 10).map((s) => ({
+    return displayedStates.slice(0, 10).map((s) => ({
       name: s.state.length > 14 ? s.state.slice(0, 12) + "..." : s.state,
       allocated: Math.round(s.totalAllocated / 10000000),
       utilized: Math.round(s.totalExpenditure / 10000000),
       rate: s.utilizationPercentage,
     }));
-  }, [states]);
+  }, [displayedStates]);
 
   // Handle ML Model Retraining Trigger
   const handleRetrainModel = async () => {
@@ -384,7 +654,7 @@ export const MinistryDashboard: React.FC = () => {
       }
     } catch {
       setRetrainNotice(
-        "Retraining simulation completed! Anomaly thresholds recalibrated for 11,538 live works."
+        "Retraining simulation completed! Anomaly thresholds recalibrated for live works."
       );
     } finally {
       setIsRetraining(false);
@@ -405,7 +675,7 @@ export const MinistryDashboard: React.FC = () => {
         t={t}
       />
 
-      {/* 2. Official MPLADS Top Navigation Bar (Emblem of India, MoSPI, Role Switcher) */}
+      {/* 2. Official MPLADS Top Navigation Bar (Emblem of India, MoSPI, Role Switcher, House Filter) */}
       <Navbar
         activeTab="dashboard"
         setActiveTab={() => {
@@ -419,7 +689,9 @@ export const MinistryDashboard: React.FC = () => {
           setIsLoginOpen(true);
         }}
         t={t}
-        flagCount={nationalStats?.flaggedWorksCount || 120}
+        flagCount={displayedNationalStats.flaggedWorksCount}
+        adminHouseFilter={adminHouseFilter}
+        onAdminHouseFilterChange={setAdminHouseFilter}
       />
       {/* 3. Main Content Area */}
       <main className="mplads-main" style={{ flex: 1, padding: "1.5rem 0 3.5rem" }}>
@@ -472,7 +744,7 @@ export const MinistryDashboard: React.FC = () => {
                   color: activeModule === "states" ? "#ffffff" : "#475569",
                   fontWeight: 700
                 }}>
-                  {states.length || 36}
+                  {displayedStates.length}
                 </span>
               </button>
 
@@ -496,7 +768,7 @@ export const MinistryDashboard: React.FC = () => {
                   color: activeModule === "mps" ? "#ffffff" : "#92400e",
                   fontWeight: 700
                 }}>
-                  {mps.length || 160}
+                  {displayedMps.length}
                 </span>
               </button>
 
@@ -534,7 +806,7 @@ export const MinistryDashboard: React.FC = () => {
                   color: activeModule === "projects" ? "#ffffff" : "#065f46",
                   fontWeight: 700
                 }}>
-                  11.5k
+                  {uniqueProjects.length}
                 </span>
               </button>
 
@@ -553,8 +825,8 @@ export const MinistryDashboard: React.FC = () => {
               </button>
             </div>
 
-            {/* Right Status Badges */}
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {/* Right Status Badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <div
                 style={{
                   display: "flex",
@@ -579,7 +851,7 @@ export const MinistryDashboard: React.FC = () => {
                     boxShadow: "0 0 6px #10b981",
                   }}
                 />
-                <span>{nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"} Works Live</span>
+                <span>{displayedNationalStats.totalWorks.toLocaleString("en-IN")} Works Live</span>
               </div>
             </div>
           </div>
@@ -593,7 +865,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div className="dashboard-title-section">
                   <h1>MPLADS National Development Dashboard</h1>
                   <p>
-                    Live tracking of approved government funds, local community projects, and public works across India in simple, easy-to-understand terms
+                    Live tracking of approved government funds, local community projects, and public works across India in simple, easy-to-understand terms ({adminHouseFilter === "both" ? "Both Houses" : adminHouseFilter})
                   </p>
                 </div>
               </div>
@@ -611,7 +883,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-slate-900 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats ? formatCurrency(nationalStats.totalSanctioned) : "₹641.87 Cr"}
+                      {formatCurrency(displayedNationalStats.totalSanctioned)}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Total funding allocated for community projects
@@ -630,7 +902,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-emerald-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats ? formatCurrency(nationalStats.totalUtilized) : "₹412.30 Cr"}
+                      {formatCurrency(displayedNationalStats.totalUtilized)}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Actual funds disbursed & verified on ground
@@ -649,16 +921,16 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-indigo-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats ? `${nationalStats.nationalUtilization}%` : "64%"}
+                      {displayedNationalStats.nationalUtilization}%
                     </div>
                     <div className="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
                       <span>Percentage of funds spent</span>
-                      <span className="font-semibold text-indigo-600">{nationalStats?.nationalUtilization || 64}%</span>
+                      <span className="font-semibold text-indigo-600">{displayedNationalStats.nationalUtilization}%</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                       <div
                         className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${nationalStats?.nationalUtilization || 64}%` }}
+                        style={{ width: `${displayedNationalStats.nationalUtilization}%` }}
                       />
                     </div>
                   </div>
@@ -675,10 +947,10 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-slate-900 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {mps.length || 160} MPs
+                      {displayedMps.length} MPs
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Lok Sabha & Rajya Sabha MPs tracking works
+                      {adminHouseFilter === "both" ? "Lok Sabha & Rajya Sabha MPs" : `${adminHouseFilter} MPs`}
                     </div>
                   </div>
                 </div>
@@ -694,10 +966,10 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-purple-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats?.totalWorks.toLocaleString("en-IN") || "11,538"}
+                      {displayedNationalStats.totalWorks.toLocaleString("en-IN")}
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
-                      Approved projects across 36 States & UTs
+                      Approved projects across {displayedStates.length} States & UTs
                     </div>
                   </div>
                 </div>
@@ -713,7 +985,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-emerald-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats?.statusBreakdown.Completed || 13} Works
+                      {displayedNationalStats.statusBreakdown.Completed} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Completed and handed over to the public
@@ -732,7 +1004,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-sky-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats?.statusBreakdown.InProgress || 118} Works
+                      {displayedNationalStats.statusBreakdown.InProgress} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Works actively being built on the ground
@@ -751,7 +1023,7 @@ export const MinistryDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-3xl font-extrabold text-rose-700 tracking-tight my-1.5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      {nationalStats?.flaggedWorksCount || 120} Works
+                      {displayedNationalStats.flaggedWorksCount} Works
                     </div>
                     <div className="text-xs text-slate-500 font-medium">
                       Flagged by automated cost & delay checks
@@ -773,10 +1045,10 @@ export const MinistryDashboard: React.FC = () => {
                     <div className="insight-content">
                       <h3>High Fund Usage (70% or more)</h3>
                       <p className="insight-count">
-                        {states.filter((s) => s.utilizationPercentage >= 70).length} States
+                        {displayedStates.filter((s) => s.utilizationPercentage >= 70).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage >= 70).length} MPs achieving the national target
+                        {displayedMps.filter((m) => m.utilizationPercentage >= 70).length} MPs achieving the national target
                       </p>
                     </div>
                   </div>
@@ -791,10 +1063,10 @@ export const MinistryDashboard: React.FC = () => {
                     <div className="insight-content">
                       <h3>Steady Progress (40% to 69%)</h3>
                       <p className="insight-count">
-                        {states.filter((s) => s.utilizationPercentage >= 40 && s.utilizationPercentage < 70).length} States
+                        {displayedStates.filter((s) => s.utilizationPercentage >= 40 && s.utilizationPercentage < 70).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage >= 40 && m.utilizationPercentage < 70).length} MPs with active ongoing projects
+                        {displayedMps.filter((m) => m.utilizationPercentage >= 40 && m.utilizationPercentage < 70).length} MPs with active ongoing projects
                       </p>
                     </div>
                   </div>
@@ -809,10 +1081,10 @@ export const MinistryDashboard: React.FC = () => {
                     <div className="insight-content">
                       <h3>Needs Faster Action (Under 40%)</h3>
                       <p className="insight-count">
-                        {states.filter((s) => s.utilizationPercentage < 40).length} States
+                        {displayedStates.filter((s) => s.utilizationPercentage < 40).length} States
                       </p>
                       <p className="insight-desc">
-                        {mps.filter((m) => m.utilizationPercentage < 40).length} MPs where project execution needs speed up
+                        {displayedMps.filter((m) => m.utilizationPercentage < 40).length} MPs where project execution needs speed up
                       </p>
                     </div>
                   </div>
@@ -833,7 +1105,7 @@ export const MinistryDashboard: React.FC = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                   <div>
                     <h2 style={{ fontSize: "1.35rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-                      State-wise Budget vs Money Spent (Top 10 States)
+                      State-wise Budget vs Money Spent (Top {Math.min(10, displayedStates.length)} States)
                     </h2>
                     <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: "4px 0 0" }}>
                       Comparing total approved funds against money spent on ground (in ₹ Crores)
@@ -855,7 +1127,7 @@ export const MinistryDashboard: React.FC = () => {
                       cursor: "pointer",
                     }}
                   >
-                    <span>View All 36 States</span>
+                    <span>View All {displayedStates.length} States</span>
                     <ArrowRight size={14} />
                   </button>
                 </div>
@@ -889,9 +1161,9 @@ export const MinistryDashboard: React.FC = () => {
               {selectedStateName ? (
                 <StateDetail
                   stateName={selectedStateName}
-                  stateData={states.find((s) => s.state === selectedStateName)}
-                  mps={mps}
-                  projects={projects}
+                  stateData={displayedStates.find((s) => s.state === selectedStateName)}
+                  mps={displayedMps}
+                  projects={uniqueProjects}
                   onBack={() => setSelectedStateName(null)}
                   onSelectProject={(p) => openWorkDossier(p)}
                   onSelectMP={(mp) => {
@@ -902,7 +1174,7 @@ export const MinistryDashboard: React.FC = () => {
                 />
               ) : (
                 <StateList
-                  states={states}
+                  states={displayedStates}
                   onSelectState={(stName) => setSelectedStateName(stName)}
                   isLoading={loading}
                 />
@@ -918,13 +1190,13 @@ export const MinistryDashboard: React.FC = () => {
               {selectedMP ? (
                 <MPDetail
                   mp={selectedMP}
-                  projects={projects}
+                  projects={uniqueProjects}
                   onBack={() => setSelectedMP(null)}
                   onSelectProject={(p) => openWorkDossier(p)}
                 />
               ) : (
                 <MPList
-                  mps={mps}
+                  mps={displayedMps}
                   onSelectMP={(mp) => setSelectedMP(mp)}
                   isLoading={loading}
                 />
@@ -937,7 +1209,7 @@ export const MinistryDashboard: React.FC = () => {
               ---------------------------------------------------------------- */}
           {activeModule === "compare" && (
             <CompareView
-              mps={mps}
+              mps={displayedMps}
               onSelectMP={(mp) => {
                 setSelectedMP(mp);
                 setActiveModule("mps");
@@ -969,28 +1241,47 @@ export const MinistryDashboard: React.FC = () => {
                 </p>
 
                 {/* Filter Controls Row */}
-                <div style={{ display: "flex", gap: "12px", marginTop: "20px", flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "10px", marginTop: "20px", flexWrap: "wrap", alignItems: "center" }}>
                   {/* Search Bar */}
                   <div style={{ position: "relative", flex: 1, minWidth: "260px" }}>
                     <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
                     <input
                       type="text"
-                      placeholder="Search by project name, ID, district, category..."
+                      placeholder="Search project name, ID, district, MP, agency..."
                       value={projectSearch}
-                      onChange={(e) => {
-                        setProjectSearch(e.target.value);
-                        setProjectsPage(1);
-                      }}
+                      onChange={(e) => setProjectSearch(e.target.value)}
                       style={{
                         width: "100%",
                         paddingLeft: "36px",
-                        paddingRight: "12px",
+                        paddingRight: projectSearch ? "36px" : "12px",
                         height: "40px",
                         borderRadius: "8px",
                         border: "1px solid #cbd5e1",
                         fontSize: "0.85rem",
                       }}
                     />
+                    {projectSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setProjectSearch("")}
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "transparent",
+                          border: "none",
+                          color: "#94a3b8",
+                          cursor: "pointer",
+                          padding: "2px",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                        title="Clear search"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
                   </div>
 
                   {/* State Select */}
@@ -998,7 +1289,7 @@ export const MinistryDashboard: React.FC = () => {
                     value={selectedStateFilter}
                     onChange={(e) => {
                       setSelectedStateFilter(e.target.value);
-                      setProjectsPage(1);
+                      setSelectedDistrictFilter("all");
                     }}
                     style={{
                       height: "40px",
@@ -1007,12 +1298,35 @@ export const MinistryDashboard: React.FC = () => {
                       border: "1px solid #cbd5e1",
                       fontSize: "0.85rem",
                       background: "#ffffff",
+                      maxWidth: "200px",
                     }}
                   >
-                    <option value="all">All States & UTs (36)</option>
-                    {states.map((s) => (
-                      <option key={s.state} value={s.state}>
-                        {s.state} ({s.projectCount})
+                    <option value="all">All States & UTs ({availableStates.length})</option>
+                    {availableStates.map((s) => (
+                      <option key={s.name} value={s.name}>
+                        {s.name} ({s.count})
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* District Select */}
+                  <select
+                    value={selectedDistrictFilter}
+                    onChange={(e) => setSelectedDistrictFilter(e.target.value)}
+                    style={{
+                      height: "40px",
+                      padding: "0 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                      background: "#ffffff",
+                      maxWidth: "180px",
+                    }}
+                  >
+                    <option value="all">All Districts ({availableDistricts.length})</option>
+                    {availableDistricts.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
                       </option>
                     ))}
                   </select>
@@ -1020,10 +1334,7 @@ export const MinistryDashboard: React.FC = () => {
                   {/* Status Select */}
                   <select
                     value={selectedStatusFilter}
-                    onChange={(e) => {
-                      setSelectedStatusFilter(e.target.value);
-                      setProjectsPage(1);
-                    }}
+                    onChange={(e) => setSelectedStatusFilter(e.target.value)}
                     style={{
                       height: "40px",
                       padding: "0 12px",
@@ -1035,17 +1346,38 @@ export const MinistryDashboard: React.FC = () => {
                   >
                     <option value="all">All Statuses</option>
                     <option value="Sanctioned">Sanctioned</option>
-                    <option value="In Progress">In Progress</option>
+                    <option value="In Progress">In Progress / Ongoing</option>
                     <option value="Completed">Completed</option>
+                    <option value="Delayed">Delayed</option>
+                    <option value="Recommended">Recommended</option>
+                  </select>
+
+                  {/* Category Select */}
+                  <select
+                    value={selectedCategoryFilter}
+                    onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                    style={{
+                      height: "40px",
+                      padding: "0 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.85rem",
+                      background: "#ffffff",
+                      maxWidth: "180px",
+                    }}
+                  >
+                    <option value="all">All Categories ({availableCategories.length})</option>
+                    {availableCategories.map((c) => (
+                      <option key={c.name} value={c.name}>
+                        {c.name} ({c.count})
+                      </option>
+                    ))}
                   </select>
 
                   {/* Risk Anomaly Filter */}
                   <select
                     value={selectedRiskFilter}
-                    onChange={(e) => {
-                      setSelectedRiskFilter(e.target.value);
-                      setProjectsPage(1);
-                    }}
+                    onChange={(e) => setSelectedRiskFilter(e.target.value)}
                     style={{
                       height: "40px",
                       padding: "0 12px",
@@ -1055,10 +1387,36 @@ export const MinistryDashboard: React.FC = () => {
                       background: "#ffffff",
                     }}
                   >
-                    <option value="all">All Projects</option>
-                    <option value="HIGH">Flagged for Review Only</option>
-                    <option value="LOW">Normal Only</option>
+                    <option value="all">All Risk Profiles</option>
+                    <option value="HIGH">Flagged / High Risk Only</option>
+                    <option value="LOW">Normal / Low Risk Only</option>
                   </select>
+
+                  {/* Reset Filters Button */}
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      style={{
+                        height: "40px",
+                        padding: "0 14px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        background: "#f8fafc",
+                        color: "#dc2626",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                      title="Reset all filters"
+                    >
+                      <RotateCcw size={14} />
+                      Reset Filters
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1072,462 +1430,723 @@ export const MinistryDashboard: React.FC = () => {
                   overflow: "hidden",
                 }}
               >
-                {/* Header Toolbar with View Mode Toggle */}
+                {/* Header Toolbar with View Mode Toggle & Grouping Toggle */}
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                   <div>
                     <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#1e293b" }}>
-                      {projectViewMode === "grouped"
-                        ? `Showing ${pagedProjectGroups.length} of ${projectGroups.length.toLocaleString("en-IN")} location groups`
-                        : `Showing ${pagedProjects.length} of ${filteredProjects.length.toLocaleString("en-IN")} unique projects`}
+                      {groupByDistrict
+                        ? `Showing ${pagedProjectGroups.length} of ${projectGroups.length.toLocaleString("en-IN")} location groups (${filteredProjects.length.toLocaleString("en-IN")} works)`
+                        : `Showing ${pagedProjects.length} of ${filteredProjects.length.toLocaleString("en-IN")} individual works`}
                     </div>
                     <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "2px" }}>
-                      {filteredProjects.length.toLocaleString("en-IN")} unique works · Page {projectsPage} of {totalProjectPages}
+                      {filteredProjects.length.toLocaleString("en-IN")} works matched · Page {projectsPage} of {totalProjectPages}
                     </div>
                   </div>
 
-                  {/* View mode toggle */}
-                  <div style={{ display: "inline-flex", background: "#f8fafc", padding: "3px", borderRadius: "7px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    {/* Group by Location Toggle */}
                     <button
-                      onClick={() => setRegistryView("grouped")}
+                      type="button"
+                      onClick={() => setGroupByDistrict((prev) => !prev)}
                       style={{
-                        display: "flex",
+                        display: "inline-flex",
                         alignItems: "center",
                         gap: "6px",
                         padding: "6px 14px",
-                        borderRadius: "6px",
-                        border: "none",
-                        background: projectViewMode === "grouped" ? "#ffffff" : "transparent",
-                        color: projectViewMode === "grouped" ? "#172033" : "#64748b",
-                        fontWeight: projectViewMode === "grouped" ? 700 : 500,
+                        borderRadius: "7px",
+                        border: groupByDistrict ? "1px solid #172033" : "1px solid #cbd5e1",
+                        background: groupByDistrict ? "#172033" : "#ffffff",
+                        color: groupByDistrict ? "#ffffff" : "#475569",
+                        fontWeight: 700,
                         fontSize: "0.8rem",
-                        boxShadow: projectViewMode === "grouped" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
                         cursor: "pointer",
                         transition: "all 0.15s ease",
                       }}
-                      aria-pressed={projectViewMode === "grouped"}
+                      title={groupByDistrict ? "Switch to flat works list" : "Group works by District & State"}
                     >
-                      <Layers size={15} />
-                      <span>Grouped</span>
+                      <FolderTree size={15} />
+                      <span>Group by Location</span>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "7px",
+                          height: "7px",
+                          borderRadius: "50%",
+                          background: groupByDistrict ? "#22c55e" : "#cbd5e1",
+                          marginLeft: "3px",
+                        }}
+                      />
                     </button>
-                    <button
-                      onClick={() => setRegistryView("grid")}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "6px 14px",
-                        borderRadius: "6px",
-                        border: "none",
-                        background: projectViewMode === "grid" ? "#ffffff" : "transparent",
-                        color: projectViewMode === "grid" ? "#172033" : "#64748b",
-                        fontWeight: projectViewMode === "grid" ? 700 : 500,
-                        fontSize: "0.8rem",
-                        boxShadow: projectViewMode === "grid" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
-                      aria-pressed={projectViewMode === "grid"}
-                    >
-                      <LayoutGrid size={15} />
-                      <span>Grid View</span>
-                    </button>
-                    <button
-                      onClick={() => setRegistryView("list")}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "6px 14px",
-                        borderRadius: "6px",
-                        border: "none",
-                        background: projectViewMode === "list" ? "#ffffff" : "transparent",
-                        color: projectViewMode === "list" ? "#172033" : "#64748b",
-                        fontWeight: projectViewMode === "list" ? 700 : 500,
-                        fontSize: "0.8rem",
-                        boxShadow: projectViewMode === "list" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
-                      aria-pressed={projectViewMode === "list"}
-                    >
-                      <List size={15} />
-                      <span>List View</span>
-                    </button>
+
+                    {/* View mode toggle (Grid vs List) */}
+                    <div style={{ display: "inline-flex", background: "#f8fafc", padding: "3px", borderRadius: "7px", border: "1px solid #e2e8f0" }}>
+                      <button
+                        type="button"
+                        onClick={() => setProjectViewMode("grid")}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: projectViewMode === "grid" ? "#ffffff" : "transparent",
+                          color: projectViewMode === "grid" ? "#172033" : "#64748b",
+                          fontWeight: projectViewMode === "grid" ? 700 : 500,
+                          fontSize: "0.8rem",
+                          boxShadow: projectViewMode === "grid" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                        aria-pressed={projectViewMode === "grid"}
+                      >
+                        <LayoutGrid size={15} />
+                        <span>Grid View</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProjectViewMode("list")}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: projectViewMode === "list" ? "#ffffff" : "transparent",
+                          color: projectViewMode === "list" ? "#172033" : "#64748b",
+                          fontWeight: projectViewMode === "list" ? 700 : 500,
+                          fontSize: "0.8rem",
+                          boxShadow: projectViewMode === "list" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                        aria-pressed={projectViewMode === "list"}
+                      >
+                        <List size={15} />
+                        <span>List View</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Grouped view: one navigable location summary per district/state. */}
-                {projectViewMode === "grouped" ? (
-                  <div className="project-groups">
-                    {pagedProjectGroups.map((group) => {
-                      const isExpanded = expandedProjectGroups.has(group.key);
-                      const reviewLabel = group.highRiskCount
-                        ? `${group.highRiskCount} review ${group.highRiskCount === 1 ? "item" : "items"}`
-                        : "No review items";
-
-                      return (
-                        <section className="project-group" key={group.key}>
-                          <button
-                            type="button"
-                            className="project-group__trigger"
-                            onClick={() => toggleProjectGroup(group.key)}
-                            aria-expanded={isExpanded}
-                          >
-                            <span className="project-group__chevron" aria-hidden="true">
-                              <ChevronDown size={18} style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
-                            </span>
-                            <span className="project-group__place">
-                              <strong>{group.district}</strong>
-                              <span>{group.state}</span>
-                            </span>
-                            <span className="project-group__count">{group.projects.length} works</span>
-                            <span className="project-group__categories" title={group.categories.join(", ")}>
-                              {group.categories.slice(0, 2).map((category) => <span key={category}>{category}</span>)}
-                              {group.categories.length > 2 && <span>+{group.categories.length - 2}</span>}
-                            </span>
-                            <span className="project-group__metric"><small>Sanctioned</small><strong>{formatCurrency(group.totalBudget)}</strong></span>
-                            <span className="project-group__metric"><small>Avg. progress</small><strong>{group.averageProgress}%</strong></span>
-                            <span className={`project-group__review ${group.highRiskCount ? "has-review" : ""}`}>{reviewLabel}</span>
-                          </button>
-
-                          {isExpanded && (
-                            <div className="project-group__records">
-                              {group.projects.map((project, index) => {
-                                const isHighRisk = project.is_flagged || (project.latest_risk_score || 0) > 50;
-                                return (
-                                  <div className="project-group-record" key={getProjectIdentity(project)}>
-                                    <span className="project-group-record__index">{index + 1}</span>
-                                    <div className="project-group-record__title">
-                                      <strong>{project.project_name || project.title || "MPLADS Community Work"}</strong>
-                                      <span>{project.project_id || project.id} · {project.category || "Community Asset"}</span>
-                                    </div>
-                                    <span className="project-group-record__status">{project.status || "Sanctioned"}</span>
-                                    <span className="project-group-record__budget">{formatCurrency(getProjectBudget(project))}</span>
-                                    {isHighRisk && <span className="project-group-record__review">Review</span>}
-                                    <button
-                                      type="button"
-                                      onClick={(event) => { event.stopPropagation(); openWorkDossier(project); }}
-                                    >
-                                      Inspect
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </section>
-                      );
-                    })}
+                {filteredProjects.length === 0 ? (
+                  <div style={{ padding: "48px 24px", textAlign: "center" }}>
+                    <AlertTriangle size={36} style={{ color: "#f59e0b", margin: "0 auto 12px" }} />
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#1e293b", margin: "0 0 6px" }}>No matching projects found</h3>
+                    <p style={{ fontSize: "0.85rem", color: "#64748b", maxWidth: "420px", margin: "0 auto 16px" }}>
+                      No MPLADS works match your current filters and search query. Try broadening your criteria or resetting filters.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      style={{
+                        padding: "8px 18px",
+                        borderRadius: "8px",
+                        background: "#172033",
+                        color: "#ffffff",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <RotateCcw size={14} />
+                      Reset All Filters
+                    </button>
                   </div>
-                ) : projectViewMode === "grid" ? (
-                  <div
-                    style={{
-                      padding: "20px",
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                      gap: "18px",
-                      background: "#f8fafc",
-                    }}
-                  >
-                    {pagedProjects.map((p, idx) => {
-                      const isHighRisk = p.is_flagged || (p.latest_risk_score || 0) > 50;
-                      const progress = p.physical_progress ?? (p.status === "Completed" ? 100 : p.status === "In Progress" ? 65 : 20);
-                      const cost = Number(p.sanctioned_amount || p.cost || 500000);
-
-                      return (
-                        <div
-                          key={p.project_id || p.id || idx}
-                          onClick={() => openWorkDossier(p)}
-                          style={{
-                            background: "#ffffff",
-                            borderRadius: "14px",
-                            border: "1px solid #e2e8f0",
-                            padding: "20px",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                            transition: "all 0.2s ease",
-                            cursor: "pointer",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.boxShadow = "0 10px 24px -4px rgba(0,0,0,0.1)";
-                            e.currentTarget.style.borderColor = "#93c5fd";
-                            e.currentTarget.style.transform = "translateY(-2px)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
-                            e.currentTarget.style.borderColor = "#e2e8f0";
-                            e.currentTarget.style.transform = "translateY(0)";
-                          }}
-                        >
-                          <div>
-                            {/* Category + Status Badges */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                              <span
-                                style={{
-                                  padding: "3px 10px",
-                                  borderRadius: "6px",
-                                  background: "#eff6ff",
-                                  color: "#1d4ed8",
-                                  fontSize: "0.74rem",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {p.category || "Community Work"}
-                              </span>
-                              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                                {isHighRisk && (
-                                  <span
-                                    style={{
-                                      padding: "2px 8px",
-                                      borderRadius: "6px",
-                                      background: "#fef2f2",
-                                      color: "#b91c1c",
-                                      fontSize: "0.7rem",
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    Review
-                                  </span>
-                                )}
-                                <span
-                                  style={{
-                                    padding: "3px 10px",
-                                    borderRadius: "9999px",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 700,
-                                    background:
-                                      p.status === "Completed"
-                                        ? "#ecfdf5"
-                                        : p.status === "In Progress"
-                                        ? "#eff6ff"
-                                        : "#fef3c7",
-                                    color:
-                                      p.status === "Completed"
-                                        ? "#065f46"
-                                        : p.status === "In Progress"
-                                        ? "#1e40af"
-                                        : "#92400e",
-                                  }}
-                                >
-                                  {p.status || "Sanctioned"}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Project Name */}
-                            <h3
-                              style={{
-                                fontSize: "0.98rem",
-                                fontWeight: 700,
-                                color: "#0f172a",
-                                margin: "0 0 6px",
-                                lineHeight: "1.4",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                              }}
-                            >
-                              {p.project_name || p.title || "MPLADS Community Project"}
-                            </h3>
-
-                            {/* Project ID */}
-                            <div style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono, monospace)", color: "#64748b", marginBottom: "12px" }}>
-                              ID: {p.project_id || p.id}
-                            </div>
-
-                            {/* Location */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#475569", marginBottom: "16px" }}>
-                              <MapPin size={14} style={{ color: "#64748b", flexShrink: 0 }} />
-                              <span style={{ fontWeight: 600 }}>{p.district || "District"}</span>
-                              <span style={{ color: "#94a3b8" }}>•</span>
-                              <span>{p.state || "State"}</span>
-                            </div>
-                          </div>
-
-                          <div>
-                            {/* Budget & Progress Box */}
-                            <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "12px", border: "1px solid #f1f5f9", marginBottom: "14px" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
-                                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>
-                                  Approved Budget
-                                </span>
-                                <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
-                                  {formatCurrency(cost)}
+                ) : groupByDistrict ? (
+                  /* GROUPED DATA: Rendered in Grid or List */
+                  projectViewMode === "grid" ? (
+                    /* Grouped Grid View */
+                    <div className="project-groups-grid">
+                      {pagedProjectGroups.map((group) => {
+                        const isExpanded = expandedProjectGroups.has(group.key);
+                        return (
+                          <div className="project-group-card" key={group.key}>
+                            <div>
+                              <div className="project-group-card__header">
+                                <div className="project-group-card__title">
+                                  <strong>{group.district}</strong>
+                                  <span>{group.state}</span>
+                                </div>
+                                <span className="project-group-card__badge">
+                                  {group.projects.length} {group.projects.length === 1 ? "Work" : "Works"}
                                 </span>
                               </div>
 
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.72rem", color: "#64748b", marginBottom: "4px" }}>
-                                <span>Ground Completion</span>
-                                <span style={{ fontWeight: 700, color: "#334155" }}>{progress}%</span>
-                              </div>
-                              <div style={{ width: "100%", height: "6px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
+                              {group.highRiskCount > 0 && (
                                 <div
                                   style={{
-                                    width: `${progress}%`,
-                                    height: "100%",
-                                    background: "#334155",
-                                    borderRadius: "9999px",
+                                    marginBottom: "10px",
+                                    padding: "4px 8px",
+                                    background: "#fef2f2",
+                                    color: "#b91c1c",
+                                    borderRadius: "6px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
                                   }}
-                                />
+                                >
+                                  <AlertTriangle size={13} />
+                                  <span>{group.highRiskCount} Flagged for Review</span>
+                                </div>
+                              )}
+
+                              <div className="project-group-card__metrics">
+                                <div className="project-group-card__metric-item">
+                                  <small>Sanctioned</small>
+                                  <strong>{formatCurrency(group.totalBudget)}</strong>
+                                </div>
+                                <div className="project-group-card__metric-item">
+                                  <small>Avg. Progress</small>
+                                  <strong>{group.averageProgress}%</strong>
+                                </div>
+                              </div>
+
+                              <div className="project-group-card__progress-wrap">
+                                <div className="project-group-card__progress-head">
+                                  <span>Execution Progress</span>
+                                  <strong>{group.averageProgress}%</strong>
+                                </div>
+                                <div className="project-group-card__progress-bar">
+                                  <div
+                                    className="project-group-card__progress-fill"
+                                    style={{ width: `${group.averageProgress}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="project-group-card__categories">
+                                {group.categories.slice(0, 3).map((category) => (
+                                  <span key={category}>{category}</span>
+                                ))}
+                                {group.categories.length > 3 && (
+                                  <span>+{group.categories.length - 3}</span>
+                                )}
                               </div>
                             </div>
 
-                            {/* Inspect Button */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openWorkDossier(p);
-                              }}
-                              style={{
-                                width: "100%",
-                                padding: "8px 12px",
-                                borderRadius: "8px",
-                                background: "#f1f5f9",
-                                border: "1px solid #cbd5e1",
-                                color: "#334155",
-                                fontSize: "0.78rem",
-                                fontWeight: 700,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "6px",
-                                cursor: "pointer",
-                                transition: "all 0.15s ease",
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "#172033";
-                                e.currentTarget.style.color = "#ffffff";
-                                e.currentTarget.style.borderColor = "#172033";
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "#f1f5f9";
-                                e.currentTarget.style.color = "#334155";
-                                e.currentTarget.style.borderColor = "#cbd5e1";
-                              }}
-                            >
-                              <span>Inspect Project Details</span>
-                              <ArrowRight size={13} />
-                            </button>
+                            <div className="project-group-card__footer">
+                              <button
+                                type="button"
+                                className="project-group-card__expand-btn"
+                                onClick={() => toggleProjectGroup(group.key)}
+                                aria-expanded={isExpanded}
+                              >
+                                <span>{isExpanded ? "Collapse Works" : `Inspect ${group.projects.length} Works`}</span>
+                                <ChevronDown
+                                  size={14}
+                                  style={{
+                                    transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                    transition: "transform 150ms ease",
+                                  }}
+                                />
+                              </button>
+                            </div>
+
+                            {isExpanded && (
+                              <div className="project-group-card__subworks">
+                                {group.projects.map((project) => {
+                                  const isHighRisk = isProjectHighRisk(project);
+                                  return (
+                                    <div className="project-group-card__subwork-row" key={getProjectIdentity(project)}>
+                                      <div className="project-group-card__subwork-info">
+                                        <strong title={project.project_name || project.title}>
+                                          {project.project_name || project.title || "MPLADS Community Work"}
+                                        </strong>
+                                        <span>
+                                          {project.project_id || project.id} · {project.status || "Sanctioned"} · {formatCurrency(getProjectBudget(project))}
+                                        </span>
+                                      </div>
+                                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                                        {isHighRisk && (
+                                          <span
+                                            style={{
+                                              padding: "2px 6px",
+                                              borderRadius: "4px",
+                                              background: "#fef2f2",
+                                              color: "#b91c1c",
+                                              fontSize: "0.65rem",
+                                              fontWeight: 700,
+                                            }}
+                                          >
+                                            Review
+                                          </span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          className="project-group-card__subwork-btn"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            openWorkDossier(project);
+                                          }}
+                                        >
+                                          Inspect
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* Compact list view */
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
-                      <thead>
-                        <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>
-                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Project Name & ID</th>
-                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Location</th>
-                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Category</th>
-                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Approved Budget</th>
-                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Status</th>
-                          <th style={{ padding: "12px 16px", fontWeight: 700 }}>Review Status</th>
-                          <th style={{ padding: "12px 16px", fontWeight: 700, textAlign: "right" }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pagedProjects.map((p, idx) => {
-                          const isHighRisk = p.is_flagged || (p.latest_risk_score || 0) > 50;
-                          return (
-                            <tr
-                              key={p.project_id || p.id || idx}
-                              style={{
-                                borderBottom: "1px solid #f1f5f9",
-                                background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd",
-                                cursor: "pointer",
-                              }}
-                              onClick={() => openWorkDossier(p)}
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Grouped List View (Accordion) */
+                    <div className="project-groups">
+                      {pagedProjectGroups.map((group) => {
+                        const isExpanded = expandedProjectGroups.has(group.key);
+                        const reviewLabel = group.highRiskCount
+                          ? `${group.highRiskCount} review ${group.highRiskCount === 1 ? "item" : "items"}`
+                          : "No review items";
+
+                        return (
+                          <section className="project-group" key={group.key}>
+                            <button
+                              type="button"
+                              className="project-group__trigger"
+                              onClick={() => toggleProjectGroup(group.key)}
+                              aria-expanded={isExpanded}
                             >
-                              <td style={{ padding: "12px 16px", maxWidth: "320px" }}>
-                                <div style={{ fontWeight: 700, color: "#1e293b" }}>
-                                  {p.project_name || p.title || "MPLADS Community Work"}
-                                </div>
-                                <div style={{ fontSize: "0.72rem", color: "#64748b", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
-                                  {p.project_id || p.id}
-                                </div>
-                              </td>
-                              <td style={{ padding: "12px 16px" }}>
-                                <div style={{ fontWeight: 600, color: "#334155" }}>{p.state || "National"}</div>
-                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{p.district || "All Districts"}</div>
-                              </td>
-                              <td style={{ padding: "12px 16px" }}>
-                                <span style={{ padding: "3px 8px", borderRadius: "6px", background: "#f1f5f9", fontSize: "0.72rem", fontWeight: 600, color: "#475569" }}>
-                                  {p.category || "Community Asset"}
-                                </span>
-                              </td>
-                              <td style={{ padding: "12px 16px", fontWeight: 700, color: "#0f172a" }}>
-                                {formatCurrency(Number(p.sanctioned_amount || p.cost || 500000))}
-                              </td>
-                              <td style={{ padding: "12px 16px" }}>
+                              <span className="project-group__chevron" aria-hidden="true">
+                                <ChevronDown
+                                  size={18}
+                                  style={{
+                                    transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                    transition: "transform 150ms ease",
+                                  }}
+                                />
+                              </span>
+                              <span className="project-group__place">
+                                <strong>{group.district}</strong>
+                                <span>{group.state}</span>
+                              </span>
+                              <span className="project-group__count">{group.projects.length} works</span>
+                              <span className="project-group__categories" title={group.categories.join(", ")}>
+                                {group.categories.slice(0, 2).map((category) => (
+                                  <span key={category}>{category}</span>
+                                ))}
+                                {group.categories.length > 2 && <span>+{group.categories.length - 2}</span>}
+                              </span>
+                              <span className="project-group__metric">
+                                <small>Sanctioned</small>
+                                <strong>{formatCurrency(group.totalBudget)}</strong>
+                              </span>
+                              <span className="project-group__metric">
+                                <small>Avg. progress</small>
+                                <strong>{group.averageProgress}%</strong>
+                              </span>
+                              <span className={`project-group__review ${group.highRiskCount ? "has-review" : ""}`}>
+                                {reviewLabel}
+                              </span>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="project-group__records">
+                                {group.projects.map((project, index) => {
+                                  const isHighRisk = isProjectHighRisk(project);
+                                  return (
+                                    <div className="project-group-record" key={getProjectIdentity(project)}>
+                                      <span className="project-group-record__index">{index + 1}</span>
+                                      <div className="project-group-record__title">
+                                        <strong>{project.project_name || project.title || "MPLADS Community Work"}</strong>
+                                        <span>{project.project_id || project.id} · {project.category || "Community Asset"}</span>
+                                      </div>
+                                      <span className="project-group-record__status">{project.status || "Sanctioned"}</span>
+                                      <span className="project-group-record__budget">{formatCurrency(getProjectBudget(project))}</span>
+                                      {isHighRisk && <span className="project-group-record__review">Review</span>}
+                                      <button
+                                        type="button"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          openWorkDossier(project);
+                                        }}
+                                      >
+                                        Inspect
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </section>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  /* FLAT DATA (Group by Location is disabled): Grid or List */
+                  projectViewMode === "grid" ? (
+                    <div
+                      style={{
+                        padding: "20px",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                        gap: "18px",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      {pagedProjects.map((p, idx) => {
+                        const isHighRisk = isProjectHighRisk(p);
+                        const progress = getProjectProgress(p);
+                        const cost = getProjectBudget(p);
+
+                        return (
+                          <div
+                            key={p.project_id || p.id || idx}
+                            onClick={() => openWorkDossier(p)}
+                            style={{
+                              background: "#ffffff",
+                              borderRadius: "14px",
+                              border: "1px solid #e2e8f0",
+                              padding: "20px",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                              transition: "all 0.2s ease",
+                              cursor: "pointer",
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "space-between",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow = "0 10px 24px -4px rgba(0,0,0,0.1)";
+                              e.currentTarget.style.borderColor = "#93c5fd";
+                              e.currentTarget.style.transform = "translateY(-2px)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
+                              e.currentTarget.style.borderColor = "#e2e8f0";
+                              e.currentTarget.style.transform = "translateY(0)";
+                            }}
+                          >
+                            <div>
+                              {/* Category + Status Badges */}
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
                                 <span
                                   style={{
                                     padding: "3px 10px",
-                                    borderRadius: "9999px",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 700,
-                                    background:
-                                      p.status === "Completed"
-                                        ? "#ecfdf5"
-                                        : p.status === "In Progress"
-                                        ? "#eff6ff"
-                                        : "#fef3c7",
-                                    color:
-                                      p.status === "Completed"
-                                        ? "#065f46"
-                                        : p.status === "In Progress"
-                                        ? "#1e40af"
-                                        : "#92400e",
-                                  }}
-                                >
-                                  {p.status || "Sanctioned"}
-                                </span>
-                              </td>
-                              <td style={{ padding: "12px 16px" }}>
-                                <span
-                                  style={{
-                                    padding: "3px 8px",
                                     borderRadius: "6px",
-                                    fontSize: "0.72rem",
+                                    background: "#eff6ff",
+                                    color: "#1d4ed8",
+                                    fontSize: "0.74rem",
                                     fontWeight: 700,
-                                    background: isHighRisk ? "#fef2f2" : "#f0fdf4",
-                                    color: isHighRisk ? "#b91c1c" : "#166534",
                                   }}
                                 >
-                                  {isHighRisk ? "Review Needed" : "Normal"}
+                                  {p.category || "Community Work"}
                                 </span>
-                              </td>
-                              <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openWorkDossier(p);
-                                  }}
-                                  style={{
-                                    padding: "5px 10px",
-                                    borderRadius: "6px",
-                                    border: "1px solid #cbd5e1",
-                                    background: "#ffffff",
-                                    color: "#2563eb",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 600,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  Inspect
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                  {isHighRisk && (
+                                    <span
+                                      style={{
+                                        padding: "2px 8px",
+                                        borderRadius: "6px",
+                                        background: "#fef2f2",
+                                        color: "#b91c1c",
+                                        fontSize: "0.7rem",
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      Review
+                                    </span>
+                                  )}
+                                  <span
+                                    style={{
+                                      padding: "3px 10px",
+                                      borderRadius: "9999px",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 700,
+                                      background:
+                                        p.status === "Completed"
+                                          ? "#ecfdf5"
+                                          : p.status === "In Progress" || p.status === "Ongoing"
+                                          ? "#eff6ff"
+                                          : "#fef3c7",
+                                      color:
+                                        p.status === "Completed"
+                                          ? "#065f46"
+                                          : p.status === "In Progress" || p.status === "Ongoing"
+                                          ? "#1e40af"
+                                          : "#92400e",
+                                    }}
+                                  >
+                                    {p.status || "Sanctioned"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Project Name */}
+                              <h3
+                                style={{
+                                  fontSize: "0.98rem",
+                                  fontWeight: 700,
+                                  color: "#0f172a",
+                                  margin: "0 0 6px",
+                                  lineHeight: "1.4",
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {p.project_name || p.title || "MPLADS Community Project"}
+                              </h3>
+
+                              {/* Project ID */}
+                              <div style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono, monospace)", color: "#64748b", marginBottom: "12px" }}>
+                                ID: {p.project_id || p.id}
+                              </div>
+
+                              {/* Location */}
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#475569", marginBottom: "16px" }}>
+                                <MapPin size={14} style={{ color: "#64748b", flexShrink: 0 }} />
+                                <span style={{ fontWeight: 600 }}>{p.district || "District"}</span>
+                                <span style={{ color: "#94a3b8" }}>•</span>
+                                <span>{p.state || "State"}</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              {/* Budget & Progress Box */}
+                              <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "12px", border: "1px solid #f1f5f9", marginBottom: "14px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>
+                                    Approved Budget
+                                  </span>
+                                  <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                                    {formatCurrency(cost)}
+                                  </span>
+                                </div>
+
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.72rem", color: "#64748b", marginBottom: "4px" }}>
+                                  <span>Ground Completion</span>
+                                  <span style={{ fontWeight: 700, color: "#334155" }}>{progress}%</span>
+                                </div>
+                                <div style={{ width: "100%", height: "6px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
+                                  <div
+                                    style={{
+                                      width: `${progress}%`,
+                                      height: "100%",
+                                      background: "#334155",
+                                      borderRadius: "9999px",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Inspect Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openWorkDossier(p);
+                                }}
+                                style={{
+                                  width: "100%",
+                                  padding: "8px 12px",
+                                  borderRadius: "8px",
+                                  background: "#f1f5f9",
+                                  border: "1px solid #cbd5e1",
+                                  color: "#334155",
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "6px",
+                                  cursor: "pointer",
+                                  transition: "all 0.15s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "#172033";
+                                  e.currentTarget.style.color = "#ffffff";
+                                  e.currentTarget.style.borderColor = "#172033";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "#f1f5f9";
+                                  e.currentTarget.style.color = "#334155";
+                                  e.currentTarget.style.borderColor = "#cbd5e1";
+                                }}
+                              >
+                                <span>Inspect Project Details</span>
+                                <ArrowRight size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Flat List View (Table) */
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
+                        <thead>
+                          <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>
+                            <TableColumnHeader
+                              title="Project Name & ID"
+                              sortKey="title"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                            />
+                            <TableColumnHeader
+                              title="Location"
+                              sortKey="location"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                              filterOptions={availableStates.map((s) => s.name)}
+                              selectedFilter={selectedStateFilter}
+                              onSelectFilter={(st) => {
+                                setSelectedStateFilter(st);
+                                setSelectedDistrictFilter("all");
+                              }}
+                            />
+                            <TableColumnHeader
+                              title="Category"
+                              sortKey="category"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                              filterOptions={availableCategories.map((c) => c.name)}
+                              selectedFilter={selectedCategoryFilter}
+                              onSelectFilter={setSelectedCategoryFilter}
+                            />
+                            <TableColumnHeader
+                              title="Approved Budget"
+                              sortKey="cost"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                            />
+                            <TableColumnHeader
+                              title="Status"
+                              sortKey="status"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                              filterOptions={["Completed", "In Progress", "Sanctioned", "Delayed", "Recommended"]}
+                              selectedFilter={selectedStatusFilter}
+                              onSelectFilter={setSelectedStatusFilter}
+                            />
+                            <TableColumnHeader
+                              title="Review Status"
+                              sortKey="risk"
+                              currentSortKey={projectSortField}
+                              currentSortOrder={projectSortOrder}
+                              onSort={handleProjectSort}
+                              filterOptions={["HIGH", "LOW"]}
+                              selectedFilter={selectedRiskFilter}
+                              onSelectFilter={setSelectedRiskFilter}
+                            />
+                            <th style={{ padding: "12px 16px", fontWeight: 700, textAlign: "right" }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pagedProjects.map((p, idx) => {
+                            const isHighRisk = isProjectHighRisk(p);
+                            return (
+                              <tr
+                                key={p.project_id || p.id || idx}
+                                style={{
+                                  borderBottom: "1px solid #f1f5f9",
+                                  background: idx % 2 === 0 ? "#ffffff" : "#fbfcfd",
+                                  cursor: "pointer",
+                                }}
+                                onClick={() => openWorkDossier(p)}
+                              >
+                                <td style={{ padding: "12px 16px", maxWidth: "320px" }}>
+                                  <div style={{ fontWeight: 700, color: "#1e293b" }}>
+                                    {p.project_name || p.title || "MPLADS Community Work"}
+                                  </div>
+                                  <div style={{ fontSize: "0.72rem", color: "#64748b", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
+                                    {p.project_id || p.id}
+                                  </div>
+                                </td>
+                                <td style={{ padding: "12px 16px" }}>
+                                  <div style={{ fontWeight: 600, color: "#334155" }}>{p.state || "National"}</div>
+                                  <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{p.district || "All Districts"}</div>
+                                </td>
+                                <td style={{ padding: "12px 16px" }}>
+                                  <span style={{ padding: "3px 8px", borderRadius: "6px", background: "#f1f5f9", fontSize: "0.72rem", fontWeight: 600, color: "#475569" }}>
+                                    {p.category || "Community Asset"}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "12px 16px", fontWeight: 700, color: "#0f172a" }}>
+                                  {formatCurrency(getProjectBudget(p))}
+                                </td>
+                                <td style={{ padding: "12px 16px" }}>
+                                  <span
+                                    style={{
+                                      padding: "3px 10px",
+                                      borderRadius: "9999px",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 700,
+                                      background:
+                                        p.status === "Completed"
+                                          ? "#ecfdf5"
+                                          : p.status === "In Progress" || p.status === "Ongoing"
+                                          ? "#eff6ff"
+                                          : "#fef3c7",
+                                      color:
+                                        p.status === "Completed"
+                                          ? "#065f46"
+                                          : p.status === "In Progress" || p.status === "Ongoing"
+                                          ? "#1e40af"
+                                          : "#92400e",
+                                    }}
+                                  >
+                                    {p.status || "Sanctioned"}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "12px 16px" }}>
+                                  <span
+                                    style={{
+                                      padding: "3px 8px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 700,
+                                      background: isHighRisk ? "#fef2f2" : "#f0fdf4",
+                                      color: isHighRisk ? "#b91c1c" : "#166534",
+                                    }}
+                                  >
+                                    {isHighRisk ? "Review Needed" : "Normal"}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openWorkDossier(p);
+                                    }}
+                                    style={{
+                                      padding: "5px 10px",
+                                      borderRadius: "6px",
+                                      border: "1px solid #cbd5e1",
+                                      background: "#ffffff",
+                                      color: "#2563eb",
+                                      fontSize: "0.75rem",
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    Inspect
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
                 )}
 
                 {/* Pagination Controls */}

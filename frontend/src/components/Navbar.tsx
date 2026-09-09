@@ -27,6 +27,8 @@ interface NavbarProps {
   onOpenLogin: (initialRole?: Role) => void;
   t?: TranslationDict;
   flagCount?: number;
+  adminHouseFilter?: "both" | "Lok Sabha" | "Rajya Sabha";
+  onAdminHouseFilterChange?: (filter: "both" | "Lok Sabha" | "Rajya Sabha") => void;
 }
 
 const ROLES_EN: { id: Role; label: string; desc: string; icon: any }[] = [
@@ -49,7 +51,7 @@ const ROLES_HI: { id: Role; label: string; desc: string; icon: any }[] = [
   { id: "ministry", label: "सांख्यिकी मंत्रालय (MoSPI)", desc: "शीर्ष राष्ट्रीय पर्यवेक्षण", icon: Award }
 ];
 
-export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: propT }: NavbarProps) {
+export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: propT, adminHouseFilter, onAdminHouseFilterChange }: NavbarProps) {
   const { user, logout, setRole, isAuthenticated } = useRole();
   const { t: prefT, lang } = usePreferences();
   const t = prefT || propT;
@@ -131,7 +133,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           
 
-          {/* Quick Nav Links */}
+          {/* Quick Nav Links & Top Right House Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600 }}>
             <button
               type="button"
@@ -172,6 +174,45 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
               <BookOpen size={14} />
               <span>{t?.howItWorks || (lang === 'hi' ? 'दिशानिर्देश' : 'Guidelines')}</span>
             </button>
+
+            {/* Parliamentary House Filter Dropdown (Top Navbar, right side of How it works) */}
+            {adminHouseFilter !== undefined && onAdminHouseFilterChange && (
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  marginLeft: '4px',
+                  background: 'rgba(241, 245, 249, 0.85)',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1'
+                }}
+              >
+                <Landmark size={14} color="#0284c7" />
+                <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>House:</span>
+                <select
+                  value={adminHouseFilter}
+                  onChange={(e) => onAdminHouseFilterChange(e.target.value as any)}
+                  style={{
+                    padding: "3px 6px",
+                    borderRadius: "4px",
+                    border: "1px solid #94a3b8",
+                    background: "#ffffff",
+                    color: "#0f172a",
+                    fontSize: "0.80rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    outline: "none"
+                  }}
+                  title="Filter Ministry by Parliamentary House"
+                >
+                  <option value="both">Both Houses (Default)</option>
+                  <option value="Lok Sabha">Lok Sabha</option>
+                  <option value="Rajya Sabha">Rajya Sabha</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <div style={{ height: '24px', width: '1px', background: 'var(--border-light, #e2e8f0)' }} />

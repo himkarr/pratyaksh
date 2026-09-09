@@ -871,6 +871,7 @@ export const CitizenDashboard: React.FC = () => {
           <CitizenProjectSearch
             works={displayWorks}
             onSelectWork={(work) => setSelectedWork(work)}
+            onReportProblem={handleOpenReportWithWork}
             onOpenRecommendModal={handleOpenRecommend}
             currentConstituency={currentConstituency}
           />

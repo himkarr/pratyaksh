@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { StateSummary, MPSummary } from "../../../api/adminDataService";
 import { CivicUtilizationGauge } from "../../common/CivicUtilizationGauge";
+import { MPPersonalityDonut } from "./MPPersonalityDonut";
+import { TableColumnHeader } from "../../common/TableColumnHeader";
 
 interface StateDetailProps {
   stateName: string;
@@ -44,15 +46,25 @@ export const StateDetail: React.FC<StateDetailProps> = ({
   // Three Tabs: Overview, MPs Performance, Projects
   const [activeTab, setActiveTab] = useState<"overview" | "mps" | "projects">("overview");
 
-  // Sorting for MPs table
-  const [mpSortBy, setMpSortBy] = useState<string>("utilization");
+  // Sorting & Filtering for MPs table
+  const [mpSortBy, setMpSortBy] = useState<string>("utilizationPercentage");
   const [mpSortOrder, setMpSortOrder] = useState<"asc" | "desc">("desc");
   const [mpSearch, setMpSearch] = useState<string>("");
+  const [mpHouseFilter, setMpHouseFilter] = useState<string>("all");
+  const [mpConstituencyFilter, setMpConstituencyFilter] = useState<string>("all");
 
-  // Projects Tab Filters
+  // District Table Filters & Sorting
+  const [districtSortBy, setDistrictSortBy] = useState<string>("sanctioned");
+  const [districtSortOrder, setDistrictSortOrder] = useState<"asc" | "desc">("desc");
+  const [districtStatusFilter, setDistrictStatusFilter] = useState<string>("all");
+
+  // Projects Tab Filters & Sorting
   const [projectSearch, setProjectSearch] = useState("");
   const [projectStatusFilter, setProjectStatusFilter] = useState("all");
   const [projectCategoryFilter, setProjectCategoryFilter] = useState("all");
+  const [projectDistrictFilter, setProjectDistrictFilter] = useState("all");
+  const [projectSortBy, setProjectSortBy] = useState<string>("sanctioned_amount");
+  const [projectSortOrder, setProjectSortOrder] = useState<"asc" | "desc">("desc");
   const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("grid");
 
   // Filter MPs for this state
@@ -69,22 +81,37 @@ export const StateDetail: React.FC<StateDetailProps> = ({
     );
   }, [projects, stateName]);
 
-  // Aggregate Financials
+  // Distinct Constituencies in this State
+  const stateConstituencies = useMemo(() => {
+    const set = new Set<string>();
+    stateMPs.forEach((m) => {
+      if (m.constituency) set.add(m.constituency);
+    });
+    return Array.from(set).sort();
+  }, [stateMPs]);
+
+  // Aggregate Financials - Exactly matching stateData and pure DB records
   const totalAllocated = useMemo(() => {
     if (stateData && stateData.totalAllocated > 0) return stateData.totalAllocated;
-    const sum = stateProjects.reduce((acc, p) => acc + (Number(p.sanctioned_amount || p.cost || 0)), 0);
-    return sum > 0 ? sum : (stateMPs.length * 50000000); // 5 Cr per MP statutory baseline
-  }, [stateData, stateProjects, stateMPs]);
+    return stateProjects.reduce((acc, p) => acc + (Number(p.sanctioned_amount || p.cost || 0)), 0);
+  }, [stateData, stateProjects]);
 
   const totalExpenditure = useMemo(() => {
     if (stateData && stateData.totalExpenditure > 0) return stateData.totalExpenditure;
-    const sum = stateProjects.reduce((acc, p) => acc + (Number(p.utilized_amount || p.expenditure || 0)), 0);
-    return sum > 0 ? sum : Math.round(totalAllocated * 0.68);
-  }, [stateData, stateProjects, totalAllocated]);
+    return stateProjects.reduce((acc, p) => acc + (Number(p.utilized_amount || p.expenditure || 0)), 0);
+  }, [stateData, stateProjects]);
 
   const unspentBalance = Math.max(0, totalAllocated - totalExpenditure);
-  const utilizationRate = totalAllocated > 0 ? Math.round((totalExpenditure / totalAllocated) * 100) : 0;
+  const utilizationRate = stateData && stateData.totalAllocated > 0
+    ? stateData.utilizationPercentage
+    : (totalAllocated > 0 ? Math.round((totalExpenditure / totalAllocated) * 100) : 0);
+
   const completedProjectsCount = stateProjects.filter((p) => (p.status || "").toLowerCase() === "completed").length;
+  const ongoingProjectsCount = stateProjects.filter((p) => {
+    const st = (p.status || "").toLowerCase();
+    return st === "in progress" || st === "inprogress" || st === "ongoing";
+  }).length;
+  const delayedProjectsCount = stateProjects.filter((p) => (p.status || "").toLowerCase() === "delayed").length;
   const avgPerMp = stateMPs.length > 0 ? Math.round(totalAllocated / stateMPs.length) : 0;
 
   // Currency Formatter
@@ -117,12 +144,29 @@ export const StateDetail: React.FC<StateDetailProps> = ({
       entry.sanctioned += Number(p.sanctioned_amount || p.cost || 0);
       entry.utilized += Number(p.utilized_amount || p.expenditure || 0);
     }
-    return Array.from(map.entries()).map(([district, data]) => ({
+    const list = Array.from(map.entries()).map(([district, data]) => ({
       district,
       ...data,
       utilization: data.sanctioned > 0 ? Math.min(100, Math.round((data.utilized / data.sanctioned) * 100)) : 0,
-    })).sort((a, b) => b.sanctioned - a.sanctioned);
-  }, [stateProjects]);
+    }));
+
+    return list
+      .filter((d) => {
+        if (districtStatusFilter === "on_schedule" && d.utilization < 70) return false;
+        if (districtStatusFilter === "in_progress" && (d.utilization < 40 || d.utilization >= 70)) return false;
+        if (districtStatusFilter === "pending" && d.utilization >= 40) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        let diff = 0;
+        if (districtSortBy === "district") diff = a.district.localeCompare(b.district);
+        else if (districtSortBy === "count") diff = a.count - b.count;
+        else if (districtSortBy === "sanctioned") diff = a.sanctioned - b.sanctioned;
+        else if (districtSortBy === "utilized") diff = a.utilized - b.utilized;
+        else if (districtSortBy === "utilization") diff = a.utilization - b.utilization;
+        return districtSortOrder === "desc" ? -diff : diff;
+      });
+  }, [stateProjects, districtSortBy, districtSortOrder, districtStatusFilter]);
 
   // Sort and filter MPs
   const handleMpSort = (field: string) => {
@@ -136,6 +180,12 @@ export const StateDetail: React.FC<StateDetailProps> = ({
 
   const sortedAndFilteredMPs = useMemo(() => {
     let list = stateMPs;
+    if (mpHouseFilter !== "all") {
+      list = list.filter((m) => m.house.toLowerCase() === mpHouseFilter.toLowerCase());
+    }
+    if (mpConstituencyFilter !== "all") {
+      list = list.filter((m) => m.constituency.toLowerCase() === mpConstituencyFilter.toLowerCase());
+    }
     if (mpSearch.trim()) {
       const q = mpSearch.toLowerCase();
       list = list.filter((m) =>
@@ -157,14 +207,17 @@ export const StateDetail: React.FC<StateDetailProps> = ({
           return mpSortOrder === "asc" ? a.constituency.localeCompare(b.constituency) : b.constituency.localeCompare(a.constituency);
         case "house":
           return mpSortOrder === "asc" ? a.house.localeCompare(b.house) : b.house.localeCompare(a.house);
+        case "totalSanctioned":
         case "allocated":
           valA = a.totalSanctioned || 0;
           valB = b.totalSanctioned || 0;
           break;
+        case "totalUtilized":
         case "utilized":
           valA = a.totalUtilized || 0;
           valB = b.totalUtilized || 0;
           break;
+        case "utilizationPercentage":
         case "utilization":
         default:
           valA = a.utilizationPercentage || 0;
@@ -176,30 +229,60 @@ export const StateDetail: React.FC<StateDetailProps> = ({
     });
 
     return sorted;
-  }, [stateMPs, mpSearch, mpSortBy, mpSortOrder]);
+  }, [stateMPs, mpSearch, mpHouseFilter, mpConstituencyFilter, mpSortBy, mpSortOrder]);
+
+  // Project Districts list
+  const stateDistricts = useMemo(() => {
+    const set = new Set<string>();
+    stateProjects.forEach((p) => {
+      if (p.district) set.add(p.district);
+    });
+    return Array.from(set).sort();
+  }, [stateProjects]);
 
   // Filtered Projects for Tab 3
   const filteredProjects = useMemo(() => {
-    return stateProjects.filter((p) => {
-      if (projectStatusFilter !== "all" && (p.status || "").toLowerCase() !== projectStatusFilter.toLowerCase()) {
-        return false;
-      }
-      if (projectCategoryFilter !== "all" && (p.category || "").toLowerCase() !== projectCategoryFilter.toLowerCase()) {
-        return false;
-      }
-      if (projectSearch.trim()) {
-        const q = projectSearch.toLowerCase();
-        const title = (p.project_name || p.title || "").toLowerCase();
-        const dist = (p.district || "").toLowerCase();
-        const cat = (p.category || "").toLowerCase();
-        const id = (p.project_id || p.id || "").toLowerCase();
-        if (!title.includes(q) && !dist.includes(q) && !cat.includes(q) && !id.includes(q)) {
+    return stateProjects
+      .filter((p) => {
+        if (projectStatusFilter !== "all" && (p.status || "").toLowerCase() !== projectStatusFilter.toLowerCase()) {
           return false;
         }
-      }
-      return true;
-    });
-  }, [stateProjects, projectSearch, projectStatusFilter, projectCategoryFilter]);
+        if (projectCategoryFilter !== "all" && (p.category || "").toLowerCase() !== projectCategoryFilter.toLowerCase()) {
+          return false;
+        }
+        if (projectDistrictFilter !== "all" && (p.district || "").toLowerCase() !== projectDistrictFilter.toLowerCase()) {
+          return false;
+        }
+        if (projectSearch.trim()) {
+          const q = projectSearch.toLowerCase();
+          const title = (p.project_name || p.title || "").toLowerCase();
+          const dist = (p.district || "").toLowerCase();
+          const cat = (p.category || "").toLowerCase();
+          const id = (p.project_id || p.id || "").toLowerCase();
+          if (!title.includes(q) && !dist.includes(q) && !cat.includes(q) && !id.includes(q)) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        let valA: any = 0;
+        let valB: any = 0;
+        if (projectSortBy === "title") return projectSortOrder === "asc" ? (a.project_name || a.title || "").localeCompare(b.project_name || b.title || "") : (b.project_name || b.title || "").localeCompare(a.project_name || a.title || "");
+        if (projectSortBy === "district") return projectSortOrder === "asc" ? (a.district || "").localeCompare(b.district || "") : (b.district || "").localeCompare(a.district || "");
+        if (projectSortBy === "category") return projectSortOrder === "asc" ? (a.category || "").localeCompare(b.category || "") : (b.category || "").localeCompare(a.category || "");
+        if (projectSortBy === "sanctioned_amount") {
+          valA = Number(a.sanctioned_amount || a.cost || 0);
+          valB = Number(b.sanctioned_amount || b.cost || 0);
+        } else if (projectSortBy === "progress") {
+          valA = a.physical_progress ?? a.physicalProgress ?? 0;
+          valB = b.physical_progress ?? b.physicalProgress ?? 0;
+        } else if (projectSortBy === "status") {
+          return projectSortOrder === "asc" ? (a.status || "").localeCompare(b.status || "") : (b.status || "").localeCompare(a.status || "");
+        }
+        return projectSortOrder === "desc" ? valB - valA : valA - valB;
+      });
+  }, [stateProjects, projectSearch, projectStatusFilter, projectCategoryFilter, projectDistrictFilter, projectSortBy, projectSortOrder]);
 
   // Project Categories list
   const projectCategories = useMemo(() => {
@@ -209,31 +292,6 @@ export const StateDetail: React.FC<StateDetailProps> = ({
     });
     return Array.from(set);
   }, [stateProjects]);
-
-  // Sortable header renderer
-  const renderMpSortableHeader = (field: string, label: string) => {
-    const isActive = mpSortBy === field;
-    return (
-      <th
-        onClick={() => handleMpSort(field)}
-        style={{
-          cursor: "pointer",
-          userSelect: "none",
-          background: isActive ? "#edf2f7" : "#f7fafc",
-          fontWeight: 700,
-        }}
-      >
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-          <span>{label}</span>
-          {isActive ? (
-            mpSortOrder === "desc" ? <ChevronDown size={14} color="#2c5282" /> : <ChevronUp size={14} color="#2c5282" />
-          ) : (
-            <ArrowUpDown size={12} style={{ opacity: 0.4 }} />
-          )}
-        </div>
-      </th>
-    );
-  };
 
   return (
     <div className="state-detail-page">
@@ -249,9 +307,28 @@ export const StateDetail: React.FC<StateDetailProps> = ({
           <p>State Overview, District Deployments & Parliamentary Performance • National MPLADS Portal</p>
         </div>
 
-        {/* 4 Summary Stat Cards */}
+        {/* 4 Interactive Summary Stat Cards */}
         <div className="state-summary-stats">
-          <div className="summary-stat">
+          <div
+            className="summary-stat"
+            onClick={() => {
+              setActiveTab("mps");
+              setMpHouseFilter("all");
+              setMpConstituencyFilter("all");
+            }}
+            title="Click to view all MPs from this State"
+            style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 6px 16px -3px rgba(0,0,0,0.08)";
+              e.currentTarget.style.borderColor = "#93c5fd";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "none";
+              e.currentTarget.style.borderColor = "";
+            }}
+          >
             <span className="stat-icon">
               <Users size={28} strokeWidth={1.75} />
             </span>
@@ -261,7 +338,22 @@ export const StateDetail: React.FC<StateDetailProps> = ({
             </div>
           </div>
 
-          <div className="summary-stat">
+          <div
+            className="summary-stat"
+            onClick={() => setActiveTab("overview")}
+            title="Click to inspect Financial Outlay"
+            style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 6px 16px -3px rgba(0,0,0,0.08)";
+              e.currentTarget.style.borderColor = "#93c5fd";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "none";
+              e.currentTarget.style.borderColor = "";
+            }}
+          >
             <span className="stat-icon">
               <IndianRupee size={28} strokeWidth={1.75} />
             </span>
@@ -271,7 +363,22 @@ export const StateDetail: React.FC<StateDetailProps> = ({
             </div>
           </div>
 
-          <div className="summary-stat">
+          <div
+            className="summary-stat"
+            onClick={() => setActiveTab("overview")}
+            title="Click to inspect Fund Utilization"
+            style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 6px 16px -3px rgba(0,0,0,0.08)";
+              e.currentTarget.style.borderColor = "#93c5fd";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "none";
+              e.currentTarget.style.borderColor = "";
+            }}
+          >
             <span className="stat-icon">
               <TrendingUp size={28} strokeWidth={1.75} />
             </span>
@@ -283,7 +390,25 @@ export const StateDetail: React.FC<StateDetailProps> = ({
             </div>
           </div>
 
-          <div className="summary-stat">
+          <div
+            className="summary-stat"
+            onClick={() => {
+              setActiveTab("projects");
+              setProjectStatusFilter("completed");
+            }}
+            title="Click to view Completed Works"
+            style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 6px 16px -3px rgba(0,0,0,0.08)";
+              e.currentTarget.style.borderColor = "#93c5fd";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "none";
+              e.currentTarget.style.borderColor = "";
+            }}
+          >
             <span className="stat-icon">
               <CheckCircle2 size={28} strokeWidth={1.75} />
             </span>
@@ -322,83 +447,166 @@ export const StateDetail: React.FC<StateDetailProps> = ({
         {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
           <div className="overview-section">
-            <div className="charts-grid">
-              {/* Fund Utilization Half-Gauge */}
-              <div className="chart-container">
+            {/* Top Row: Gauge & MP Personality Types Donut (Matching Reference Architecture) */}
+            <div className="charts-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: "24px", marginBottom: "28px" }}>
+              {/* Left Column: Fund Utilization Gauge */}
+              <div className="chart-container" style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <CivicUtilizationGauge
                   utilization={utilizationRate}
-                  title={`${stateName} Fund Usage & Progress`}
+                  title={`${stateName} Utilization`}
+                  cardHeader="Fund Utilization"
                   size="md"
+                  hideCardWrap={true}
                 />
-
-                {/* Status Benchmark & Summary Chips (Fills empty space with clear info) */}
-                <div style={{ marginTop: "16px", padding: "14px 16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#64748b" }}>
-                      National Goal
-                    </span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: utilizationRate >= 70 ? "#059669" : utilizationRate >= 40 ? "#d97706" : "#dc2626" }}>
-                      {utilizationRate >= 70 ? "● Target Met (≥70%)" : utilizationRate >= 40 ? "● Steady Spending (40-69%)" : "● Needs Speed Up (<40%)"}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: "0.82rem", color: "#334155", margin: "0 0 12px", lineHeight: "1.4" }}>
-                    {utilizationRate >= 70
-                      ? `${stateName} has spent ${utilizationRate}% of its sanctioned funds, successfully surpassing the national target of 70%.`
-                      : utilizationRate >= 40
-                      ? `${stateName} is actively spending funds (${utilizationRate}% utilized), with ongoing project bills being processed.`
-                      : `${stateName} fund spending (${utilizationRate}%) is currently below the 40% benchmark. District sanctioning should be expedited.`}
-                  </p>
-                  
-                  {/* 3 mini summary chips */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", paddingTop: "10px", borderTop: "1px solid #e2e8f0" }}>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Total Budget</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>{formatCurrency(totalAllocated)}</div>
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Money Spent</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#059669" }}>{formatCurrency(totalExpenditure)}</div>
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Remaining</div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#d97706" }}>{formatCurrency(unspentBalance)}</div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Financial Breakdown Card */}
-              <div className="financial-breakdown">
-                <h3>State Budget Summary</h3>
-                <div className="breakdown-grid">
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Total Budget Approved</span>
-                    <span className="breakdown-value">{formatCurrency(totalAllocated)}</span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Actual Money Spent</span>
-                    <span className="breakdown-value">{formatCurrency(totalExpenditure)}</span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Remaining Balance</span>
-                    <span className="breakdown-value" style={{ color: "#d97706" }}>
-                      {formatCurrency(unspentBalance)}
-                    </span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Average Budget per MP</span>
-                    <span className="breakdown-value">{formatCurrency(avgPerMp)}</span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Total Local Projects</span>
-                    <span className="breakdown-value">{stateProjects.length} Works</span>
-                  </div>
-                  <div className="breakdown-item">
-                    <span className="breakdown-label">Completed Projects</span>
-                    <span className="breakdown-value" style={{ color: "#059669" }}>
-                      {completedProjectsCount} Works
-                    </span>
-                  </div>
+              {/* Right Column: MP Personality Types Donut */}
+              <div className="chart-container" style={{ height: "100%" }}>
+                <MPPersonalityDonut stateName={stateName} mps={stateMPs} />
+              </div>
+            </div>
+
+            {/* Financial Breakdown Section (Interactive & Unified Card Architecture) */}
+            <div className="financial-breakdown-card" style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", padding: "24px", marginBottom: "28px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <h3 style={{ fontFamily: "var(--font-serif, 'Cormorant Garamond', Georgia, serif)", fontSize: "1.3rem", fontWeight: 700, color: "#1e293b", margin: "0 0 20px 0" }}>
+                Financial & Delivery Breakdown
+              </h3>
+              <div className="breakdown-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
+                <div
+                  className="breakdown-item"
+                  style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}
+                >
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Total Budget Approved</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", marginTop: "4px" }}>{formatCurrency(totalAllocated)}</span>
+                </div>
+                <div
+                  className="breakdown-item"
+                  style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}
+                >
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Actual Money Spent</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#059669", marginTop: "4px" }}>{formatCurrency(totalExpenditure)}</span>
+                </div>
+                <div
+                  className="breakdown-item"
+                  style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease" }}
+                >
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Remaining Balance</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#d97706", marginTop: "4px" }}>
+                    {formatCurrency(unspentBalance)}
+                  </span>
+                </div>
+                <div
+                  className="breakdown-item cursor-pointer"
+                  onClick={() => setActiveTab("mps")}
+                  title="Click to view Parliamentarians list"
+                  style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease", cursor: "pointer" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.borderColor = "#93c5fd";
+                    e.currentTarget.style.background = "#eff6ff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                    e.currentTarget.style.background = "#f8fafc";
+                  }}
+                >
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Average Budget per MP</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", marginTop: "4px" }}>{formatCurrency(avgPerMp)}</span>
+                </div>
+                <div
+                  className="breakdown-item cursor-pointer"
+                  onClick={() => {
+                    setActiveTab("projects");
+                    setProjectStatusFilter("all");
+                  }}
+                  title="Click to view all projects"
+                  style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease", cursor: "pointer" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.borderColor = "#93c5fd";
+                    e.currentTarget.style.background = "#eff6ff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                    e.currentTarget.style.background = "#f8fafc";
+                  }}
+                >
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Total Local Projects</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#2563eb", marginTop: "4px" }}>{stateProjects.length} Works</span>
+                </div>
+                <div
+                  className="breakdown-item cursor-pointer"
+                  onClick={() => {
+                    setActiveTab("projects");
+                    setProjectStatusFilter("completed");
+                  }}
+                  title="Click to view Completed Works"
+                  style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease", cursor: "pointer" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.borderColor = "#86efac";
+                    e.currentTarget.style.background = "#f0fdf4";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                    e.currentTarget.style.background = "#f8fafc";
+                  }}
+                >
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#047857", fontWeight: 600, textTransform: "uppercase" }}>Completed Works</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#059669", marginTop: "4px" }}>
+                    {completedProjectsCount} Works
+                  </span>
+                </div>
+                <div
+                  className="breakdown-item cursor-pointer"
+                  onClick={() => {
+                    setActiveTab("projects");
+                    setProjectStatusFilter("in progress");
+                  }}
+                  title="Click to view Ongoing Works"
+                  style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease", cursor: "pointer" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.borderColor = "#fde047";
+                    e.currentTarget.style.background = "#fffbeb";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                    e.currentTarget.style.background = "#f8fafc";
+                  }}
+                >
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#b45309", fontWeight: 600, textTransform: "uppercase" }}>Ongoing Works</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#d97706", marginTop: "4px" }}>
+                    {ongoingProjectsCount} Works
+                  </span>
+                </div>
+                <div
+                  className="breakdown-item cursor-pointer"
+                  onClick={() => {
+                    setActiveTab("projects");
+                    setProjectStatusFilter("delayed");
+                  }}
+                  title="Click to view Delayed Works"
+                  style={{ padding: "16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0", transition: "all 0.2s ease", cursor: "pointer" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.borderColor = "#fca5a5";
+                    e.currentTarget.style.background = "#fef2f2";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.borderColor = "#e2e8f0";
+                    e.currentTarget.style.background = "#f8fafc";
+                  }}
+                >
+                  <span className="breakdown-label" style={{ display: "block", fontSize: "0.74rem", color: "#b91c1c", fontWeight: 600, textTransform: "uppercase" }}>Delayed Works</span>
+                  <span className="breakdown-value" style={{ display: "block", fontSize: "1.2rem", fontWeight: 800, color: "#dc2626", marginTop: "4px" }}>
+                    {delayedProjectsCount} Works
+                  </span>
                 </div>
               </div>
             </div>
@@ -421,12 +629,51 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                 <table>
                   <thead>
                     <tr>
-                      <th>District</th>
-                      <th>Works Logged</th>
-                      <th>Sanctioned Outlay</th>
-                      <th>Certified Expenditure</th>
-                      <th>Utilization Rate</th>
-                      <th>Status</th>
+                      <TableColumnHeader
+                        title="District"
+                        field="district"
+                        currentSortField={districtSortBy}
+                        currentSortDirection={districtSortOrder}
+                        onSort={setDistrictSortBy}
+                      />
+                      <TableColumnHeader
+                        title="Works Logged"
+                        field="count"
+                        currentSortField={districtSortBy}
+                        currentSortDirection={districtSortOrder}
+                        onSort={setDistrictSortBy}
+                      />
+                      <TableColumnHeader
+                        title="Sanctioned Outlay"
+                        field="sanctioned"
+                        currentSortField={districtSortBy}
+                        currentSortDirection={districtSortOrder}
+                        onSort={setDistrictSortBy}
+                      />
+                      <TableColumnHeader
+                        title="Certified Expenditure"
+                        field="utilized"
+                        currentSortField={districtSortBy}
+                        currentSortDirection={districtSortOrder}
+                        onSort={setDistrictSortBy}
+                      />
+                      <TableColumnHeader
+                        title="Utilization Rate"
+                        field="utilization"
+                        currentSortField={districtSortBy}
+                        currentSortDirection={districtSortOrder}
+                        onSort={setDistrictSortBy}
+                        filterOptions={[
+                          { label: "All Tiers", value: "all" },
+                          { label: "On Schedule (>= 70%)", value: "on_schedule" },
+                          { label: "In Progress (40-69%)", value: "in_progress" },
+                          { label: "Pending UC (< 40%)", value: "pending" },
+                        ]}
+                        selectedFilter={districtStatusFilter}
+                        onFilterChange={setDistrictStatusFilter}
+                        style={{ minWidth: "160px" }}
+                      />
+                      <th style={{ padding: "12px 16px", color: "var(--text-secondary)", fontWeight: 700 }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -481,44 +728,187 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                 </p>
               </div>
 
-              {/* Search MP */}
-              <div style={{ position: "relative", minWidth: "260px" }}>
-                <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
-                <input
-                  type="text"
-                  placeholder="Search MP or Constituency..."
-                  value={mpSearch}
-                  onChange={(e) => setMpSearch(e.target.value)}
+              {/* Search MP & Dropdowns */}
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+                <div style={{ position: "relative", minWidth: "220px" }}>
+                  <Search size={16} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+                  <input
+                    type="text"
+                    placeholder="Search MP or Constituency..."
+                    value={mpSearch}
+                    onChange={(e) => setMpSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px 8px 34px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.875rem",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                {/* House Filter Dropdown */}
+                <select
+                  value={mpHouseFilter}
+                  onChange={(e) => setMpHouseFilter(e.target.value)}
                   style={{
-                    width: "100%",
-                    padding: "8px 12px 8px 34px",
+                    padding: "8px 12px",
                     borderRadius: "8px",
                     border: "1px solid #cbd5e1",
                     fontSize: "0.875rem",
-                    outline: "none",
+                    background: "white",
+                    color: "#334155",
+                    cursor: "pointer",
                   }}
-                />
+                >
+                  <option value="all">Both Houses</option>
+                  <option value="lok sabha">Lok Sabha</option>
+                  <option value="rajya sabha">Rajya Sabha</option>
+                </select>
+
+                {/* Constituency Filter Dropdown */}
+                {stateConstituencies.length > 0 && (
+                  <select
+                    value={mpConstituencyFilter}
+                    onChange={(e) => setMpConstituencyFilter(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.875rem",
+                      background: "white",
+                      color: "#334155",
+                      cursor: "pointer",
+                      maxWidth: "200px",
+                    }}
+                  >
+                    <option value="all">All Constituencies ({stateConstituencies.length})</option>
+                    {stateConstituencies.map((c) => (
+                      <option key={c} value={c.toLowerCase()}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {(mpSearch || mpHouseFilter !== "all" || mpConstituencyFilter !== "all") && (
+                  <button
+                    onClick={() => {
+                      setMpSearch("");
+                      setMpHouseFilter("all");
+                      setMpConstituencyFilter("all");
+                    }}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      background: "#f1f5f9",
+                      color: "#475569",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reset Filters
+                  </button>
+                )}
               </div>
             </div>
 
-            {sortedAndFilteredMPs.length === 0 ? (
-              <div className="no-data">No MPs found matching your search.</div>
-            ) : (
-              <div className="mps-table">
-                <table>
-                  <thead>
+            <div className="mps-table">
+              <table>
+                <thead>
+                  <tr>
+                    <TableColumnHeader
+                      title="Member of Parliament"
+                      field="name"
+                      currentSortField={mpSortBy}
+                      currentSortDirection={mpSortOrder}
+                      onSort={handleMpSort}
+                    />
+                    <TableColumnHeader
+                      title="Constituency"
+                      field="constituency"
+                      currentSortField={mpSortBy}
+                      currentSortDirection={mpSortOrder}
+                      onSort={handleMpSort}
+                      filterOptions={[
+                        { label: "All Constituencies", value: "all" },
+                        ...stateConstituencies.map((c) => ({ label: c, value: c.toLowerCase() })),
+                      ]}
+                      selectedFilter={mpConstituencyFilter}
+                      onFilterChange={setMpConstituencyFilter}
+                    />
+                    <TableColumnHeader
+                      title="House"
+                      field="house"
+                      currentSortField={mpSortBy}
+                      currentSortDirection={mpSortOrder}
+                      onSort={handleMpSort}
+                      filterOptions={[
+                        { label: "Both Houses", value: "all" },
+                        { label: "Lok Sabha", value: "lok sabha" },
+                        { label: "Rajya Sabha", value: "rajya sabha" },
+                      ]}
+                      selectedFilter={mpHouseFilter}
+                      onFilterChange={setMpHouseFilter}
+                    />
+                    <TableColumnHeader
+                      title="Allocated"
+                      field="totalSanctioned"
+                      currentSortField={mpSortBy}
+                      currentSortDirection={mpSortOrder}
+                      onSort={handleMpSort}
+                    />
+                    <TableColumnHeader
+                      title="Utilized"
+                      field="totalUtilized"
+                      currentSortField={mpSortBy}
+                      currentSortDirection={mpSortOrder}
+                      onSort={handleMpSort}
+                    />
+                    <TableColumnHeader
+                      title="Utilization Rate"
+                      field="utilizationPercentage"
+                      currentSortField={mpSortBy}
+                      currentSortDirection={mpSortOrder}
+                      onSort={handleMpSort}
+                      style={{ minWidth: "150px" }}
+                    />
+                    <th style={{ padding: "12px 16px", textAlign: "right", color: "var(--text-secondary)", fontWeight: 700 }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedAndFilteredMPs.length === 0 ? (
                     <tr>
-                      {renderMpSortableHeader("name", "MP Name")}
-                      {renderMpSortableHeader("constituency", "Constituency")}
-                      {renderMpSortableHeader("house", "House")}
-                      {renderMpSortableHeader("allocated", "Allocated")}
-                      {renderMpSortableHeader("utilized", "Utilized")}
-                      {renderMpSortableHeader("utilization", "Utilization %")}
-                      <th style={{ textAlign: "right" }}>Action</th>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "48px 24px", color: "#64748b" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                          <span>No Members of Parliament match your search or filter criteria.</span>
+                          <button
+                            onClick={() => {
+                              setMpHouseFilter("all");
+                              setMpConstituencyFilter("all");
+                              setMpSearch("");
+                            }}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: "6px",
+                              background: "#eff6ff",
+                              color: "#2563eb",
+                              border: "1px solid #bfdbfe",
+                              fontWeight: 600,
+                              fontSize: "0.82rem",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Reset MP Filters
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sortedAndFilteredMPs.map((mp) => (
+                  ) : (
+                    sortedAndFilteredMPs.map((mp) => (
                       <tr key={mp.mpId}>
                         <td>
                           <button
@@ -586,11 +976,11 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                           </button>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -647,6 +1037,31 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                   <option value="delayed">Delayed</option>
                 </select>
 
+                {/* District Filter */}
+                {stateDistricts.length > 0 && (
+                  <select
+                    value={projectDistrictFilter}
+                    onChange={(e) => setProjectDistrictFilter(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "0.875rem",
+                      background: "white",
+                      color: "#334155",
+                      cursor: "pointer",
+                      maxWidth: "180px",
+                    }}
+                  >
+                    <option value="all">All Districts ({stateDistricts.length})</option>
+                    {stateDistricts.map((d) => (
+                      <option key={d} value={d.toLowerCase()}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
                 {/* Category Filter */}
                 {projectCategories.length > 0 && (
                   <select
@@ -669,6 +1084,29 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                       </option>
                     ))}
                   </select>
+                )}
+
+                {(projectSearch || projectStatusFilter !== "all" || projectDistrictFilter !== "all" || projectCategoryFilter !== "all") && (
+                  <button
+                    onClick={() => {
+                      setProjectSearch("");
+                      setProjectStatusFilter("all");
+                      setProjectDistrictFilter("all");
+                      setProjectCategoryFilter("all");
+                    }}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      background: "#f1f5f9",
+                      color: "#475569",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reset Filters
+                  </button>
                 )}
 
                 {/* View Toggle */}
@@ -722,258 +1160,94 @@ export const StateDetail: React.FC<StateDetailProps> = ({
               Showing {filteredProjects.length} of {stateProjects.length} projects in {stateName}
             </div>
 
-            {filteredProjects.length === 0 ? (
-              <div className="no-data">No projects found matching the selected filters.</div>
-            ) : projectViewMode === "grid" ? (
-              /* GRID VIEW */
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                  gap: "18px",
-                }}
-              >
-                {filteredProjects.map((p) => {
-                  const cost = p.sanctioned_amount || p.cost || 0;
-                  const status = (p.status || "In Progress").toLowerCase();
-                  const progress = p.physical_progress ?? p.physicalProgress ?? 50;
+            {projectViewMode === "grid" ? (
+              filteredProjects.length === 0 ? (
+                <div style={{ background: "white", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "48px 24px", textAlign: "center" }}>
+                  <p style={{ color: "#64748b", margin: "0 0 12px 0", fontSize: "0.95rem" }}>
+                    No projects found matching the selected filters.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setProjectStatusFilter("all");
+                      setProjectDistrictFilter("all");
+                      setProjectCategoryFilter("all");
+                      setProjectSearch("");
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "6px",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      border: "none",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
+              ) : (
+                /* GRID VIEW */
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                    gap: "18px",
+                  }}
+                >
+                  {filteredProjects.map((p) => {
+                    const cost = p.sanctioned_amount || p.cost || 0;
+                    const status = (p.status || "In Progress").toLowerCase();
+                    const progress = p.physical_progress ?? p.physicalProgress ?? 50;
 
-                  return (
-                    <div
-                      key={p.project_id || p.id}
-                      onClick={() => onSelectProject(p)}
-                      style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        border: "1px solid #e2e8f0",
-                        padding: "18px",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = "0 8px 20px -4px rgba(0,0,0,0.1)";
-                        e.currentTarget.style.borderColor = "#93c5fd";
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
-                        e.currentTarget.style.borderColor = "#e2e8f0";
-                        e.currentTarget.style.transform = "translateY(0)";
-                      }}
-                    >
-                      <div>
-                        {/* Badges */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                          <span
-                            style={{
-                              padding: "2px 8px",
-                              borderRadius: "4px",
-                              fontSize: "0.72rem",
-                              fontWeight: 600,
-                              background: "#f1f5f9",
-                              color: "#475569",
-                            }}
-                          >
-                            {p.category || "General"}
-                          </span>
-                          <span
-                            style={{
-                              padding: "3px 10px",
-                              borderRadius: "9999px",
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              textTransform: "capitalize",
-                              background: status === "completed" ? "#dcfce7" : status === "delayed" ? "#fee2e2" : "#eff6ff",
-                              color: status === "completed" ? "#15803d" : status === "delayed" ? "#b91c1c" : "#1d4ed8",
-                              border: `1px solid ${status === "completed" ? "#bbf7d0" : status === "delayed" ? "#fecaca" : "#bfdbfe"}`,
-                            }}
-                          >
-                            {p.status || "In Progress"}
-                          </span>
-                        </div>
-
-                        {/* Title */}
-                        <h4
-                          style={{
-                            margin: "0 0 6px",
-                            fontSize: "0.95rem",
-                            fontWeight: 700,
-                            color: "#1e293b",
-                            lineHeight: "1.4",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {p.project_name || p.title || "MPLADS Infrastructure Asset"}
-                        </h4>
-
-                        {/* ID & District */}
-                        <div style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "#64748b", marginBottom: "8px" }}>
-                          ID: {p.project_id || p.id}
-                        </div>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontSize: "0.8rem", marginBottom: "14px" }}>
-                          <MapPin size={14} style={{ color: "#2563eb" }} />
-                          <span>{p.district || "District"}</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        {/* Budget & Progress */}
-                        <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "10px 12px", border: "1px solid #f1f5f9", marginBottom: "12px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
-                            <span style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>
-                              Approved Budget
-                            </span>
-                            <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
-                              {formatINRCompact(cost)}
-                            </span>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#64748b", marginBottom: "4px" }}>
-                            <span>Progress</span>
-                            <span style={{ fontWeight: 700 }}>{progress}%</span>
-                          </div>
-                          <div style={{ width: "100%", height: "5px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
-                            <div
-                              style={{
-                                width: `${progress}%`,
-                                height: "100%",
-                                background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
-                                borderRadius: "9999px",
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Inspect link */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectProject(p);
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "6px 12px",
-                            borderRadius: "6px",
-                            background: "#f1f5f9",
-                            border: "1px solid #cbd5e1",
-                            color: "#1e40af",
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "6px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <span>Inspect Project</span>
-                          <ArrowRight size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* TABLE VIEW */
-              <div className="mps-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Work ID & Title</th>
-                      <th>District</th>
-                      <th>Category</th>
-                      <th>Sanctioned Outlay</th>
-                      <th>Progress</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: "right" }}>Inspect</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProjects.map((p) => {
-                      const cost = p.sanctioned_amount || p.cost || 0;
-                      const status = (p.status || "In Progress").toLowerCase();
-                      const progress = p.physical_progress ?? p.physicalProgress ?? 50;
-
-                      return (
-                        <tr key={p.project_id || p.id}>
-                          <td style={{ maxWidth: "320px" }}>
-                            <div style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "#64748b", fontWeight: 600 }}>
-                              {p.project_id || p.id}
-                            </div>
-                            <button
-                              onClick={() => onSelectProject(p)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                padding: 0,
-                                textAlign: "left",
-                                fontWeight: 700,
-                                color: "#1e293b",
-                                cursor: "pointer",
-                                fontSize: "0.9rem",
-                                marginTop: "2px",
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.color = "#2563eb")}
-                              onMouseLeave={(e) => (e.currentTarget.style.color = "#1e293b")}
-                            >
-                              {p.project_name || p.title || "MPLADS Infrastructure Asset"}
-                            </button>
-                          </td>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569" }}>
-                              <MapPin size={14} />
-                              <span>{p.district || "General"}</span>
-                            </div>
-                          </td>
-                          <td>
+                    return (
+                      <div
+                        key={p.project_id || p.id}
+                        onClick={() => onSelectProject(p)}
+                        style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          border: "1px solid #e2e8f0",
+                          padding: "18px",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = "0 8px 20px -4px rgba(0,0,0,0.1)";
+                          e.currentTarget.style.borderColor = "#93c5fd";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
+                          e.currentTarget.style.borderColor = "#e2e8f0";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                      >
+                        <div>
+                          {/* Badges */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                             <span
                               style={{
-                                display: "inline-block",
                                 padding: "2px 8px",
                                 borderRadius: "4px",
-                                fontSize: "0.76rem",
+                                fontSize: "0.72rem",
                                 fontWeight: 600,
-                                background: "#f8fafc",
-                                border: "1px solid #e2e8f0",
+                                background: "#f1f5f9",
                                 color: "#475569",
                               }}
                             >
                               {p.category || "General"}
                             </span>
-                          </td>
-                          <td style={{ fontWeight: 700, color: "#1e293b" }}>
-                            {formatINRCompact(cost)}
-                          </td>
-                          <td style={{ minWidth: "110px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
-                                <div
-                                  style={{
-                                    height: "100%",
-                                    width: `${progress}%`,
-                                    background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
-                                    borderRadius: "9999px",
-                                  }}
-                                />
-                              </div>
-                              <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>{progress}%</span>
-                            </div>
-                          </td>
-                          <td>
                             <span
                               style={{
-                                display: "inline-block",
                                 padding: "3px 10px",
                                 borderRadius: "9999px",
-                                fontSize: "0.75rem",
+                                fontSize: "0.72rem",
                                 fontWeight: 700,
                                 textTransform: "capitalize",
                                 background: status === "completed" ? "#dcfce7" : status === "delayed" ? "#fee2e2" : "#eff6ff",
@@ -983,34 +1257,311 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                             >
                               {p.status || "In Progress"}
                             </span>
-                          </td>
-                          <td style={{ textAlign: "right" }}>
+                          </div>
+
+                          {/* Title */}
+                          <h4
+                            style={{
+                              margin: "0 0 6px",
+                              fontSize: "0.95rem",
+                              fontWeight: 700,
+                              color: "#1e293b",
+                              lineHeight: "1.4",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {p.project_name || p.title || "MPLADS Infrastructure Asset"}
+                          </h4>
+
+                          {/* ID & District */}
+                          <div style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "#64748b", marginBottom: "8px" }}>
+                            ID: {p.project_id || p.id}
+                          </div>
+
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontSize: "0.8rem", marginBottom: "14px" }}>
+                            <MapPin size={14} style={{ color: "#2563eb" }} />
+                            <span>{p.district || "District"}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          {/* Budget & Progress */}
+                          <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "10px 12px", border: "1px solid #f1f5f9", marginBottom: "12px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
+                              <span style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>
+                                Approved Budget
+                              </span>
+                              <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
+                                {formatINRCompact(cost)}
+                              </span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#64748b", marginBottom: "4px" }}>
+                              <span>Progress</span>
+                              <span style={{ fontWeight: 700 }}>{progress}%</span>
+                            </div>
+                            <div style={{ width: "100%", height: "5px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
+                              <div
+                                style={{
+                                  width: `${progress}%`,
+                                  height: "100%",
+                                  background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
+                                  borderRadius: "9999px",
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Inspect link */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectProject(p);
+                            }}
+                            style={{
+                              width: "100%",
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              background: "#f1f5f9",
+                              border: "1px solid #cbd5e1",
+                              color: "#1e40af",
+                              fontSize: "0.75rem",
+                              fontWeight: 700,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "6px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span>Inspect Project</span>
+                            <ArrowRight size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : (
+              /* TABLE VIEW */
+              <div className="mps-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <TableColumnHeader
+                        title="Work ID & Title"
+                        field="title"
+                        currentSortField={projectSortBy}
+                        currentSortDirection={projectSortOrder}
+                        onSort={setProjectSortBy}
+                      />
+                      <TableColumnHeader
+                        title="District"
+                        field="district"
+                        currentSortField={projectSortBy}
+                        currentSortDirection={projectSortOrder}
+                        onSort={setProjectSortBy}
+                        filterOptions={[
+                          { label: "All Districts", value: "all" },
+                          ...stateDistricts.map((d) => ({ label: d, value: d.toLowerCase() })),
+                        ]}
+                        selectedFilter={projectDistrictFilter}
+                        onFilterChange={setProjectDistrictFilter}
+                      />
+                      <TableColumnHeader
+                        title="Category"
+                        field="category"
+                        currentSortField={projectSortBy}
+                        currentSortDirection={projectSortOrder}
+                        onSort={setProjectSortBy}
+                        filterOptions={[
+                          { label: "All Categories", value: "all" },
+                          ...projectCategories.map((c) => ({ label: c, value: c.toLowerCase() })),
+                        ]}
+                        selectedFilter={projectCategoryFilter}
+                        onFilterChange={setProjectCategoryFilter}
+                      />
+                      <TableColumnHeader
+                        title="Sanctioned Outlay"
+                        field="sanctioned_amount"
+                        currentSortField={projectSortBy}
+                        currentSortDirection={projectSortOrder}
+                        onSort={setProjectSortBy}
+                      />
+                      <TableColumnHeader
+                        title="Progress"
+                        field="progress"
+                        currentSortField={projectSortBy}
+                        currentSortDirection={projectSortOrder}
+                        onSort={setProjectSortBy}
+                      />
+                      <TableColumnHeader
+                        title="Status"
+                        field="status"
+                        currentSortField={projectSortBy}
+                        currentSortDirection={projectSortOrder}
+                        onSort={setProjectSortBy}
+                        filterOptions={[
+                          { label: "All Statuses", value: "all" },
+                          { label: "Completed", value: "completed" },
+                          { label: "In Progress", value: "in progress" },
+                          { label: "Sanctioned", value: "sanctioned" },
+                          { label: "Delayed", value: "delayed" },
+                        ]}
+                        selectedFilter={projectStatusFilter}
+                        onFilterChange={setProjectStatusFilter}
+                      />
+                      <th style={{ padding: "12px 16px", textAlign: "right", color: "var(--text-secondary)", fontWeight: 700 }}>Inspect</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProjects.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: "center", padding: "48px 24px", color: "#64748b" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                            <span>No projects match the selected filters.</span>
                             <button
-                              onClick={() => onSelectProject(p)}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                padding: "6px 12px",
-                                borderRadius: "6px",
-                                background: "#f1f5f9",
-                                border: "1px solid #cbd5e1",
-                                color: "#2c5282",
-                                fontSize: "0.8rem",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                transition: "all 0.15s ease",
+                              onClick={() => {
+                                setProjectStatusFilter("all");
+                                setProjectDistrictFilter("all");
+                                setProjectCategoryFilter("all");
+                                setProjectSearch("");
                               }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
-                              onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                              style={{
+                                padding: "6px 14px",
+                                borderRadius: "6px",
+                                background: "#eff6ff",
+                                color: "#2563eb",
+                                border: "1px solid #bfdbfe",
+                                fontWeight: 600,
+                                fontSize: "0.82rem",
+                                cursor: "pointer",
+                              }}
                             >
-                              <Eye size={13} />
-                              <span>Inspect</span>
+                              Reset Project Filters
                             </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProjects.map((p) => {
+                        const cost = p.sanctioned_amount || p.cost || 0;
+                        const status = (p.status || "In Progress").toLowerCase();
+                        const progress = p.physical_progress ?? p.physicalProgress ?? 50;
+
+                        return (
+                          <tr key={p.project_id || p.id}>
+                            <td style={{ maxWidth: "320px" }}>
+                              <div style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "#64748b", fontWeight: 600 }}>
+                                {p.project_id || p.id}
+                              </div>
+                              <button
+                                onClick={() => onSelectProject(p)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  padding: 0,
+                                  textAlign: "left",
+                                  fontWeight: 700,
+                                  color: "#1e293b",
+                                  cursor: "pointer",
+                                  fontSize: "0.9rem",
+                                  marginTop: "2px",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = "#2563eb")}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = "#1e293b")}
+                              >
+                                {p.project_name || p.title || "MPLADS Infrastructure Asset"}
+                              </button>
+                            </td>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569" }}>
+                                <MapPin size={14} />
+                                <span>{p.district || "General"}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  padding: "2px 8px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.76rem",
+                                  fontWeight: 600,
+                                  background: "#f8fafc",
+                                  border: "1px solid #e2e8f0",
+                                  color: "#475569",
+                                }}
+                              >
+                                {p.category || "General"}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 700, color: "#1e293b" }}>
+                              {formatINRCompact(cost)}
+                            </td>
+                            <td style={{ minWidth: "110px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
+                                  <div
+                                    style={{
+                                      height: "100%",
+                                      width: `${progress}%`,
+                                      background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
+                                      borderRadius: "9999px",
+                                    }}
+                                  />
+                                </div>
+                                <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>{progress}%</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  padding: "3px 10px",
+                                  borderRadius: "9999px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 700,
+                                  textTransform: "capitalize",
+                                  background: status === "completed" ? "#dcfce7" : status === "delayed" ? "#fee2e2" : "#eff6ff",
+                                  color: status === "completed" ? "#15803d" : status === "delayed" ? "#b91c1c" : "#1d4ed8",
+                                  border: `1px solid ${status === "completed" ? "#bbf7d0" : status === "delayed" ? "#fecaca" : "#bfdbfe"}`,
+                                }}
+                              >
+                                {p.status || "In Progress"}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              <button
+                                onClick={() => onSelectProject(p)}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  background: "#f1f5f9",
+                                  border: "1px solid #cbd5e1",
+                                  color: "#2c5282",
+                                  fontSize: "0.8rem",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  transition: "all 0.15s ease",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                              >
+                                <Eye size={13} />
+                                <span>Inspect</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>

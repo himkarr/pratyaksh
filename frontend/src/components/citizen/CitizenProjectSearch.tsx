@@ -12,6 +12,7 @@ import { CitizenInteractiveMap } from "./CitizenInteractiveMap";
 export interface CitizenProjectSearchProps {
   works: WorkItem[];
   onSelectWork: (work: WorkItem) => void;
+  onReportProblem?: (work: WorkItem) => void;
   onOpenRecommendModal?: () => void;
   currentConstituency?: string;
 }
@@ -26,6 +27,7 @@ const PAGE_SIZE_OPTIONS = [
 export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({ 
   works, 
   onSelectWork,
+  onReportProblem,
   onOpenRecommendModal,
   currentConstituency = "Pune"
 }) => {
@@ -482,6 +484,7 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
             works={filteredWorks}
             currentConstituency={currentConstituency}
             onSelectWork={onSelectWork}
+            onReportProblem={onReportProblem}
           />
         </div>
       )}

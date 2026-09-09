@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  ArrowUpDown,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import { WorkItem } from '../data/mpladsData';
 import { TranslationDict } from '../data/translations';
+import { TableColumnHeader } from './common/TableColumnHeader';
 
 interface WorksTableProps {
   works: WorkItem[];
@@ -28,7 +28,6 @@ interface WorksTableProps {
   t: TranslationDict;
 }
 
-type SortField = 'dateSanctioned' | 'sanctionedAmt' | 'physicalProgress' | 'id';
 type ViewMode = 'list' | 'grid';
 
 const statusClass: Record<WorkItem['status'], string> = {
@@ -49,12 +48,18 @@ export function WorksTable({
   setSelectedStatusFilter: _setSelectedStatusFilter,
   t,
 }: WorksTableProps) {
-  const [sortField, setSortField] = useState<SortField>('dateSanctioned');
+  const [sortField, setSortField] = useState<string>('dateSanctioned');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [tableSearch, setTableSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+
+  // Column Filters
+  const [statusColFilter, setStatusColFilter] = useState<string>('all');
+  const [stateColFilter, setStateColFilter] = useState<string>('all');
+  const [sectorColFilter, setSectorColFilter] = useState<string>('all');
+  const [signalColFilter, setSignalColFilter] = useState<string>('all');
 
   const flagMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -64,24 +69,81 @@ export function WorksTable({
     return map;
   }, [flags]);
 
-  const searchedWorks = useMemo(() => {
-    const query = tableSearch.trim().toLowerCase();
-    if (!query) return works;
+  // Distinct states for filter
+  const distinctStates = useMemo(() => {
+    const set = new Set<string>();
+    works.forEach(w => { if (w.state) set.add(w.state); });
+    return Array.from(set).sort();
+  }, [works]);
 
-    return works.filter((work) => [
-      work.id,
-      work.title,
-      work.mpName,
-      work.contractor,
-      work.agency,
-      work.district,
-      work.state,
-    ].some((value) => value?.toLowerCase().includes(query)));
-  }, [works, tableSearch]);
+  // Distinct sectors for filter
+  const distinctSectors = useMemo(() => {
+    const set = new Set<string>();
+    works.forEach(w => { if (w.sectorName) set.add(w.sectorName); });
+    return Array.from(set).sort();
+  }, [works]);
+
+  const searchedWorks = useMemo(() => {
+    return works.filter((work) => {
+      // Column filters
+      if (statusColFilter !== 'all' && work.status.toLowerCase() !== statusColFilter.toLowerCase()) {
+        return false;
+      }
+      if (stateColFilter !== 'all' && work.state.toLowerCase() !== stateColFilter.toLowerCase()) {
+        return false;
+      }
+      if (sectorColFilter !== 'all' && (work.sectorName || '').toLowerCase() !== sectorColFilter.toLowerCase()) {
+        return false;
+      }
+      if (signalColFilter !== 'all') {
+        const sev = flagMap.get(work.id);
+        if (signalColFilter === 'flagged' && !sev) return false;
+        if (signalColFilter === 'clear' && sev) return false;
+      }
+
+      const query = tableSearch.trim().toLowerCase();
+      if (!query) return true;
+
+      return [
+        work.id,
+        work.title,
+        work.mpName,
+        work.contractor,
+        work.agency,
+        work.district,
+        work.state,
+      ].some((value) => value?.toLowerCase().includes(query));
+    });
+  }, [works, tableSearch, statusColFilter, stateColFilter, sectorColFilter, signalColFilter, flagMap]);
 
   const sortedWorks = useMemo(() => [...searchedWorks].sort((a, b) => {
-    const aValue = a[sortField];
-    const bValue = b[sortField];
+    let aValue: any = a[sortField as keyof WorkItem];
+    let bValue: any = b[sortField as keyof WorkItem];
+
+    if (sortField === 'title') {
+      aValue = a.title;
+      bValue = b.title;
+    } else if (sortField === 'sanctionedAmt') {
+      aValue = a.sanctionedAmt;
+      bValue = b.sanctionedAmt;
+    } else if (sortField === 'physicalProgress') {
+      aValue = a.physicalProgress;
+      bValue = b.physicalProgress;
+    } else if (sortField === 'state') {
+      aValue = a.state;
+      bValue = b.state;
+    } else if (sortField === 'sectorName') {
+      aValue = a.sectorName;
+      bValue = b.sectorName;
+    } else if (sortField === 'status') {
+      aValue = a.status;
+      bValue = b.status;
+    }
+
+    if (typeof aValue === 'string') {
+      return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    }
+
     if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
     if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
     return 0;
@@ -96,12 +158,12 @@ export function WorksTable({
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
 
-  const handleSort = (field: SortField) => {
+  const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection((direction) => direction === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection('desc');
+      setSortDirection(field === 'title' || field === 'id' || field === 'state' ? 'asc' : 'desc');
     }
   };
 
@@ -186,44 +248,170 @@ export function WorksTable({
         </div>
       </div>
 
-      {paginatedWorks.length === 0 ? (
-        <div className="works-empty">
-          <FileText size={24} />
-          <strong>No works found</strong>
-          <span>Try broadening the current search or filters.</span>
-        </div>
-      ) : viewMode === 'list' ? (
+      {viewMode === 'list' ? (
         <div className="works-list-wrap">
           <table className="works-list">
             <thead>
               <tr>
-                <th><button onClick={() => handleSort('id')}>Work <ArrowUpDown size={13} /></button></th>
-                <th>Project & location</th>
-                <th>Classification</th>
-                <th className="works-list__numeric"><button onClick={() => handleSort('sanctionedAmt')}>Sanction <ArrowUpDown size={13} /></button></th>
-                <th className="works-list__progress"><button onClick={() => handleSort('physicalProgress')}>Progress <ArrowUpDown size={13} /></button></th>
-                <th>Audit</th>
-                <th aria-label="Actions" />
+                <TableColumnHeader
+                  title="Work ID & Status"
+                  field="id"
+                  currentSortField={sortField}
+                  currentSortDirection={sortDirection}
+                  onSort={handleSort}
+                  filterOptions={[
+                    { label: 'All Statuses', value: 'all' },
+                    { label: 'Ongoing', value: 'ongoing' },
+                    { label: 'Completed', value: 'completed' },
+                    { label: 'Sanctioned', value: 'sanctioned' },
+                    { label: 'Delayed', value: 'delayed' },
+                    { label: 'Recommended', value: 'recommended' },
+                  ]}
+                  selectedFilter={statusColFilter}
+                  onFilterChange={(v) => { setStatusColFilter(v); setCurrentPage(1); }}
+                  style={{ width: '140px' }}
+                />
+                <TableColumnHeader
+                  title="Project & Location"
+                  field="state"
+                  currentSortField={sortField}
+                  currentSortDirection={sortDirection}
+                  onSort={handleSort}
+                  filterOptions={[
+                    { label: 'All States', value: 'all' },
+                    ...distinctStates.map(st => ({ label: st, value: st.toLowerCase() }))
+                  ]}
+                  selectedFilter={stateColFilter}
+                  onFilterChange={(v) => { setStateColFilter(v); setCurrentPage(1); }}
+                />
+                <TableColumnHeader
+                  title="Classification"
+                  field="sectorName"
+                  currentSortField={sortField}
+                  currentSortDirection={sortDirection}
+                  onSort={handleSort}
+                  filterOptions={[
+                    { label: 'All Sectors', value: 'all' },
+                    ...distinctSectors.map(sec => ({ label: sec, value: sec.toLowerCase() }))
+                  ]}
+                  selectedFilter={sectorColFilter}
+                  onFilterChange={(v) => { setSectorColFilter(v); setCurrentPage(1); }}
+                />
+                <TableColumnHeader
+                  title="Sanctioned"
+                  field="sanctionedAmt"
+                  currentSortField={sortField}
+                  currentSortDirection={sortDirection}
+                  onSort={handleSort}
+                  className="works-list__numeric"
+                />
+                <TableColumnHeader
+                  title="Progress"
+                  field="physicalProgress"
+                  currentSortField={sortField}
+                  currentSortDirection={sortDirection}
+                  onSort={handleSort}
+                  className="works-list__progress"
+                />
+                <TableColumnHeader
+                  title="Audit"
+                  field="audit"
+                  currentSortField={sortField}
+                  currentSortDirection={sortDirection}
+                  onSort={handleSort}
+                  filterOptions={[
+                    { label: 'All Signals', value: 'all' },
+                    { label: 'Flagged / Review', value: 'flagged' },
+                    { label: 'Clear', value: 'clear' },
+                  ]}
+                  selectedFilter={signalColFilter}
+                  onFilterChange={(v) => { setSignalColFilter(v); setCurrentPage(1); }}
+                  style={{ width: '120px' }}
+                />
+                <th aria-label="Actions" style={{ textAlign: 'right' }} />
               </tr>
             </thead>
             <tbody>
-              {paginatedWorks.map((work) => (
-                <tr key={work.id} onClick={() => inspectWork(work)}>
-                  <td><span className="work-id">{work.id}</span><span className={`work-status ${statusClass[work.status]}`}>{work.status}</span></td>
-                  <td>
-                    <strong className="work-title">{work.title}</strong>
-                    <span className="work-subtitle">{work.district}, {work.state} · {work.constituency}</span>
-                    <span className="work-subtitle">{work.agency}{work.contractor ? ` · ${work.contractor}` : ''}</span>
+              {paginatedWorks.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px 24px', color: '#64748b' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <FileText size={24} style={{ color: '#94a3b8' }} />
+                      <strong>No works found matching the selected criteria.</strong>
+                      <span style={{ fontSize: '0.85rem' }}>Try broadening or resetting your search and column filters.</span>
+                      <button
+                        onClick={() => {
+                          setStatusColFilter('all');
+                          setStateColFilter('all');
+                          setSectorColFilter('all');
+                          setSignalColFilter('all');
+                          setTableSearch('');
+                          setCurrentPage(1);
+                        }}
+                        style={{
+                          marginTop: '6px',
+                          padding: '6px 14px',
+                          borderRadius: '6px',
+                          background: '#eff6ff',
+                          color: '#2563eb',
+                          border: '1px solid #bfdbfe',
+                          fontWeight: 600,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Reset All Filters
+                      </button>
+                    </div>
                   </td>
-                  <td><span className="work-sector">{work.sectorName}</span></td>
-                  <td className="works-list__numeric"><strong>₹ {work.sanctionedAmt.toFixed(2)} Cr</strong><span className="work-subtitle">Spent ₹ {work.expenditureAmt.toFixed(2)} Cr</span></td>
-                  <td className="works-list__progress"><div className="work-progress"><span><strong>{work.physicalProgress}%</strong> complete</span><div><i style={{ width: `${work.physicalProgress}%` }} /></div></div></td>
-                  <td>{renderSignal(work)}</td>
-                  <td>{renderActions(work)}</td>
                 </tr>
-              ))}
+              ) : (
+                paginatedWorks.map((work) => (
+                  <tr key={work.id} onClick={() => inspectWork(work)}>
+                    <td><span className="work-id">{work.id}</span><span className={`work-status ${statusClass[work.status]}`}>{work.status}</span></td>
+                    <td>
+                      <strong className="work-title">{work.title}</strong>
+                      <span className="work-subtitle">{work.district}, {work.state} · {work.constituency}</span>
+                      <span className="work-subtitle">{work.agency}{work.contractor ? ` · ${work.contractor}` : ''}</span>
+                    </td>
+                    <td><span className="work-sector">{work.sectorName}</span></td>
+                    <td className="works-list__numeric"><strong>₹ {work.sanctionedAmt.toFixed(2)} Cr</strong><span className="work-subtitle">Spent ₹ {work.expenditureAmt.toFixed(2)} Cr</span></td>
+                    <td className="works-list__progress"><div className="work-progress"><span><strong>{work.physicalProgress}%</strong> complete</span><div><i style={{ width: `${work.physicalProgress}%` }} /></div></div></td>
+                    <td>{renderSignal(work)}</td>
+                    <td>{renderActions(work)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+      ) : paginatedWorks.length === 0 ? (
+        <div className="works-empty" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '48px 24px', textAlign: 'center' }}>
+          <FileText size={24} style={{ color: '#94a3b8', margin: '0 auto 8px auto' }} />
+          <strong>No works found</strong>
+          <span style={{ display: 'block', color: '#64748b', margin: '4px 0 12px 0' }}>Try broadening the current search or filters.</span>
+          <button
+            onClick={() => {
+              setStatusColFilter('all');
+              setStateColFilter('all');
+              setSectorColFilter('all');
+              setSignalColFilter('all');
+              setTableSearch('');
+              setCurrentPage(1);
+            }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '6px',
+              background: '#eff6ff',
+              color: '#2563eb',
+              border: '1px solid #bfdbfe',
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+            }}
+          >
+            Reset All Filters
+          </button>
         </div>
       ) : (
         <div className="works-grid">
