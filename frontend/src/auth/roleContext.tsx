@@ -150,27 +150,35 @@ export const ALL_ROLES_DEFAULT_USERS: User[] = [
     state: "Uttar Pradesh"
   },
 
-  // Contractors / Implementing Agencies
+  // Contractors / Implementing Agencies (Synced with Official Supabase Contractors DB)
   {
-    id: "usr-contractor-rohtak",
-    email: "vendor.rohtak@nirikshak.gov.in",
-    name: "M/s Rohtak Development & Builders Ltd",
+    id: "2df07d35-4493-4bd4-b7e6-d6a55ea3d80d",
+    email: "vendor.sahil.rohtak@contractor.gov.in",
+    name: "The Sahil Co-operative Labour and Construction Society Ltd",
     role: "contractor",
     state: "Haryana",
     district: "Rohtak"
   },
   {
-    id: "usr-contractor-jind",
-    email: "vendor.jind@nirikshak.gov.in",
-    name: "M/s Haryana Infrastructure & Highways Pvt Ltd (Jind)",
+    id: "bb2e6047-1b01-44f1-9d8f-9266837807e3",
+    email: "vendor.deepak.rohtak@contractor.gov.in",
+    name: "Deepak Govt Contractor",
     role: "contractor",
     state: "Haryana",
-    district: "Jind"
+    district: "Rohtak"
   },
   {
-    id: "usr-contractor-01",
-    email: "vendor.gurugram@nirikshak.gov.in",
-    name: "Gurugram Metropolitan Development Authority (GMDA)",
+    id: "10d11672-ed12-44e3-872a-7a050fe19149",
+    email: "vendor.winpower.gurugram@contractor.gov.in",
+    name: "Win Power Construction Co",
+    role: "contractor",
+    state: "Haryana",
+    district: "Gurugram"
+  },
+  {
+    id: "a15337f8-9f87-4c04-bb04-19b4127f963d",
+    email: "vendor.lalkripa.gurugram@contractor.gov.in",
+    name: "The Lal Kripa Coop L&C Society Ltd",
     role: "contractor",
     state: "Haryana",
     district: "Gurugram"
