@@ -38,6 +38,8 @@ import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { districtContractorSync } from "../api/districtContractorSync";
 import { adminDataService } from "../api/adminDataService";
+import { contractorApi } from "../api/contractorApi";
+import { ContractorProject, EvidenceSubmissionRecord } from "../data/contractorData";
 
 export const DistrictDashboard: React.FC = () => {
   const { user } = useRole();
@@ -58,6 +60,8 @@ export const DistrictDashboard: React.FC = () => {
   // Modals State
   const [isCreateWorkOpen, setIsCreateWorkOpen] = useState(false);
   const [selectedWorkForDossier, setSelectedWorkForDossier] = useState<WorkItem | null>(null);
+  const [dossierSubmissions, setDossierSubmissions] = useState<EvidenceSubmissionRecord[]>([]);
+  const [dossierContractorProject, setDossierContractorProject] = useState<ContractorProject | null>(null);
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
@@ -154,7 +158,19 @@ export const DistrictDashboard: React.FC = () => {
           };
         });
 
-        setProjects(mapped);
+        // Retrieve persistent custom works created by District Authority
+        const customWorks = districtContractorSync.getCustomWorks();
+        const customInDist = customWorks.filter(w => !w.district || w.district.toLowerCase() === targetDistLower);
+
+        // Merge custom works at the top of mapped DB/static works
+        const mergedProjects = [...customInDist];
+        mapped.forEach(p => {
+          if (!mergedProjects.some(cp => cp.id === p.id)) {
+            mergedProjects.push(p);
+          }
+        });
+
+        setProjects(mergedProjects);
         setIsLiveConnected(true);
       } catch (err) {
         console.warn("Using local fallback projects for District Authority:", err);
@@ -162,6 +178,25 @@ export const DistrictDashboard: React.FC = () => {
     }
     loadLiveDistrictProjects();
   }, [districtName, stateName]);
+
+  // Fetch live contractor data & stage submissions when opening Collectorate Dossier Modal
+  useEffect(() => {
+    if (!selectedWorkForDossier?.id) {
+      setDossierSubmissions([]);
+      setDossierContractorProject(null);
+      return;
+    }
+
+    Promise.all([
+      districtContractorSync.getStageSubmissionsForWork(selectedWorkForDossier.id),
+      contractorApi.getContractorProject(selectedWorkForDossier.id)
+    ])
+      .then(([subs, cProj]) => {
+        setDossierSubmissions(subs || []);
+        setDossierContractorProject(cProj || null);
+      })
+      .catch(err => console.warn("Failed to fetch dossier contractor data:", err));
+  }, [selectedWorkForDossier?.id]);
 
   // Helper to compute priority level
   const getWorkPriority = (w: WorkItem): "High" | "Medium" | "Routine" => {
@@ -938,101 +973,126 @@ export const DistrictDashboard: React.FC = () => {
         </div>
       </main>
 
-      {/* COLLECTORATE REVIEW DOSSIER MODAL (Simplified, zero confidence badges, actual numbers) */}
-      {selectedWorkForDossier && (
-        <Modal
-          isOpen={!!selectedWorkForDossier}
-          onClose={() => setSelectedWorkForDossier(null)}
-          title={`Collectorate Review Dossier — ${selectedWorkForDossier.id}`}
-          maxWidth="740px"
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <Alert type="info" title="Collectorate Statutory Review">
-              Review project status, inspecting engineer findings, and execute administrative orders.
-            </Alert>
+      {/* COLLECTORATE REVIEW DOSSIER MODAL (Synced with Live Contractor Evidence & De-duplicated) */}
+      {selectedWorkForDossier && (() => {
+        const dossierContractorName = dossierContractorProject?.contractorName || selectedWorkForDossier.contractor || selectedWorkForDossier.agency || "Assigned Contractor";
+        const dossierPhysicalProgress = dossierContractorProject?.physicalProgress ?? selectedWorkForDossier.physicalProgress ?? 0;
+        const dossierDisbursedStr = dossierContractorProject?.utilizedAmountRs !== undefined && dossierContractorProject?.utilizedAmountRs !== null
+          ? formatCost(dossierContractorProject.utilizedAmountRs / 10000000)
+          : getDisbursedCost(selectedWorkForDossier);
 
-            {/* Structured Executive Inquiries */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              
-              <div style={{ padding: "12px 14px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gov-primary)" }}>1. REASON FOR REVIEW</div>
-                <div style={{ fontSize: "0.80rem", color: "var(--text-body)", marginTop: "3px" }}>
-                  {getWorkAuditReason(selectedWorkForDossier)}. Sanctioned Outlay: <strong>{formatCost(selectedWorkForDossier.sanctionedAmt)}</strong>, Total Disbursed: <strong>{getDisbursedCost(selectedWorkForDossier)}</strong>.
+        const dossierTotalFiles = dossierSubmissions.reduce((acc, sub) => acc + (sub.files ? sub.files.length : 0), 0);
+        const dossierPhotoCount = dossierSubmissions.reduce((acc, sub) => {
+          return acc + (sub.files || []).filter(f => f.type?.includes("Photo") || f.type?.includes("image") || /\.(jpg|jpeg|png|webp|gif)$/i.test(f.name) || (f.url && f.url.startsWith("http"))).length;
+        }, 0);
+        const dossierDocCount = Math.max(0, dossierTotalFiles - dossierPhotoCount);
+        const dossierLatestSubmission = dossierSubmissions.length > 0 ? dossierSubmissions[0] : null;
+
+        return (
+          <Modal
+            isOpen={!!selectedWorkForDossier}
+            onClose={() => setSelectedWorkForDossier(null)}
+            title={`Collectorate Review Dossier — ${selectedWorkForDossier.id}`}
+            maxWidth="740px"
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <Alert type="info" title="Collectorate Statutory Review">
+                Review project status, inspecting engineer findings, and execute administrative orders.
+              </Alert>
+
+              {/* Structured Executive Inquiries */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                
+                <div style={{ padding: "12px 14px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gov-primary)" }}>1. REASON FOR REVIEW</div>
+                  <div style={{ fontSize: "0.80rem", color: "var(--text-body)", marginTop: "3px" }}>
+                    {getWorkAuditReason(selectedWorkForDossier)}. Sanctioned Outlay: <strong>{formatCost(selectedWorkForDossier.sanctionedAmt)}</strong>, Total Disbursed: <strong>{dossierDisbursedStr}</strong>.
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ padding: "12px 14px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gov-primary)" }}>2. STATUTORY TIMELINE STATUS</div>
-                <div style={{ fontSize: "0.80rem", color: "var(--text-body)", marginTop: "3px" }}>
-                  {selectedWorkForDossier.status === "Delayed" ? (
-                    <span style={{ color: "#b91c1c", fontWeight: 700 }}>Overdue by 45 calendar days past the 1-year statutory completion limit.</span>
-                  ) : (
-                    <span>On schedule within sanctioned implementation period.</span>
+                <div style={{ padding: "12px 14px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gov-primary)" }}>2. STATUTORY TIMELINE STATUS</div>
+                  <div style={{ fontSize: "0.80rem", color: "var(--text-body)", marginTop: "3px" }}>
+                    {selectedWorkForDossier.status === "Delayed" ? (
+                      <span style={{ color: "#b91c1c", fontWeight: 700 }}>Overdue by 45 calendar days past the 1-year statutory completion limit (Physical Execution: {dossierPhysicalProgress}%).</span>
+                    ) : (
+                      <span>On schedule within sanctioned implementation period (Physical Execution: <strong>{dossierPhysicalProgress}%</strong>).</span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ padding: "12px 14px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gov-primary)" }}>3. ATTACHED EVIDENCE</div>
+                  <div style={{ fontSize: "0.80rem", color: "var(--text-body)", marginTop: "3px" }}>
+                    {dossierTotalFiles > 0 ? (
+                      <>
+                        <strong>{dossierPhotoCount} Geotagged Photo(s)</strong>, <strong>{dossierDocCount} Document/MB Extract(s)</strong> submitted by <strong>{dossierContractorName}</strong> across {dossierSubmissions.length} stage submission(s).
+                      </>
+                    ) : (
+                      <>
+                        Awaiting geotagged evidence submission from assigned contractor (<strong>{dossierContractorName}</strong>).
+                      </>
+                    )}
+                  </div>
+                  {dossierTotalFiles > 0 && (
+                    <div style={{ marginTop: "6px" }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          const w = selectedWorkForDossier;
+                          setSelectedWorkForDossier(null);
+                          handleOpenEvidence(w);
+                        }}
+                        icon={<Camera size={12} />}
+                      >
+                        Inspect Attached Photos & Documents ({dossierTotalFiles})
+                      </Button>
+                    </div>
                   )}
                 </div>
-              </div>
 
-              <div style={{ padding: "12px 14px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gov-primary)" }}>3. ATTACHED EVIDENCE</div>
-                <div style={{ fontSize: "0.80rem", color: "var(--text-body)", marginTop: "3px" }}>
-                  2 Geotagged Progress Photos, 1 Measurement Book Extract, 1 Division Engineer Inspection Record.
+                <div style={{ padding: "12px 14px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gov-primary)" }}>4. FIELD INSPECTION REPORT</div>
+                  <div style={{ fontSize: "0.80rem", color: "var(--text-body)", marginTop: "3px" }}>
+                    District Quality Inspection Division verified physical construction on site for <strong>{dossierContractorName}</strong>. Verified physical progress: <strong>{dossierPhysicalProgress}%</strong>. {dossierLatestSubmission ? `Latest stage verified: '${dossierLatestSubmission.checkpointActionName || dossierLatestSubmission.workStage}' (${dossierLatestSubmission.verificationStatus || 'Submitted'}).` : 'Recommended physical verification approval subject to DM concurrence.'}
+                  </div>
                 </div>
-                <div style={{ marginTop: "6px" }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      const w = selectedWorkForDossier;
-                      setSelectedWorkForDossier(null);
-                      handleOpenEvidence(w);
-                    }}
-                    icon={<Camera size={12} />}
-                  >
-                    Inspect Attached Photos & Documents
-                  </Button>
-                </div>
-              </div>
 
-              <div style={{ padding: "12px 14px", border: "1px solid var(--border-light, #e2e8f0)", borderRadius: "8px", background: "var(--bg-surface-subtle, #f8fafc)" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--gov-primary)" }}>4. FIELD INSPECTION REPORT</div>
-                <div style={{ fontSize: "0.80rem", color: "var(--text-body)", marginTop: "3px" }}>
-                  Er. Rajesh Kumar verified physical construction on site. Recommended physical verification approval with tranche release subject to DM concurrence.
+                <div style={{ padding: "14px 16px", border: "1px solid var(--border-main, #cbd5e1)", borderRadius: "8px", background: "var(--bg-surface, #ffffff)" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.84rem", color: "var(--gov-primary)" }}>5. DISTRICT COLLECTORATE EXECUTIVE DIRECTIVE</div>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "3px" }}>
+                    Select administrative action to record in the official district ledger:
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      onClick={() => { 
+                        handleApproveSanction(selectedWorkForDossier.id); 
+                        setSelectedWorkForDossier(null); 
+                      }}
+                    >
+                      Approve Sanction Tranche
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => { 
+                        handleFlagWork(selectedWorkForDossier.id, "Collectorate Order: Tranche held pending re-measurement"); 
+                        setSelectedWorkForDossier(null); 
+                      }}
+                    >
+                      Hold Tranche & Issue Show-Cause Notice
+                    </Button>
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ padding: "14px 16px", border: "1px solid var(--border-main, #cbd5e1)", borderRadius: "8px", background: "var(--bg-surface, #ffffff)" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.84rem", color: "var(--gov-primary)" }}>5. DISTRICT COLLECTORATE EXECUTIVE DIRECTIVE</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "3px" }}>
-                  Select administrative action to record in the official district ledger:
-                </div>
-                <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
-                  <Button 
-                    variant="primary" 
-                    size="sm" 
-                    onClick={() => { 
-                      handleApproveSanction(selectedWorkForDossier.id); 
-                      setSelectedWorkForDossier(null); 
-                    }}
-                  >
-                    Approve Sanction Tranche
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => { 
-                      handleFlagWork(selectedWorkForDossier.id, "Collectorate Order: Tranche held pending re-measurement"); 
-                      setSelectedWorkForDossier(null); 
-                    }}
-                  >
-                    Hold Tranche & Issue Show-Cause Notice
-                  </Button>
-                </div>
               </div>
-
             </div>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        );
+      })()}
 
       {/* Create New Work Modal */}
       {isCreateWorkOpen && (

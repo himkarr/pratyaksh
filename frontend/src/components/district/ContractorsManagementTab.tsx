@@ -23,12 +23,14 @@ import { Button } from "../ui/Button";
 
 interface ContractorsManagementTabProps {
   works: WorkItem[];
+  districtName?: string;
   onSelectWork: (work: WorkItem) => void;
   onUpdateWorks: (updatedWorks: WorkItem[]) => void;
 }
 
 export const ContractorsManagementTab: React.FC<ContractorsManagementTabProps> = ({
   works,
+  districtName,
   onSelectWork,
   onUpdateWorks
 }) => {
@@ -44,8 +46,8 @@ export const ContractorsManagementTab: React.FC<ContractorsManagementTabProps> =
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    setVendors(districtContractorSync.getRegisteredVendors());
-  }, []);
+    setVendors(districtContractorSync.getRegisteredVendors(districtName));
+  }, [districtName]);
 
   const handleOpenAssignModal = (work: WorkItem) => {
     setAssigningWork(work);

@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Landmark,
   TrendingUp,
   CheckCircle2,
   Target,
@@ -9,31 +8,71 @@ import {
   Building,
   ShieldCheck,
   Clock,
-  Check,
+  AlertCircle,
+  FileCheck2,
+  HardHat,
+  Activity,
 } from "lucide-react";
 import { WorkItem } from "../../data/mpladsData";
+import { ContractorProject, EvidenceSubmissionRecord } from "../../data/contractorData";
 import { CivicUtilizationGauge } from "../common/CivicUtilizationGauge";
 
 export interface FinancialSummaryProps {
   project: WorkItem;
+  contractorProject?: ContractorProject | null;
+  stageSubmissions?: EvidenceSubmissionRecord[];
 }
 
-export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) => {
+export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
+  project,
+  contractorProject,
+  stageSubmissions = [],
+}) => {
   const formatCurrency = (valInCr: number | undefined | null) =>
     `₹${Number(valInCr || 0).toFixed(2)} Cr`;
 
-  const unspentAmt = Math.max(0, (project?.sanctionedAmt || 0) - (project?.expenditureAmt || 0));
+  // 1. Sanctioned Amount in Cr
+  const sanctionedAmtCr = (project?.sanctionedAmt || 0) > 0
+    ? project.sanctionedAmt
+    : (contractorProject?.sanctionAmountRs ? contractorProject.sanctionAmountRs / 10000000 : 0.10);
 
-  const finUtilization = (project?.sanctionedAmt || 0) > 0
-    ? Math.min(100, Math.round(((project?.expenditureAmt || 0) / project.sanctionedAmt) * 100))
-    : project?.financialProgress || 0;
+  // 2. Recommended Amount in Cr
+  const recommendedAmtCr = (project?.recommendedAmt || 0) > 0
+    ? project.recommendedAmt
+    : (contractorProject?.recommendedAmountRs ? contractorProject.recommendedAmountRs / 10000000 : sanctionedAmtCr);
 
-  const physicalProgress = project?.physicalProgress || 0;
+  // 3. Recorded Expenditure in Cr (synced with actual contractor uploads & project overrides)
+  const expenditureAmtCr = contractorProject?.utilizedAmountRs !== undefined && contractorProject?.utilizedAmountRs !== null
+    ? contractorProject.utilizedAmountRs / 10000000
+    : (project?.expenditureAmt || 0);
+
+  // 4. Unspent Allocation in Cr
+  const unspentAmtCr = Math.max(0, sanctionedAmtCr - expenditureAmtCr);
+
+  // 5. Financial Utilization %
+  const finUtilization = sanctionedAmtCr > 0
+    ? Math.min(100, Math.round((expenditureAmtCr / sanctionedAmtCr) * 100))
+    : (project?.financialProgress || 0);
+
+  // 6. Physical Progress % (prioritizing contractor's actual uploaded progress)
+  const physicalProgress = contractorProject?.physicalProgress ?? project?.physicalProgress ?? 0;
+
+  // 7. Contractor & Agency details
+  const contractorName = contractorProject?.contractorName || project?.contractor || "Gurugram Metropolitan Development Authority (GMDA)";
+  const agencyName = contractorProject?.implementingAuthority || project?.agency || "Office of District Magistrate & Collector (IDA)";
+
+  // 8. Contractor stage evidence records
+  const submissionsList = contractorProject?.submissionRecords || stageSubmissions;
+  const submissionCount = submissionsList.length;
+  const latestSubmission = submissionCount > 0 ? submissionsList[0] : null;
+
   const projectTitleUpper = (project?.title || "Constituency Project").toUpperCase();
+  const isAnomaly = expenditureAmtCr > sanctionedAmtCr;
+  const worksStatus = project?.status || (physicalProgress >= 100 ? "Completed" : "InProgress");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      {/* Top Row: Fund Utilization Gauge & Delivery Overview Cards (Matching Reference Architecture) */}
+      {/* Top Row: Fund Utilization Gauge & Delivery Overview Cards */}
       <div
         style={{
           display: "grid",
@@ -65,7 +104,7 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
           />
         </div>
 
-        {/* Right: 2x2 Colored Overview Cards */}
+        {/* Right: 2x2 Overview Cards */}
         <div
           style={{
             background: "#ffffff",
@@ -103,21 +142,6 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                 alignItems: "center",
                 gap: "12px",
                 transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#f0fdf4";
-                e.currentTarget.style.borderColor = "#86efac";
-                e.currentTarget.style.borderLeftColor = "#059669";
-                e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(5, 150, 105, 0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.borderLeftColor = "#10b981";
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "none";
               }}
             >
               <div
@@ -132,14 +156,13 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  transition: "all 0.2s ease",
                 }}
               >
                 <CheckCircle2 size={18} />
               </div>
               <div>
                 <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
-                  {formatCurrency(project.recommendedAmt)}
+                  {formatCurrency(recommendedAmtCr)}
                 </span>
                 <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "2px" }}>
                   Recommended Outlay
@@ -159,21 +182,6 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                 alignItems: "center",
                 gap: "12px",
                 transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#fffbeb";
-                e.currentTarget.style.borderColor = "#fde047";
-                e.currentTarget.style.borderLeftColor = "#d97706";
-                e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(217, 119, 6, 0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.borderLeftColor = "#f59e0b";
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "none";
               }}
             >
               <div
@@ -188,14 +196,13 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  transition: "all 0.2s ease",
                 }}
               >
                 <TrendingUp size={18} />
               </div>
               <div>
                 <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
-                  {formatCurrency(project.sanctionedAmt)}
+                  {formatCurrency(sanctionedAmtCr)}
                 </span>
                 <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "2px" }}>
                   Sanctioned Amount
@@ -203,33 +210,18 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
               </div>
             </div>
 
-            {/* Recorded Expenditure */}
+            {/* Recorded Expenditure (Contractor Synced) */}
             <div
               style={{
                 background: "#ffffff",
                 border: "1px solid #e2e8f0",
-                borderLeft: "4px solid #0284c7",
+                borderLeft: `4px solid ${isAnomaly ? "#ef4444" : "#0284c7"}`,
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",
                 alignItems: "center",
                 gap: "12px",
                 transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#f0f9ff";
-                e.currentTarget.style.borderColor = "#7dd3fc";
-                e.currentTarget.style.borderLeftColor = "#0284c7";
-                e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(2, 132, 199, 0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.borderLeftColor = "#0284c7";
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "none";
               }}
             >
               <div
@@ -237,21 +229,20 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                   width: "34px",
                   height: "34px",
                   borderRadius: "8px",
-                  background: "#f0f9ff",
-                  color: "#0284c7",
-                  border: "1px solid #bae6fd",
+                  background: isAnomaly ? "#fef2f2" : "#f0f9ff",
+                  color: isAnomaly ? "#dc2626" : "#0284c7",
+                  border: `1px solid ${isAnomaly ? "#fecaca" : "#bae6fd"}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  transition: "all 0.2s ease",
                 }}
               >
                 <Target size={18} />
               </div>
               <div>
                 <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
-                  {formatCurrency(project.expenditureAmt)}
+                  {formatCurrency(expenditureAmtCr)}
                 </span>
                 <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "2px" }}>
                   Recorded Expenditure
@@ -259,7 +250,7 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
               </div>
             </div>
 
-            {/* Remaining Balance */}
+            {/* Unspent Allocation */}
             <div
               style={{
                 background: "#ffffff",
@@ -271,21 +262,6 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                 alignItems: "center",
                 gap: "12px",
                 transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#f8fafc";
-                e.currentTarget.style.borderColor = "#cbd5e1";
-                e.currentTarget.style.borderLeftColor = "#475569";
-                e.currentTarget.style.transform = "translateY(-3px) scale(1.02)";
-                e.currentTarget.style.boxShadow = "0 8px 18px -4px rgba(100, 116, 139, 0.15)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.borderLeftColor = "#64748b";
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "none";
               }}
             >
               <div
@@ -300,14 +276,13 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  transition: "all 0.2s ease",
                 }}
               >
                 <Users size={18} />
               </div>
               <div>
                 <span style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
-                  {formatCurrency(unspentAmt)}
+                  {formatCurrency(unspentAmtCr)}
                 </span>
                 <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600, display: "block", marginTop: "2px" }}>
                   Unspent Allocation
@@ -318,7 +293,7 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
         </div>
       </div>
 
-      {/* Performance Summary (Matching Reference Architecture 2-Column Breakdown) */}
+      {/* Performance Summary (Clean Non-Redundant 2-Column Breakdown) */}
       <div
         style={{
           background: "#ffffff",
@@ -347,138 +322,121 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({ project }) =
             gap: "20px",
           }}
         >
-          {/* Financial Performance Column */}
+          {/* Column 1: Financial Performance */}
           <div
             style={{
               background: "#f8fafc",
               border: "1px solid #e2e8f0",
               borderRadius: "12px",
               padding: "18px",
-              transition: "all 0.2s ease",
             }}
           >
             <h5 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", margin: "0 0 14px 0" }}>
               Financial Performance
             </h5>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
-                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Allocated Amount:</span>
-                <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.92rem" }}>{formatCurrency(project.sanctionedAmt)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
-                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Recorded Expenditure:</span>
-                <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.92rem" }}>{formatCurrency(project.expenditureAmt)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
-                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Remaining Balance:</span>
-                <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.92rem" }}>{formatCurrency(unspentAmt)}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {/* Financial Progress Bar */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", fontSize: "0.84rem" }}>
+                  <span style={{ color: "#475569", fontWeight: 600 }}>Financial Disbursement Rate:</span>
+                  <span style={{ fontWeight: 800, color: isAnomaly ? "#dc2626" : "#0f172a" }}>
+                    {finUtilization.toFixed(1)}% ({formatCurrency(expenditureAmtCr)} / {formatCurrency(sanctionedAmtCr)})
+                  </span>
+                </div>
+                <div style={{ width: "100%", background: "#e2e8f0", height: "8px", borderRadius: "4px", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${Math.min(100, finUtilization)}%`,
+                      background: isAnomaly ? "#ef4444" : "#10b981",
+                      height: "100%",
+                      transition: "width 0.3s ease",
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* Highlight row for Fund Utilization */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  background: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  margin: "4px 0",
-                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#166534", fontWeight: 600, fontSize: "0.86rem" }}>
-                  Fund Utilization
-                  <Info size={14} color="#16a34a" />
-                </span>
-                <span style={{ fontWeight: 800, color: "#16a34a", fontSize: "1.05rem" }}>
-                  {finUtilization.toFixed(1)}%
+              {/* Burn Rate Trajectory */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
+                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Burn Rate Trajectory:</span>
+                <span style={{ fontWeight: 700, fontSize: "0.82rem", color: isAnomaly ? "#dc2626" : "#166534", background: isAnomaly ? "#fef2f2" : "#f0fdf4", padding: "2px 8px", borderRadius: "6px", border: `1px solid ${isAnomaly ? "#fecaca" : "#bbf7d0"}` }}>
+                  {isAnomaly ? "Expenditure Anomaly (Over Budget)" : "Compliant MoSPI Benchmark"}
                 </span>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
-                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Works Status:</span>
-                <span style={{ fontWeight: 800, color: project.status === "Completed" ? "#059669" : "#d97706", fontSize: "0.9rem" }}>
-                  {project.status || "In Progress"}
+              {/* Statutory Tranche Release Status */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
+                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Statutory Tranche Status:</span>
+                <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#0369a1" }}>
+                  {expenditureAmtCr > 0 ? "1st Tranche Disbursed (50%)" : "Sanctioned & Awaiting Release"}
+                </span>
+              </div>
+
+              {/* Works Status */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "4px" }}>
+                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Works Administrative Status:</span>
+                <span style={{ fontWeight: 800, color: worksStatus === "Completed" ? "#059669" : "#d97706", fontSize: "0.88rem" }}>
+                  {worksStatus}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Project Delivery Column */}
+          {/* Column 2: Project Delivery (Contractor Synced) */}
           <div
             style={{
               background: "#f8fafc",
               border: "1px solid #e2e8f0",
               borderRadius: "12px",
               padding: "18px",
-              transition: "all 0.2s ease",
             }}
           >
             <h5 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", margin: "0 0 14px 0" }}>
-              Project Delivery
+              Project Delivery (Contractor Data)
             </h5>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {/* Assigned Contractor */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
                 <span style={{ color: "#475569", fontSize: "0.84rem" }}>Assigned Contractor:</span>
-                <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem", maxWidth: "180px", textAlign: "right", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={project.contractor}>
-                  {project.contractor || "Assigned Agency"}
+                <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.86rem", maxWidth: "200px", textAlign: "right", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={contractorName}>
+                  {contractorName}
                 </span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
+
+              {/* Implementing Nodal Agency */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
                 <span style={{ color: "#475569", fontSize: "0.84rem" }}>Implementing Agency:</span>
-                <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem", maxWidth: "180px", textAlign: "right", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={project.agency}>
-                  {project.agency || "District DRDA"}
-                </span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
-                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Physical Progress:</span>
-                <span style={{ fontWeight: 800, color: physicalProgress >= 70 ? "#059669" : "#d97706", fontSize: "0.92rem" }}>
-                  {physicalProgress}%
+                <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.86rem", maxWidth: "200px", textAlign: "right", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={agencyName}>
+                  {agencyName}
                 </span>
               </div>
 
-              {/* Highlight row for Completion Rate */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  background: physicalProgress >= 50 ? "#f0fdf4" : "#fef2f2",
-                  border: `1px solid ${physicalProgress >= 50 ? "#bbf7d0" : "#fecaca"}`,
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  margin: "4px 0",
-                }}
-              >
-                <span style={{ color: physicalProgress >= 50 ? "#166534" : "#991b1b", fontWeight: 600, fontSize: "0.86rem" }}>
-                  Completion Rate:
-                </span>
-                <span style={{ fontWeight: 800, color: physicalProgress >= 50 ? "#16a34a" : "#dc2626", fontSize: "1.05rem" }}>
-                  {physicalProgress.toFixed(1)}%
-                </span>
+              {/* Physical Execution Progress */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", fontSize: "0.84rem" }}>
+                  <span style={{ color: "#475569", fontWeight: 600 }}>Physical Execution Progress:</span>
+                  <span style={{ fontWeight: 800, color: physicalProgress >= 70 ? "#059669" : "#d97706" }}>
+                    {physicalProgress}%
+                  </span>
+                </div>
+                <div style={{ width: "100%", background: "#e2e8f0", height: "8px", borderRadius: "4px", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${Math.min(100, physicalProgress)}%`,
+                      background: physicalProgress >= 70 ? "#10b981" : (physicalProgress >= 40 ? "#f59e0b" : "#ef4444"),
+                      height: "100%",
+                      transition: "width 0.3s ease",
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* Highlight row for Fund Utilization */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  background: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  margin: "4px 0",
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#166534", fontWeight: 600, fontSize: "0.86rem" }}>
-                  Fund Utilization
-                  <Info size={14} color="#16a34a" />
-                </span>
-                <span style={{ fontWeight: 800, color: "#16a34a", fontSize: "1.05rem" }}>
-                  {finUtilization.toFixed(1)}%
+              {/* Contractor Stage Evidence Submissions */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "4px" }}>
+                <span style={{ color: "#475569", fontSize: "0.84rem" }}>Contractor Stage Submissions:</span>
+                <span style={{ fontWeight: 700, fontSize: "0.82rem", color: submissionCount > 0 ? "#166534" : "#64748b", background: submissionCount > 0 ? "#f0fdf4" : "#f1f5f9", padding: "2px 8px", borderRadius: "6px", border: `1px solid ${submissionCount > 0 ? "#bbf7d0" : "#e2e8f0"}` }}>
+                  {submissionCount > 0
+                    ? `${submissionCount} Uploaded (${latestSubmission?.checkpointActionName || latestSubmission?.workStage || 'Stage Active'})`
+                    : "No Uploads Yet"}
                 </span>
               </div>
             </div>

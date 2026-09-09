@@ -39,7 +39,10 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   // Form State
   const [evidenceType, setEvidenceType] = useState<string>("Geo-tagged Work Progress Photo");
   const [physicalProgress, setPhysicalProgress] = useState<number>(stage.targetProgressPercent || project.physicalProgress || 0);
-  const [expenditureAmount, setExpenditureAmount] = useState<number>(project.utilizedAmountRs || 0);
+  const [expenditureAmount, setExpenditureAmount] = useState<number>(() => {
+    const stageCount = Math.max(1, project.schedule?.length || 4);
+    return Math.round((project.sanctionAmountRs || 1000000) / stageCount);
+  });
   const [workStage, setWorkStage] = useState<string>(stage.stageName);
   const [materialStatus, setMaterialStatus] = useState<string>("Sufficient material stock available on site");
   const [notes, setNotes] = useState<string>("");
@@ -541,7 +544,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
             <div>
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--gov-primary)", display: "block" }}>
-                Expenditure Incurred To Date (₹) *
+                Stage Expenditure Incurred (₹) *
               </label>
               <input
                 type="number"
@@ -550,6 +553,9 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                 onChange={(e) => setExpenditureAmount(Number(e.target.value))}
                 style={{ fontWeight: 700, width: "100%", marginTop: "3px" }}
               />
+              <span style={{ fontSize: "0.70rem", color: "var(--text-muted)", marginTop: "2px", display: "block" }}>
+                Enter expenditure incurred for this stage period. Stage expenditures accumulate across all stages to track total outlay vs sanctioned amount.
+              </span>
             </div>
 
             <div>
