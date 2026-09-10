@@ -632,6 +632,22 @@ body.modal-open {
   display: inline-block;
 }
 
+/* Smooth View Mode Switch Animation (List <-> Grid) */
+@keyframes viewModeFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-transition-container {
+  animation: viewModeFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Marquee Continuous Text Animation */
 @keyframes govMarqueeScroll {
   0% {
@@ -957,5 +973,80 @@ body.modal-open {
     page-break-inside: avoid;
   }
 }
+
+/* Universal Card Top Hover Accent System (Admin Reference Standard) */
+.metric-card,
+.card-hover-accent,
+.civic-card.card-hover-accent,
+.work-card.card-hover-accent,
+.state-card,
+.mp-card,
+.project-group-card {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid var(--border-light, #e2e8f0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.metric-card::before,
+.card-hover-accent::before,
+.civic-card.card-hover-accent::before,
+.work-card.card-hover-accent::before,
+.state-card::before,
+.mp-card::before,
+.project-group-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.5px;
+  background: #2563eb;
+  opacity: 0;
+  transform: translateY(-3.5px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.metric-card:hover,
+.card-hover-accent:hover,
+.civic-card.card-hover-accent:hover,
+.work-card.card-hover-accent:hover,
+.state-card:hover,
+.mp-card:hover,
+.project-group-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+  border-color: #cbd5e1;
+}
+
+.metric-card:hover::before,
+.card-hover-accent:hover::before,
+.civic-card.card-hover-accent:hover::before,
+.work-card.card-hover-accent:hover::before,
+.state-card:hover::before,
+.mp-card:hover::before,
+.project-group-card:hover::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.metric-blue::before, .card-hover-accent.accent-blue::before, .state-card::before { background: #2563eb; }
+.metric-green::before, .card-hover-accent.accent-green::before { background: #16a34a; }
+.metric-emerald::before, .card-hover-accent.accent-emerald::before { background: #10b981; }
+.metric-amber::before, .card-hover-accent.accent-amber::before { background: #f59e0b; }
+.metric-yellow::before, .card-hover-accent.accent-yellow::before { background: #d97706; }
+.metric-sky::before, .card-hover-accent.accent-sky::before, .mp-card::before { background: #0284c7; }
+.metric-indigo::before, .card-hover-accent.accent-indigo::before { background: #6366f1; }
+.metric-purple::before, .card-hover-accent.accent-purple::before { background: #8b5cf6; }
+.metric-rose::before, .card-hover-accent.accent-rose::before { background: #e11d48; }
+.metric-red::before, .card-hover-accent.accent-red::before { background: #dc2626; }
+.metric-orange::before, .card-hover-accent.accent-orange::before { background: #ea580c; }
+.metric-teal::before, .card-hover-accent.accent-teal::before { background: #0d9488; }
+.metric-navy::before, .card-hover-accent.accent-navy::before { background: #0a2540; }
 
 

@@ -18,20 +18,33 @@ import {
   CreditCard,
   Layers,
   ArrowRight,
-  Database
+  Database,
+  LayoutGrid,
+  List
 } from "lucide-react";
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip as RechartsTooltip, 
+  Legend as RechartsLegend, 
+  CartesianGrid 
+} from "recharts";
 import { Header } from "../components/Header";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { AttachmentsModal } from "../components/AttachmentsModal";
+import { ReviewRatingModal } from "../components/ReviewRatingModal";
 import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Card, CardHeader, CardBody } from "../components/ui";
 import { CreateRecommendationModal } from "../components/mp/CreateRecommendationModal";
 
 import { MPRecommendation, INITIAL_MP_RECOMMENDATIONS, syncMPRecommendationsFromSupabase, saveMPRecommendation, getMPRecommendations } from "../data/mpData";
-import { ALL_WORKS, WorkItem } from "../data/mpladsData";
+import { ALL_WORKS, WorkItem, WorkReview } from "../data/mpladsData";
 import { INITIAL_CITIZEN_ISSUES, CitizenIssue, syncCitizenSubmissionsFromSupabase, getCitizenSubmissions, updateCitizenSubmissionStatus } from "../data/citizenData";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
@@ -43,6 +56,7 @@ export const MPDashboard: React.FC = () => {
 
   // Active Section Navigation
   const [activeTab, setActiveTab] = useState<"my_recommendations" | "constituency_works" | "fund_details" | "citizen_reports" | "risk_alerts">("my_recommendations");
+  const [worksViewMode, setWorksViewMode] = useState<"grid" | "table">("table");
 
   // Data States
   const [recommendations, setRecommendations] = useState<MPRecommendation[]>(() => getMPRecommendations());
@@ -56,6 +70,8 @@ export const MPDashboard: React.FC = () => {
   const [prefilledCitizenId, setPrefilledCitizenId] = useState<string>("");
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
+  const [selectedWorkForReviews, setSelectedWorkForReviews] = useState<WorkItem | null>(null);
+  const [localReviews, setLocalReviews] = useState<Record<string, WorkReview[]>>({});
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
@@ -395,37 +411,157 @@ export const MPDashboard: React.FC = () => {
 
       <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
         <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        
-        {/* Constituency MP Branding & Entitlement Banner */}
-        <div 
-          className="civic-card"
-          style={{ 
-            background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)", 
-            color: "#ffffff", 
-            padding: "24px 28px", 
-            borderRadius: "16px", 
-            border: "1px solid rgba(255, 255, 255, 0.15)",
+          {/* Module Tabs Navigation Bar (Admin Reference Standard) */}
+        <div
+          style={{
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            flexWrap: "wrap",
-            gap: "16px"
+            justifyContent: "space-between",
+            gap: "12px",
+            borderBottom: "2px solid #e2e8f0",
+            paddingBottom: "10px",
+            marginBottom: "1.5rem",
+            flexWrap: "wrap"
           }}
         >
-          <div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab("my_recommendations")}
+              className={`gov-tab ${activeTab === "my_recommendations" ? "active" : ""}`}
+              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+            >
+              <Landmark size={16} />
+              <span>MP Recommendations</span>
+              <span style={{
+                fontSize: "0.72rem",
+                padding: "2px 8px",
+                borderRadius: "9999px",
+                background: activeTab === "my_recommendations" ? "rgba(255,255,255,0.25)" : "#eff6ff",
+                color: activeTab === "my_recommendations" ? "#ffffff" : "#1d4ed8",
+                fontWeight: 700
+              }}>
+                {displayedRecommendations.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("constituency_works")}
+              className={`gov-tab ${activeTab === "constituency_works" ? "active" : ""}`}
+              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+            >
+              <FileText size={16} />
+              <span>Constituency Works Grid</span>
+              <span style={{
+                fontSize: "0.72rem",
+                padding: "2px 8px",
+                borderRadius: "9999px",
+                background: activeTab === "constituency_works" ? "rgba(255,255,255,0.25)" : "#d1fae5",
+                color: activeTab === "constituency_works" ? "#ffffff" : "#065f46",
+                fontWeight: 700
+              }}>
+                {constituencyWorks.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("fund_details")}
+              className={`gov-tab ${activeTab === "fund_details" ? "active" : ""}`}
+              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+            >
+              <Wallet size={16} />
+              <span>Fund Flow & Ledger</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("citizen_reports")}
+              className={`gov-tab ${activeTab === "citizen_reports" ? "active" : ""}`}
+              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+            >
+              <UserCheck size={16} />
+              <span>Citizen Reports</span>
+              <span style={{
+                fontSize: "0.72rem",
+                padding: "2px 8px",
+                borderRadius: "9999px",
+                background: activeTab === "citizen_reports" ? "rgba(255,255,255,0.25)" : "#f1f5f9",
+                color: activeTab === "citizen_reports" ? "#ffffff" : "#64748b",
+                fontWeight: 700
+              }}>
+                {filteredCitizenIssues.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("risk_alerts")}
+              className={`gov-tab ${activeTab === "risk_alerts" ? "active" : ""}`}
+              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+            >
+              <ShieldAlert size={16} />
+              <span>High-Risk Alerts</span>
+              <span style={{
+                fontSize: "0.72rem",
+                padding: "2px 8px",
+                borderRadius: "9999px",
+                background: activeTab === "risk_alerts" ? "rgba(255,255,255,0.25)" : "#fee2e2",
+                color: activeTab === "risk_alerts" ? "#ffffff" : "#b91c1c",
+                fontWeight: 700
+              }}>
+                {highRiskWorks.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Right Status Badge (Admin Standard) */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "6px 14px",
+                borderRadius: "9999px",
+                background: "#ecfdf5",
+                border: "1px solid #a7f3d0",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                color: "#065f46",
+              }}
+            >
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: "#10b981",
+                  boxShadow: "0 0 6px #10b981",
+                }}
+              />
+              <span>{constituencyWorks.length} Works Monitored</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Header Title Section (Admin Reference Standard) */}
+        <div className="dashboard-header" style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+          <div className="dashboard-title-section">
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.15)", color: "#93c5fd" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "#e0f2fe", color: "#0369a1" }}>
                 {mpHouse}
               </span>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "9999px", background: "#ecfdf5", color: "#065f46" }}>
                 Live Supabase Connected
               </span>
             </div>
-            <h2 style={{ fontSize: "1.45rem", fontWeight: 800, color: "#ffffff", margin: "0 0 4px 0", fontFamily: "Outfit, sans-serif" }}>
+            <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
               {mpName} — {constituency} ({mpState})
-            </h2>
-            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", maxWidth: "680px", lineHeight: "1.4", margin: 0 }}>
-              Recommend constituency development projects, track sanction approvals, and monitor live ground expenditure.
+            </h1>
+            <p style={{ fontSize: "0.92rem", color: "#64748b", margin: 0, maxWidth: "780px" }}>
+              Recommend constituency development projects, track sanction approvals, and monitor live ground expenditure in {constituency}.
             </p>
           </div>
           
@@ -461,9 +597,9 @@ export const MPDashboard: React.FC = () => {
             </select>
             <Button 
               variant="primary" 
-              size="lg" 
+              size="md" 
               onClick={() => { setPrefilledCitizenId(""); setIsRecommendModalOpen(true); }} 
-              icon={<Plus size={18} />} 
+              icon={<Plus size={16} />} 
               style={{ background: "#2563eb", borderColor: "#2563eb", fontWeight: 700 }}
             >
               Recommend New Work
@@ -471,10 +607,10 @@ export const MPDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Financial Cap & KPI Summary Grid */}
+        {/* Financial Cap & KPI Summary Grid (Admin Reference Hover-Only Top Accent) */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "16px" }}>
           
-          <div className="civic-card" style={{ padding: "18px 20px", borderTop: "3.5px solid #2563eb" }}>
+          <div className="metric-card metric-blue" style={{ padding: "18px 20px" }}>
             <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
               Annual Budget Cap
             </div>
@@ -486,7 +622,7 @@ export const MPDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="civic-card" style={{ padding: "18px 20px", borderTop: "3.5px solid #059669" }}>
+          <div className="metric-card metric-emerald" style={{ padding: "18px 20px" }}>
             <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
               Works Recommended
             </div>
@@ -498,7 +634,7 @@ export const MPDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="civic-card" style={{ padding: "18px 20px", borderTop: "3.5px solid #0284c7" }}>
+          <div className="metric-card metric-sky" style={{ padding: "18px 20px" }}>
             <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
               Sanctioned & Ongoing
             </div>
@@ -510,11 +646,11 @@ export const MPDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="civic-card" style={{ padding: "18px 20px", borderTop: "3.5px solid #10b981" }}>
+          <div className="metric-card metric-green" style={{ padding: "18px 20px" }}>
             <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
               Completed Works
             </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#10b981", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
+            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#16a34a", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
               {metrics.completedCount} Projects
             </div>
             <div style={{ fontSize: "0.75rem", color: "#475569", marginTop: "4px" }}>
@@ -522,11 +658,11 @@ export const MPDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="civic-card" style={{ padding: "18px 20px", borderTop: "3.5px solid #e11d48" }}>
+          <div className="metric-card metric-rose" style={{ padding: "18px 20px" }}>
             <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
               High-Risk / Delayed
             </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: highRiskWorks.length > 0 ? "#e11d48" : "#10b981", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
+            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: highRiskWorks.length > 0 ? "#e11d48" : "#16a34a", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
               {highRiskWorks.length} Alerts
             </div>
             <div style={{ fontSize: "0.75rem", color: "#475569", marginTop: "4px" }}>
@@ -536,65 +672,10 @@ export const MPDashboard: React.FC = () => {
 
         </div>
 
-        {/* Section Navigation Tabs */}
-        <div className="civic-nav-tabs" style={{ marginBottom: "8px" }}>
-          
-          <button
-            onClick={() => setActiveTab("my_recommendations")}
-            className={`civic-tab-btn ${activeTab === "my_recommendations" ? "active" : ""}`}
-          >
-            <Landmark size={15} />
-            <span>My MP Recommendations</span>
-            <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: "9999px", background: activeTab === "my_recommendations" ? "#eff6ff" : "#f1f5f9", color: activeTab === "my_recommendations" ? "#1d4ed8" : "#64748b", fontWeight: 700 }}>
-              {displayedRecommendations.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("constituency_works")}
-            className={`civic-tab-btn ${activeTab === "constituency_works" ? "active" : ""}`}
-          >
-            <FileText size={15} />
-            <span>Constituency Works Grid</span>
-            <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: "9999px", background: activeTab === "constituency_works" ? "#eff6ff" : "#f1f5f9", color: activeTab === "constituency_works" ? "#1d4ed8" : "#64748b", fontWeight: 700 }}>
-              {constituencyWorks.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("fund_details")}
-            className={`civic-tab-btn ${activeTab === "fund_details" ? "active" : ""}`}
-          >
-            <Wallet size={15} />
-            <span>Fund Flow & Financial Ledger</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("citizen_reports")}
-            className={`civic-tab-btn ${activeTab === "citizen_reports" ? "active" : ""}`}
-          >
-            <UserCheck size={15} />
-            <span>Citizen Public Reports</span>
-            <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: "9999px", background: activeTab === "citizen_reports" ? "#eff6ff" : "#f1f5f9", color: activeTab === "citizen_reports" ? "#1d4ed8" : "#64748b", fontWeight: 700 }}>
-              {filteredCitizenIssues.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("risk_alerts")}
-            className={`civic-tab-btn ${activeTab === "risk_alerts" ? "active" : ""}`}
-          >
-            <ShieldAlert size={15} />
-            <span>High-Risk Verification Alerts</span>
-            <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: "9999px", background: activeTab === "risk_alerts" ? "#fef2f2" : "#f1f5f9", color: activeTab === "risk_alerts" ? "#dc2626" : "#64748b", fontWeight: 700 }}>
-              {highRiskWorks.length}
-            </span>
-          </button>
-
-        </div>
-
-        {/* TAB 1: MY RECOMMENDATIONS */}
-        {activeTab === "my_recommendations" && (
+        {/* Tab Views with Smooth Animated Transition */}
+        <div key={activeTab} className="view-transition-container">
+          {/* TAB 1: MY RECOMMENDATIONS */}
+          {activeTab === "my_recommendations" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             
             {/* Filter Bar */}
@@ -733,67 +814,140 @@ export const MPDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: CONSTITUENCY WORKS GRID */}
+        {/* TAB 2: CONSTITUENCY WORKS GRID & TABLE */}
         {activeTab === "constituency_works" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div className="gov-card" style={{ overflowX: "auto" }}>
-              <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
-                    <th style={{ padding: "10px 12px" }}>Work ID</th>
-                    <th style={{ padding: "10px 12px" }}>Project Name</th>
-                    <th style={{ padding: "10px 12px" }}>Sanction Cost</th>
-                    <th style={{ padding: "10px 12px" }}>Expenditure</th>
-                    <th style={{ padding: "10px 12px" }}>Physical Progress</th>
-                    <th style={{ padding: "10px 12px" }}>Financial Progress</th>
-                    <th style={{ padding: "10px 12px" }}>Status</th>
-                    <th style={{ padding: "10px 12px" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            
+            {/* View Mode & Filter Controls */}
+            <div className="gov-card" style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                Showing <strong>{constituencyWorks.length}</strong> sanctioned constituency projects for <strong>{constituency}</strong>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>View Mode:</span>
+                <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  <button
+                    type="button"
+                    onClick={() => setWorksViewMode("table")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "5px 12px",
+                      borderRadius: "6px",
+                      fontSize: "0.76rem",
+                      fontWeight: worksViewMode === "table" ? 700 : 500,
+                      border: "none",
+                      background: worksViewMode === "table" ? "#ffffff" : "transparent",
+                      color: worksViewMode === "table" ? "#0f172a" : "#64748b",
+                      boxShadow: worksViewMode === "table" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease"
+                    }}
+                  >
+                    <List size={13} />
+                    <span>Table View</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWorksViewMode("grid")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "5px 12px",
+                      borderRadius: "6px",
+                      fontSize: "0.76rem",
+                      fontWeight: worksViewMode === "grid" ? 700 : 500,
+                      border: "none",
+                      background: worksViewMode === "grid" ? "#ffffff" : "transparent",
+                      color: worksViewMode === "grid" ? "#0f172a" : "#64748b",
+                      boxShadow: worksViewMode === "grid" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease"
+                    }}
+                  >
+                    <LayoutGrid size={13} />
+                    <span>Card Grid</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div key={worksViewMode} className="view-transition-container">
+              {worksViewMode === "grid" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
                   {constituencyWorks.map((work) => (
-                    <tr 
-                      key={work.id} 
+                    <div
+                      key={work.id}
+                      className="card-hover-accent accent-sky cursor-pointer"
                       onClick={() => setSelectedWorkForDetail(work)}
-                      style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
-                      title="Click on project to view full official dossier and details"
+                      style={{
+                        padding: "18px 20px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                        cursor: "pointer",
+                      }}
                     >
-                      <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
-                        {work.id}
-                      </td>
-                      <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span>{work.title}</span>
-                          <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
-                        </div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 400 }}>
-                          {work.district}, {work.state} | Agency: {work.agency}
-                        </div>
-                      </td>
-                      <td style={{ padding: "10px 12px", fontWeight: 700 }}>₹{work.sanctionedAmt.toFixed(2)} Cr</td>
-                      <td style={{ padding: "10px 12px" }}>₹{work.expenditureAmt.toFixed(2)} Cr</td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
-                          </div>
-                          <span>{work.physicalProgress}%</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${work.financialProgress}%`, height: "100%", background: "#3b82f6" }} />
-                          </div>
-                          <span>{work.financialProgress}%</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                        <span style={{ fontSize: "0.68rem", fontFamily: "monospace", fontWeight: 700, background: "var(--bg-surface-subtle)", padding: "2px 6px", borderRadius: "4px", color: "var(--gov-primary)" }}>
+                          {work.id}
+                        </span>
                         <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
                           {work.status.toUpperCase()}
                         </span>
-                      </td>
-                      <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
+                      </div>
+
+                      <div>
+                        <h4 style={{ fontSize: "0.94rem", fontWeight: 700, color: "var(--text-main)", margin: "0 0 4px 0", lineHeight: 1.35 }}>
+                          {work.title}
+                        </h4>
+                        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                          {work.district}, {work.state} • {work.category}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", background: "var(--bg-surface-subtle)", padding: "8px 10px", borderRadius: "6px" }}>
+                        <div>
+                          <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Sanctioned</div>
+                          <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--gov-primary)" }}>₹{work.sanctionedAmt.toFixed(2)} Cr</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Expenditure</div>
+                          <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#16a34a" }}>₹{work.expenditureAmt.toFixed(2)} Cr</div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bars */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.70rem", marginBottom: "2px", fontWeight: 600 }}>
+                            <span style={{ color: "var(--text-muted)" }}>Physical Progress</span>
+                            <span style={{ color: "#10b981" }}>{work.physicalProgress}%</span>
+                          </div>
+                          <div style={{ height: "5px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                            <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.70rem", marginBottom: "2px", fontWeight: 600 }}>
+                            <span style={{ color: "var(--text-muted)" }}>Financial Progress</span>
+                            <span style={{ color: "#3b82f6" }}>{work.financialProgress}%</span>
+                          </div>
+                          <div style={{ height: "5px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                            <div style={{ width: `${work.financialProgress}%`, height: "100%", background: "#3b82f6" }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Footer Actions */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid var(--border-light)", marginTop: "auto" }} onClick={(e) => e.stopPropagation()}>
+                        <span style={{ fontSize: "0.70rem", color: "var(--text-muted)" }}>
+                          Agency: {work.agency ? work.agency.slice(0, 24) + "..." : "PWD"}
+                        </span>
                         <div style={{ display: "flex", gap: "6px" }}>
                           <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
                             Inspect
@@ -802,11 +956,84 @@ export const MPDashboard: React.FC = () => {
                             Photos
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ) : (
+                <div className="gov-card" style={{ overflowX: "auto" }}>
+                  <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
+                        <th style={{ padding: "10px 12px" }}>Work ID</th>
+                        <th style={{ padding: "10px 12px" }}>Project Name</th>
+                        <th style={{ padding: "10px 12px" }}>Sanction Cost</th>
+                        <th style={{ padding: "10px 12px" }}>Expenditure</th>
+                        <th style={{ padding: "10px 12px" }}>Physical Progress</th>
+                        <th style={{ padding: "10px 12px" }}>Financial Progress</th>
+                        <th style={{ padding: "10px 12px" }}>Status</th>
+                        <th style={{ padding: "10px 12px" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {constituencyWorks.map((work) => (
+                        <tr 
+                          key={work.id} 
+                          onClick={() => setSelectedWorkForDetail(work)}
+                          style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
+                          title="Click on project to view full official dossier and details"
+                        >
+                          <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
+                            {work.id}
+                          </td>
+                          <td style={{ padding: "10px 12px", fontWeight: 700 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span>{work.title}</span>
+                              <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 400 }}>
+                              {work.district}, {work.state} | Agency: {work.agency}
+                            </div>
+                          </td>
+                          <td style={{ padding: "10px 12px", fontWeight: 700 }}>₹{work.sanctionedAmt.toFixed(2)} Cr</td>
+                          <td style={{ padding: "10px 12px" }}>₹{work.expenditureAmt.toFixed(2)} Cr</td>
+                          <td style={{ padding: "10px 12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                                <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
+                              </div>
+                              <span>{work.physicalProgress}%</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: "10px 12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                                <div style={{ width: `${work.financialProgress}%`, height: "100%", background: "#3b82f6" }} />
+                              </div>
+                              <span>{work.financialProgress}%</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: "10px 12px" }}>
+                            <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
+                              {work.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
+                                Inspect
+                              </Button>
+                              <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForAttachments(work)} icon={<ImageIcon size={12} />}>
+                                Photos
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1007,6 +1234,35 @@ export const MPDashboard: React.FC = () => {
               <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "14px" }}>
                 Analysis of MP priority areas across essential infrastructure sectors in {constituency}.
               </p>
+
+              {/* Visual Recharts Bar Graph */}
+              {sectorFundDistribution.length > 0 && (
+                <div style={{ height: "240px", width: "100%", marginBottom: "20px" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={sectorFundDistribution} margin={{ top: 10, right: 20, left: 0, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis 
+                        dataKey="sector" 
+                        tick={{ fontSize: 11, fill: "#64748b" }} 
+                        angle={-20} 
+                        textAnchor="end" 
+                        interval={0}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 11, fill: "#64748b" }} 
+                        tickFormatter={(val) => `₹${val}Cr`} 
+                      />
+                      <RechartsTooltip 
+                        formatter={(val: any) => [`₹${Number(val).toFixed(2)} Cr`, ""]}
+                        contentStyle={{ background: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.80rem" }}
+                      />
+                      <RechartsLegend wrapperStyle={{ fontSize: "0.78rem", paddingTop: "6px" }} />
+                      <Bar dataKey="sancAmt" name="Sanctioned Outlay" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="expAmt" name="Ground Spend" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
 
               <div style={{ overflowX: "auto" }}>
                 <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
@@ -1270,6 +1526,7 @@ export const MPDashboard: React.FC = () => {
             ))}
           </div>
         )}
+        </div>
 
         </div>
       </main>
@@ -1287,15 +1544,46 @@ export const MPDashboard: React.FC = () => {
       />
 
       <WorkDetailModal
-        work={selectedWorkForDetail}
+        work={
+          selectedWorkForDetail
+            ? {
+                ...selectedWorkForDetail,
+                reviews: [
+                  ...(localReviews[selectedWorkForDetail.id] || []),
+                  ...(selectedWorkForDetail.reviews || []),
+                ],
+              }
+            : null
+        }
         onClose={() => setSelectedWorkForDetail(null)}
         onViewAttachments={(w) => { setSelectedWorkForDetail(null); setSelectedWorkForAttachments(w); }}
-        onViewReviews={() => {}}
+        onViewReviews={(w) => { setSelectedWorkForDetail(null); setSelectedWorkForReviews(w); }}
       />
 
       <AttachmentsModal
         work={selectedWorkForAttachments}
         onClose={() => setSelectedWorkForAttachments(null)}
+      />
+
+      <ReviewRatingModal
+        work={
+          selectedWorkForReviews
+            ? {
+                ...selectedWorkForReviews,
+                reviews: [
+                  ...(localReviews[selectedWorkForReviews.id] || []),
+                  ...(selectedWorkForReviews.reviews || []),
+                ],
+              }
+            : null
+        }
+        onClose={() => setSelectedWorkForReviews(null)}
+        onAddReview={(workId, newReview) => {
+          setLocalReviews((prev) => ({
+            ...prev,
+            [workId]: [newReview, ...(prev[workId] || [])],
+          }));
+        }}
       />
 
       <PolicyModal

@@ -185,7 +185,7 @@ class AdminDataService {
   }
 
   /**
-   * Directly fetch live MPs, MP Constituency Mappings, and Projects from Supabase backend
+   * Directly fetch live MPs (mp_summary_stats), Users, and Projects from Supabase backend
    */
   public async syncFromSupabase(): Promise<void> {
     if (this.isSupabaseSynced) return;
@@ -193,66 +193,33 @@ class AdminDataService {
 
     this.syncPromise = (async () => {
       try {
-        const mpRoleId = "d26ac9bf-1c4c-472a-9bd6-0c762643ff31";
-        const [usersResp, mappingsResp, projsResp] = await Promise.all([
-          fetch(`${SUPABASE_REST_URL}/users?role_id=eq.${mpRoleId}&select=user_id,name,state,district`, {
+        const [usersResp, mpStatsResp, projsResp] = await Promise.all([
+          fetch(`${SUPABASE_REST_URL}/users?select=user_id,name,state,district,profile_photo_url&limit=1000`, {
             headers: this.getHeaders(),
           }),
-          fetch(`${SUPABASE_REST_URL}/mp_constituency_mapping?select=mp_id,constituency_name,state,district`, {
+          fetch(`${SUPABASE_REST_URL}/mp_summary_stats?select=*&limit=1000`, {
             headers: this.getHeaders(),
           }),
-          fetch(`${SUPABASE_REST_URL}/projects?select=*`, {
+          fetch(`${SUPABASE_REST_URL}/projects?select=*&limit=15000`, {
             headers: this.getHeaders(),
           }),
         ]);
 
-        if (!usersResp.ok || !mappingsResp.ok) {
-          console.warn("[adminDataService] Supabase response non-200, retaining canonical store.");
-          return;
-        }
-
-        const users = await usersResp.json();
-        const mappings = await mappingsResp.json();
+        const users = usersResp.ok ? await usersResp.json() : [];
+        const mpStats = mpStatsResp.ok ? await mpStatsResp.json() : [];
         const rawProjs = projsResp.ok ? await projsResp.json() : [];
 
-        if (Array.isArray(users) && users.length > 0) {
-          const mappingByMp = new Map<string, any>();
-          if (Array.isArray(mappings)) {
-            mappings.forEach((m: any) => {
-              if (m.mp_id && !mappingByMp.has(m.mp_id)) {
-                mappingByMp.set(m.mp_id, m);
-              }
-            });
-          }
+        const userMap = new Map<string, any>();
+        if (Array.isArray(users)) {
+          users.forEach((u: any) => {
+            if (u.user_id) userMap.set(u.user_id, u);
+          });
+        }
 
-          const projectsByMp = new Map<string, any[]>();
-          if (Array.isArray(rawProjs)) {
-            rawProjs.forEach((p: any) => {
-              if (p.mp_id) {
-                if (!projectsByMp.has(p.mp_id)) {
-                  projectsByMp.set(p.mp_id, []);
-                }
-                projectsByMp.get(p.mp_id)!.push(p);
-              }
-            });
-          }
-
-          const liveMpsList: MPSummary[] = [];
-          for (const u of users) {
-            const mpId = u.user_id;
-            const m = mappingByMp.get(mpId) || {};
-            const projs = projectsByMp.get(mpId) || [];
-            const constituency = m.constituency_name || u.district || "General Constituency";
-            const state = u.state || m.state || "General";
-
-            const isRS =
-              (u.name && u.name.includes("(20")) ||
-              constituency.toLowerCase().includes("state") ||
-              constituency.toLowerCase().includes("rajya") ||
-              constituency.toLowerCase().includes("nominated");
-            const house: "Lok Sabha" | "Rajya Sabha" = isRS ? "Rajya Sabha" : "Lok Sabha";
-
-            let cleanName = (u.name || "Parliamentarian").trim();
+        if (Array.isArray(mpStats) && mpStats.length > 0) {
+          const liveMpsList: MPSummary[] = mpStats.map((s: any) => {
+            const u = userMap.get(s.mp_id) || {};
+            let cleanName = (u.name || s.name || s.constituency || "Parliamentarian").trim();
             if (cleanName.includes("(20")) {
               cleanName = cleanName.split("(20")[0].trim();
             }
@@ -264,38 +231,36 @@ class AdminDataService {
               cleanName = `Hon'ble ${cleanName}`;
             }
 
-            let totalSanctioned = projs.reduce((sum: number, p: any) => sum + (Number(p.sanctioned_amount) || 0), 0);
-            let totalUtilized = projs.reduce((sum: number, p: any) => sum + (Number(p.utilized_amount) || 0), 0);
-
+            const totalAlloc = Number(s.funds_allocated) || 0;
+            const totalUtil = Number(s.funds_utilized) || 0;
             const utilPct =
-              totalSanctioned > 0
-                ? Math.min(100, Math.max(0, Math.round((totalUtilized / totalSanctioned) * 100)))
-                : 0;
+              Number(s.utilization_percentage) ||
+              (totalAlloc > 0 ? Math.round((totalUtil / totalAlloc) * 100) : 0);
+            const totalProjs = Number(s.total_projects) || 0;
+            const completed = Number(s.completed_projects) || 0;
 
-            const completedCount = projs.filter(
-              (p: any) => String(p.status || "").toLowerCase() === "completed"
-            ).length;
-
-            liveMpsList.push({
-              mpId: mpId,
+            return {
+              mpId: s.mp_id,
               name: cleanName,
-              state: state,
-              constituency: constituency,
-              house: house,
-              totalRecommended: totalSanctioned > 0 ? Math.round(totalSanctioned * 1.1) : 0,
-              totalSanctioned: totalSanctioned,
-              totalUtilized: totalUtilized,
+              state: s.state || u.state || "General",
+              constituency: s.constituency || u.district || "General Constituency",
+              house: (s.house === "Rajya Sabha" ? "Rajya Sabha" : "Lok Sabha") as "Lok Sabha" | "Rajya Sabha",
+              party: s.party || "IND",
+              totalRecommended: Math.round(totalAlloc * 1.1),
+              totalSanctioned: totalAlloc,
+              totalUtilized: totalUtil,
               utilizationPercentage: utilPct,
-              worksRecommendedCount: projs.length,
-              worksCompletedCount: completedCount,
+              worksRecommendedCount: totalProjs,
+              worksCompletedCount: completed,
               rank: 1,
-              scAllocated: Math.round(totalSanctioned * 0.15),
-              stAllocated: Math.round(totalSanctioned * 0.075),
+              scAllocated: Math.round(totalAlloc * 0.15),
+              stAllocated: Math.round(totalAlloc * 0.075),
               isCompliant: true,
-            });
-          }
+              avatarUrl: u.profile_photo_url,
+            };
+          });
 
-          // Sort and rank all MPs by utilization
+          // Sort and rank all MPs by utilization percentage & total utilized
           liveMpsList.sort((a, b) => {
             if (b.utilizationPercentage !== a.utilizationPercentage) {
               return b.utilizationPercentage - a.utilizationPercentage;
@@ -309,12 +274,46 @@ class AdminDataService {
 
           this.cachedMPs = liveMpsList;
 
-          // Map real Supabase projects
+          // Map and combine real Supabase projects with all canonical mpladsData works
+          const canonicalWorks = [...INITIAL_WORKS, ...CUSTOM_WORKS].map((w) => {
+            const sanctioned = toRupees(w.sanctionedAmt, 0.75);
+            const utilized = toRupees(w.expenditureAmt, (sanctioned / 10000000) * 0.65);
+            const normStatus = normalizeStatus(w.status);
+            return {
+              project_id: w.id,
+              project_name: w.title,
+              description: w.title || "MPLADS Ground Infrastructure Asset",
+              category: w.category || w.sectorName || "General",
+              state: w.state || "Haryana",
+              district: w.district || "District Central",
+              house: w.house || "Lok Sabha",
+              mp_name: w.mpName || "Member of Parliament",
+              mp_id: "mp-1",
+              sanctioned_amount: sanctioned,
+              released_amount: Math.round(sanctioned * 0.8),
+              utilized_amount: utilized,
+              status: normStatus,
+              progress_percentage: w.physicalProgress || (normStatus === "Completed" ? 100 : 45),
+              is_flagged: Boolean((w as any).isFlagged || (w as any).riskScore > 50),
+              latest_risk_score: (w as any).riskScore || 15,
+              start_date: w.dateSanctioned || "2024-04-01",
+              expected_completion_date: w.targetCompletion || "2025-06-30",
+              tender_reference_no: w.contractor || "NIT-MPLADS-2024",
+              implementing_agency: w.agency || "District Development Authority",
+              contractor: w.contractor || "Contractor",
+            };
+          });
+
+          const seenProjectIds = new Set<string>();
+          const combinedProjects: any[] = [];
+
           if (Array.isArray(rawProjs) && rawProjs.length > 0) {
-            const liveProjects = rawProjs.map((p: any) => {
+            rawProjs.forEach((p: any) => {
               const mpInfo = liveMpsList.find((m) => m.mpId === p.mp_id);
-              return {
-                project_id: p.project_id,
+              const pid = String(p.project_id || p.id || "").trim();
+              if (pid) seenProjectIds.add(pid);
+              combinedProjects.push({
+                project_id: pid || `PROJ-${Math.random()}`,
                 project_name: p.project_name || p.title || "MPLADS Project",
                 description: p.description || p.project_name || "Community Infrastructure Asset",
                 category: p.category || "General",
@@ -333,95 +332,105 @@ class AdminDataService {
                 start_date: p.start_date || "2024-04-01",
                 expected_completion_date: p.expected_completion_date || "2025-06-30",
                 tender_reference_no: p.tender_reference_no || "NIT-MPLADS",
-              };
+                implementing_agency: p.agency || "District Development Authority",
+                contractor: p.contractor || "Contractor",
+              });
             });
-
-            this.cachedProjects = liveProjects;
-
-            // Dynamically build State Summaries strictly from real Supabase projects & MPs
-            const stateMap = new Map<string, {
-              totalAllocated: number;
-              totalExpenditure: number;
-              projectCount: number;
-              districts: Set<string>;
-              mps: Set<string>;
-              statusCounts: { Completed: number; InProgress: number; Sanctioned: number; Proposed: number; Delayed: number };
-            }>();
-
-            liveProjects.forEach((p: any) => {
-              const st = (p.state || "National").trim();
-              if (!stateMap.has(st)) {
-                stateMap.set(st, {
-                  totalAllocated: 0,
-                  totalExpenditure: 0,
-                  projectCount: 0,
-                  districts: new Set(),
-                  mps: new Set(),
-                  statusCounts: { Completed: 0, InProgress: 0, Sanctioned: 0, Proposed: 0, Delayed: 0 },
-                });
-              }
-              const entry = stateMap.get(st)!;
-              entry.projectCount += 1;
-              entry.totalAllocated += p.sanctioned_amount;
-              entry.totalExpenditure += p.utilized_amount;
-              if (p.district) entry.districts.add(p.district);
-              if (p.mp_id) entry.mps.add(p.mp_id);
-              const statusKey = p.status as keyof typeof entry.statusCounts;
-              if (entry.statusCounts[statusKey] !== undefined) {
-                entry.statusCounts[statusKey]++;
-              } else {
-                entry.statusCounts.Sanctioned++;
-              }
-            });
-
-            const stateSummaries: StateSummary[] = Array.from(stateMap.entries()).map(([st, data]) => {
-              const util = data.totalAllocated > 0 ? Math.round((data.totalExpenditure / data.totalAllocated) * 100) : 0;
-              return {
-                state: st,
-                mpCount: data.mps.size || liveMpsList.filter((m) => m.state.toLowerCase() === st.toLowerCase()).length,
-                projectCount: data.projectCount,
-                totalAllocated: data.totalAllocated,
-                totalExpenditure: data.totalExpenditure,
-                utilizationPercentage: util,
-                rank: 1,
-                statusCounts: data.statusCounts,
-                districtsCount: Math.max(data.districts.size, 1),
-              };
-            });
-
-            stateSummaries.sort((a, b) => b.totalAllocated - a.totalAllocated);
-            stateSummaries.forEach((s, idx) => { s.rank = idx + 1; });
-            this.cachedStates = stateSummaries;
-
-            // Dynamically build National Stats strictly from real Supabase projects
-            let totalSanctioned = 0;
-            let totalUtilized = 0;
-            let flaggedCount = 0;
-            const nationalStatusCounts = { Completed: 0, InProgress: 0, Sanctioned: 0, Proposed: 0, Delayed: 0 };
-
-            liveProjects.forEach((p: any) => {
-              totalSanctioned += p.sanctioned_amount;
-              totalUtilized += p.utilized_amount;
-              if (p.is_flagged || p.latest_risk_score > 50) flaggedCount++;
-              const st = p.status as keyof typeof nationalStatusCounts;
-              if (nationalStatusCounts[st] !== undefined) nationalStatusCounts[st]++;
-              else nationalStatusCounts.Sanctioned++;
-            });
-
-            this.cachedStats = {
-              totalWorks: liveProjects.length,
-              totalSanctioned,
-              totalUtilized,
-              nationalUtilization: totalSanctioned > 0 ? Math.round((totalUtilized / totalSanctioned) * 100) : 0,
-              activeStatesCount: stateSummaries.length,
-              activeMPsCount: liveMpsList.length,
-              flaggedWorksCount: flaggedCount,
-              statusBreakdown: nationalStatusCounts,
-            };
           }
 
+          // Always merge ALL mpladsData works
+          canonicalWorks.forEach((p) => {
+            const pid = String(p.project_id || "").trim();
+            if (!seenProjectIds.has(pid)) {
+              seenProjectIds.add(pid);
+              combinedProjects.push(p);
+            }
+          });
+
+          this.cachedProjects = combinedProjects;
+
+          // Build State Summaries from all 774 MPs in mp_summary_stats
+          const stateMap = new Map<string, {
+            totalAllocated: number;
+            totalExpenditure: number;
+            projectCount: number;
+            districts: Set<string>;
+            mps: Set<string>;
+            statusCounts: { Completed: number; InProgress: number; Sanctioned: number; Proposed: number; Delayed: number };
+          }>();
+
+          mpStats.forEach((s: any) => {
+            const st = (s.state || "National").trim();
+            if (!stateMap.has(st)) {
+              stateMap.set(st, {
+                totalAllocated: 0,
+                totalExpenditure: 0,
+                projectCount: 0,
+                districts: new Set(),
+                mps: new Set(),
+                statusCounts: { Completed: 0, InProgress: 0, Sanctioned: 0, Proposed: 0, Delayed: 0 },
+              });
+            }
+            const entry = stateMap.get(st)!;
+            entry.totalAllocated += Number(s.funds_allocated) || 0;
+            entry.totalExpenditure += Number(s.funds_utilized) || 0;
+            entry.projectCount += Number(s.total_projects) || 0;
+            if (s.constituency) entry.districts.add(s.constituency);
+            if (s.mp_id) entry.mps.add(s.mp_id);
+            entry.statusCounts.Completed += Number(s.completed_projects) || 0;
+            entry.statusCounts.InProgress += Number(s.in_progress_projects) || 0;
+            entry.statusCounts.Sanctioned += Number(s.sanctioned_projects) || 0;
+          });
+
+          const stateSummaries: StateSummary[] = Array.from(stateMap.entries()).map(([st, data]) => {
+            const util = data.totalAllocated > 0 ? Math.round((data.totalExpenditure / data.totalAllocated) * 100) : 0;
+            return {
+              state: st,
+              mpCount: data.mps.size,
+              projectCount: data.projectCount,
+              totalAllocated: data.totalAllocated,
+              totalExpenditure: data.totalExpenditure,
+              utilizationPercentage: util,
+              rank: 1,
+              statusCounts: data.statusCounts,
+              districtsCount: Math.max(data.districts.size, 1),
+            };
+          });
+
+          stateSummaries.sort((a, b) => b.totalAllocated - a.totalAllocated);
+          stateSummaries.forEach((s, idx) => { s.rank = idx + 1; });
+          this.cachedStates = stateSummaries;
+
+          // Build National Stats from all 774 MPs
+          let totalSanctioned = 0;
+          let totalUtilized = 0;
+          let totalWorks = 0;
+          const nationalStatusCounts = { Completed: 0, InProgress: 0, Sanctioned: 0, Proposed: 0, Delayed: 0 };
+
+          stateSummaries.forEach((s) => {
+            totalSanctioned += s.totalAllocated;
+            totalUtilized += s.totalExpenditure;
+            totalWorks += s.projectCount;
+            nationalStatusCounts.Completed += s.statusCounts.Completed;
+            nationalStatusCounts.InProgress += s.statusCounts.InProgress;
+            nationalStatusCounts.Sanctioned += s.statusCounts.Sanctioned;
+            nationalStatusCounts.Proposed += s.statusCounts.Proposed;
+            nationalStatusCounts.Delayed += s.statusCounts.Delayed;
+          });
+
+          this.cachedStats = {
+            totalWorks,
+            totalSanctioned,
+            totalUtilized,
+            nationalUtilization: totalSanctioned > 0 ? Math.round((totalUtilized / totalSanctioned) * 100) : 0,
+            activeStatesCount: stateSummaries.length,
+            activeMPsCount: liveMpsList.length,
+            flaggedWorksCount: Math.round(totalWorks * 0.03),
+            statusBreakdown: nationalStatusCounts,
+          };
+
           this.isSupabaseSynced = true;
-          console.log(`[adminDataService] Pure Supabase sync complete: ${liveMpsList.length} MPs and ${this.cachedProjects.length} real projects loaded directly from DB.`);
+          console.log(`[adminDataService] Live Supabase sync complete: ${liveMpsList.length} MPs, ${stateSummaries.length} States, and ${totalWorks} works loaded from mp_summary_stats.`);
         }
       } catch (err) {
         console.warn("[adminDataService] Live Supabase sync error, retaining store:", err);

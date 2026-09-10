@@ -162,43 +162,46 @@
   background: linear-gradient(90deg, var(--civic-blue-500), var(--civic-blue-600));
 }
 
-/* Navigation Tabs Header */
+/* Navigation Tabs Header (Standardized to Admin Reference) */
 .civic-nav-tabs {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--slate-100);
-  padding: 0.375rem;
-  border-radius: var(--civic-radius-xl);
+  background: transparent;
+  padding: 0 0 10px 0;
+  border-bottom: 2px solid var(--border-light, #e2e8f0);
+  border-radius: 0;
   overflow-x: auto;
+  margin-bottom: 1.5rem;
 }
 
 .civic-tab-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--slate-600);
-  border-radius: var(--civic-radius-lg);
+  border-radius: 8px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .civic-tab-btn:hover {
   color: var(--slate-900);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--slate-100);
 }
 
 .civic-tab-btn.active {
-  color: var(--civic-blue-700);
-  background: #ffffff;
-  font-weight: 600;
-  box-shadow: var(--civic-shadow-sm);
+  color: #ffffff;
+  background: var(--gov-primary, #0a2540);
+  border-color: var(--gov-primary, #0a2540);
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(10, 37, 64, 0.2);
 }
 
 /* Animations */

@@ -78,7 +78,7 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
       {/* ========================================================================= */}
       {/* SECTION 1: OFFICIAL PROJECT INFORMATION                                  */}
       {/* ========================================================================= */}
-      <div className="civic-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div className="gov-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
         <div style={{ borderBottom: "1px solid var(--border-light)", paddingBottom: "10px" }}>
           <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
             SECTION 1 — OFFICIAL MPLADS PROJECT INFORMATION
@@ -114,31 +114,16 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             {/* Sanctioned */}
             <div
+              className="card-hover-accent accent-green cursor-pointer"
               style={{
                 background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderLeft: "4px solid #10b981",
+                border: "1px solid var(--border-light, #e2e8f0)",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 display: "flex",
                 alignItems: "center",
                 gap: "10px",
-                transition: "all 0.25s ease",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#f0fdf4";
-                e.currentTarget.style.borderColor = "#86efac";
-                e.currentTarget.style.borderLeftColor = "#059669";
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(5, 150, 105, 0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.borderLeftColor = "#10b981";
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "none";
+                boxSizing: "border-box"
               }}
             >
               <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -154,31 +139,16 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
 
             {/* Recommended */}
             <div
+              className="card-hover-accent accent-amber cursor-pointer"
               style={{
                 background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderLeft: "4px solid #f59e0b",
+                border: "1px solid var(--border-light, #e2e8f0)",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 display: "flex",
                 alignItems: "center",
                 gap: "10px",
-                transition: "all 0.25s ease",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#fffbeb";
-                e.currentTarget.style.borderColor = "#fde047";
-                e.currentTarget.style.borderLeftColor = "#d97706";
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(217, 119, 6, 0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.borderLeftColor = "#f59e0b";
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "none";
+                boxSizing: "border-box"
               }}
             >
               <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#fffbeb", color: "#d97706", border: "1px solid #fde68a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -194,31 +164,16 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
 
             {/* Spent */}
             <div
+              className="card-hover-accent accent-sky cursor-pointer"
               style={{
                 background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderLeft: "4px solid #0284c7",
+                border: "1px solid var(--border-light, #e2e8f0)",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 display: "flex",
                 alignItems: "center",
                 gap: "10px",
-                transition: "all 0.25s ease",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#f0f9ff";
-                e.currentTarget.style.borderColor = "#7dd3fc";
-                e.currentTarget.style.borderLeftColor = "#0284c7";
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(2, 132, 199, 0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.borderLeftColor = "#0284c7";
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "none";
+                boxSizing: "border-box"
               }}
             >
               <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#f0f9ff", color: "#0284c7", border: "1px solid #bae6fd", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -234,31 +189,16 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
 
             {/* Physical Execution */}
             <div
+              className="card-hover-accent accent-navy cursor-pointer"
               style={{
                 background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderLeft: "4px solid #64748b",
+                border: "1px solid var(--border-light, #e2e8f0)",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 display: "flex",
                 alignItems: "center",
                 gap: "10px",
-                transition: "all 0.25s ease",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#f8fafc";
-                e.currentTarget.style.borderColor = "#cbd5e1";
-                e.currentTarget.style.borderLeftColor = "#475569";
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 14px -2px rgba(100, 116, 139, 0.15)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.borderLeftColor = "#64748b";
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.boxShadow = "none";
+                boxSizing: "border-box"
               }}
             >
               <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

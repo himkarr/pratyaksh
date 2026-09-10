@@ -24,48 +24,47 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
 
   return (
     <div
-      className="civic-card"
+      className="dashboard-header"
       style={{
-        background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)",
-        color: "#ffffff",
-        padding: "22px 26px",
-        borderRadius: "12px",
-        border: "1px solid rgba(255, 255, 255, 0.12)",
+        background: "#ffffff",
+        padding: "20px 24px",
+        borderRadius: "14px",
+        border: "1px solid var(--border-light, #e2e8f0)",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         flexWrap: "wrap",
-        gap: "18px",
-        boxShadow: "0 4px 20px rgba(15, 23, 42, 0.12)"
+        gap: "16px",
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)"
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", flex: 1, minWidth: "300px" }}>
         <div 
           style={{ 
-            background: "rgba(255, 255, 255, 0.12)", 
+            background: "#e0f2fe", 
             padding: "12px", 
-            borderRadius: "8px",
+            borderRadius: "10px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center"
           }}
         >
-          <Building2 size={26} color="#93c5fd" />
+          <Building2 size={26} color="#0284c7" />
         </div>
 
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: 0, fontFamily: "Outfit, sans-serif" }}>
               {profile.agencyName}
             </h2>
             <span 
               style={{ 
-                background: "rgba(59, 130, 246, 0.3)", 
-                border: "1px solid rgba(147, 197, 253, 0.5)",
-                color: "#e0f2fe", 
+                background: "#eff6ff", 
+                border: "1px solid #bfdbfe", 
+                color: "#1d4ed8", 
                 fontSize: "0.74rem", 
                 fontWeight: 800, 
-                padding: "3px 8px", 
+                padding: "2px 8px", 
                 borderRadius: "4px",
                 fontFamily: "monospace"
               }}
@@ -74,12 +73,12 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
             </span>
             <span 
               style={{ 
-                background: "rgba(16, 185, 129, 0.25)", 
-                border: "1px solid rgba(110, 231, 183, 0.4)",
-                color: "#d1fae5", 
+                background: "#ecfdf5", 
+                border: "1px solid #a7f3d0", 
+                color: "#065f46", 
                 fontSize: "0.74rem", 
                 fontWeight: 800, 
-                padding: "3px 8px", 
+                padding: "2px 8px", 
                 borderRadius: "4px"
               }}
             >
@@ -90,31 +89,30 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
-                background: "rgba(16, 185, 129, 0.2)",
-                color: "#34d399",
-                border: "1px solid rgba(52, 211, 153, 0.3)",
+                background: "#f0fdf4",
+                color: "#166534",
+                border: "1px solid #bbf7d0",
                 fontSize: "0.72rem",
                 fontWeight: 700,
-                padding: "3px 8px",
-                borderRadius: "4px",
-                letterSpacing: "0.4px"
+                padding: "2px 8px",
+                borderRadius: "4px"
               }}
             >
-              <Database size={12} />
-              SUPABASE LIVE • REPOSITORIES CONNECTED
+              <Database size={11} />
+              SUPABASE LIVE CONNECTED
             </span>
           </div>
 
-          <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginTop: "4px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
+          <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "4px", display: "flex", gap: "14px", flexWrap: "wrap" }}>
             <span>Circle: <strong>{profile.circle}</strong></span>
             <span>GSTIN: <strong style={{ fontFamily: "monospace" }}>{profile.gstin}</strong></span>
             <span>Nodal Contact: <strong>{profile.nodalOfficer}</strong></span>
           </div>
 
-          {/* Interactive Contractor Selector Dropdown inside Banner */}
-          <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid rgba(255, 255, 255, 0.15)", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", fontWeight: 800, color: "#38bdf8" }}>
-              <UserCheck size={16} />
+          {/* Interactive Contractor Selector Dropdown */}
+          <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", fontWeight: 800, color: "#0284c7" }}>
+              <UserCheck size={15} />
               <span>Switch Active Contractor Firm:</span>
             </div>
 
@@ -128,9 +126,9 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
                 borderRadius: "6px",
                 padding: "6px 12px",
                 fontSize: "0.82rem",
-                fontWeight: 800,
+                fontWeight: 700,
                 cursor: "pointer",
-                minWidth: "320px",
+                minWidth: "300px",
                 outline: "none"
               }}
             >
@@ -152,21 +150,22 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
           onClick={onOpenNotifications}
           style={{
             position: "relative",
-            background: "rgba(255, 255, 255, 0.12)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            color: "#ffffff",
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            color: "var(--gov-primary, #0a2540)",
             padding: "8px 14px",
-            borderRadius: "6px",
+            borderRadius: "8px",
             display: "flex",
             alignItems: "center",
             gap: "8px",
             fontSize: "0.82rem",
             fontWeight: 700,
-            cursor: "pointer"
+            cursor: "pointer",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
           }}
           aria-label="Contractor Portal Notifications"
         >
-          <Bell size={16} />
+          <Bell size={16} color="#0284c7" />
           <span>Monitoring Alerts</span>
           {unreadCount > 0 && (
             <span

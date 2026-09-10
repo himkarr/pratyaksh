@@ -35,6 +35,7 @@ interface MPDetailProps {
   projects: any[];
   onBack: () => void;
   onSelectProject: (project: any) => void;
+  onSelectState?: (stateName: string) => void;
 }
 
 export const MPDetail: React.FC<MPDetailProps> = ({
@@ -42,6 +43,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
   projects,
   onBack,
   onSelectProject,
+  onSelectState,
 }) => {
   // Tabs: overview, projects, compliance, financial
   const [activeTab, setActiveTab] = useState<"overview" | "projects" | "compliance" | "financial">("overview");
@@ -52,7 +54,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortField, setSortField] = useState<"title" | "category" | "cost" | "progress" | "status">("cost");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("grid");
+  const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("table");
   const [copied, setCopied] = useState(false);
 
   // Format currency helpers
@@ -103,6 +105,14 @@ export const MPDetail: React.FC<MPDetailProps> = ({
     const s = new Set<string>();
     displayProjects.forEach((p) => {
       if (p.category) s.add(p.category);
+    });
+    return Array.from(s).sort();
+  }, [displayProjects]);
+
+  const statusesList = useMemo(() => {
+    const s = new Set<string>();
+    displayProjects.forEach((p) => {
+      if (p.status) s.add(p.status);
     });
     return Array.from(s).sort();
   }, [displayProjects]);
@@ -203,16 +213,61 @@ export const MPDetail: React.FC<MPDetailProps> = ({
 
   return (
     <div className="mp-detail-page">
-      {/* Header */}
-      <div className="mp-detail-header">
+      {/* Top Breadcrumb & Back Navigation */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
         <button
+          type="button"
           onClick={onBack}
-          className="back-link"
-          style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: "8px",
+            padding: "6px 14px",
+            cursor: "pointer",
+            color: "var(--gov-primary)",
+            fontWeight: 700,
+            fontSize: "0.82rem",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+            transition: "all 0.15s ease"
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
         >
-          <ArrowLeft size={18} />
-          Back to Parliamentarians Directory
+          <ArrowLeft size={16} />
+          <span>Back to Parliamentarians Directory</span>
         </button>
+        <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>/</span>
+        <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Parliamentarians</span>
+        <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>/</span>
+        {onSelectState && mp.state && (
+          <>
+            <button
+              type="button"
+              onClick={() => onSelectState(mp.state)}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                fontSize: "0.82rem",
+                color: "#1d4ed8",
+                fontWeight: 600,
+                cursor: "pointer",
+                textDecoration: "underline"
+              }}
+              title={`Navigate to ${mp.state} State Dossier`}
+            >
+              {mp.state}
+            </button>
+            <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>/</span>
+          </>
+        )}
+        <span style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-main)" }}>{mp.name} ({mp.constituency})</span>
+      </div>
+
+      <div className="mp-detail-header">
 
         <div className="mp-title-section">
           <div className="mp-avatar-large">
@@ -225,7 +280,27 @@ export const MPDetail: React.FC<MPDetailProps> = ({
               <div className="info-item">
                 <MapPin size={16} />
                 <span>
-                  {mp.constituency}, {mp.state}
+                  {mp.constituency},{" "}
+                  {onSelectState && mp.state ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectState(mp.state)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        color: "var(--gov-accent)",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        textDecoration: "underline"
+                      }}
+                      title={`View ${mp.state} State Summary`}
+                    >
+                      {mp.state}
+                    </button>
+                  ) : (
+                    mp.state
+                  )}
                 </span>
               </div>
               <div className="info-item">
@@ -626,26 +701,6 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                 {/* View Mode Toggle: Grid Cards vs Table */}
                 <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
                   <button
-                    onClick={() => setProjectViewMode("grid")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "6px 12px",
-                      borderRadius: "6px",
-                      border: "none",
-                      background: projectViewMode === "grid" ? "#2563eb" : "transparent",
-                      color: projectViewMode === "grid" ? "#ffffff" : "#475569",
-                      fontWeight: projectViewMode === "grid" ? 700 : 500,
-                      fontSize: "0.78rem",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <LayoutGrid size={14} />
-                    <span>Grid</span>
-                  </button>
-                  <button
                     onClick={() => setProjectViewMode("table")}
                     style={{
                       display: "flex",
@@ -659,131 +714,159 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                       fontWeight: projectViewMode === "table" ? 700 : 500,
                       fontSize: "0.78rem",
                       cursor: "pointer",
-                      transition: "all 0.15s ease",
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: projectViewMode === "table" ? "0 1px 3px rgba(37, 99, 235, 0.25)" : "none",
                     }}
                   >
                     <List size={14} />
                     <span>Table</span>
                   </button>
+                  <button
+                    onClick={() => setProjectViewMode("grid")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: projectViewMode === "grid" ? "#2563eb" : "transparent",
+                      color: projectViewMode === "grid" ? "#ffffff" : "#475569",
+                      fontWeight: projectViewMode === "grid" ? 700 : 500,
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: projectViewMode === "grid" ? "0 1px 3px rgba(37, 99, 235, 0.25)" : "none",
+                    }}
+                  >
+                    <LayoutGrid size={14} />
+                    <span>Grid</span>
+                  </button>
                 </div>
               </div>
             </div>
 
-            {filteredProjects.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
-                No projects found matching the criteria.
-              </div>
-            ) : projectViewMode === "grid" ? (
-              /* GRID VIEW */
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                  gap: "18px",
-                }}
-              >
-                {filteredProjects.map((p) => {
-                  const cost = p.sanctioned_amount || p.cost || 0;
-                  const status = (p.status || "In Progress").toLowerCase();
-                  const progress = p.physical_progress ?? p.physicalProgress ?? 60;
+            <div key={projectViewMode} className="view-transition-container">
+              {filteredProjects.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                  No projects found matching the criteria.
+                </div>
+              ) : projectViewMode === "grid" ? (
+                /* GRID VIEW */
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                    gap: "18px",
+                  }}
+                >
+                  {filteredProjects.map((p) => {
+                    const cost = p.sanctioned_amount || p.cost || 0;
+                    const status = (p.status || "In Progress").toLowerCase();
+                    const progress = p.physical_progress ?? p.physicalProgress ?? 60;
 
-                  return (
-                    <div
-                      key={p.project_id || p.id}
-                      onClick={() => onSelectProject(p)}
-                      style={{
-                        background: "#ffffff",
-                        borderRadius: "12px",
-                        border: "1px solid #e2e8f0",
-                        padding: "18px",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = "0 8px 20px -4px rgba(0,0,0,0.1)";
-                        e.currentTarget.style.borderColor = "#93c5fd";
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
-                        e.currentTarget.style.borderColor = "#e2e8f0";
-                        e.currentTarget.style.transform = "translateY(0)";
-                      }}
-                    >
-                      <div>
-                        {/* Badges */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                          <span
+                    return (
+                      <div
+                        key={p.project_id || p.id}
+                        className="gov-card card-hover-accent accent-sky cursor-pointer"
+                        onClick={() => onSelectProject(p)}
+                        style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          border: "1px solid #e2e8f0",
+                          padding: "18px",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = "0 8px 20px -4px rgba(0,0,0,0.1)";
+                          e.currentTarget.style.borderColor = "#93c5fd";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
+                          e.currentTarget.style.borderColor = "#e2e8f0";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                      >
+                        <div>
+                          {/* Header badge & title */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", marginBottom: "8px" }}>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                background: "#eff6ff",
+                                color: "#1d4ed8",
+                              }}
+                            >
+                              {p.work_id || p.id || "MP-WRK"}
+                            </span>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "2px 8px",
+                                borderRadius: "9999px",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                textTransform: "capitalize",
+                                background: status === "completed" ? "#dcfce7" : status === "delayed" ? "#fee2e2" : "#fef3c7",
+                                color: status === "completed" ? "#15803d" : status === "delayed" ? "#b91c1c" : "#b45309",
+                              }}
+                            >
+                              {p.status || "In Progress"}
+                            </span>
+                          </div>
+
+                          <h4
                             style={{
-                              padding: "2px 8px",
-                              borderRadius: "4px",
-                              fontSize: "0.72rem",
-                              fontWeight: 600,
-                              background: "#f1f5f9",
-                              color: "#475569",
-                            }}
-                          >
-                            {p.category || "Development"}
-                          </span>
-                          <span
-                            style={{
-                              padding: "3px 10px",
-                              borderRadius: "9999px",
-                              fontSize: "0.72rem",
+                              margin: "0 0 8px 0",
+                              fontSize: "0.95rem",
                               fontWeight: 700,
-                              textTransform: "capitalize",
-                              background: status === "completed" ? "#dcfce7" : status === "delayed" ? "#fee2e2" : "#eff6ff",
-                              color: status === "completed" ? "#15803d" : status === "delayed" ? "#b91c1c" : "#1d4ed8",
-                              border: `1px solid ${status === "completed" ? "#bbf7d0" : status === "delayed" ? "#fecaca" : "#bfdbfe"}`,
+                              color: "#0f172a",
+                              lineHeight: 1.4,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
                             }}
                           >
-                            {p.status || "In Progress"}
-                          </span>
+                            {p.title || p.work_name || "Community Development Work"}
+                          </h4>
+
+                          {/* Meta items */}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", fontSize: "0.78rem", color: "#64748b", marginBottom: "14px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <Building size={13} />
+                              <span>{p.category || "Infrastructure"}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <MapPin size={13} />
+                              <span>{p.district || p.location || mp.state}</span>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Title */}
-                        <h4
-                          style={{
-                            margin: "0 0 6px",
-                            fontSize: "0.95rem",
-                            fontWeight: 700,
-                            color: "#1e293b",
-                            lineHeight: "1.4",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {p.project_name || p.title || "MPLADS Community Project"}
-                        </h4>
-
-                        {/* ID */}
-                        <div style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "#64748b", marginBottom: "14px" }}>
-                          ID: {p.project_id || p.id}
-                        </div>
-                      </div>
-
-                      <div>
-                        {/* Budget & Progress */}
-                        <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "10px 12px", border: "1px solid #f1f5f9", marginBottom: "12px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
-                            <span style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>
-                              Approved Budget
-                            </span>
-                            <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
-                              {formatINRCompact(cost)}
-                            </span>
+                        {/* Bottom Info & Progress */}
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
+                            <div>
+                              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.03em" }}>Sanctioned Cost</div>
+                              <div style={{ fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>{formatINRCompact(cost)}</div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Progress</div>
+                              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: progress >= 80 ? "#10b981" : "#3b82f6" }}>{progress}%</div>
+                            </div>
                           </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#64748b", marginBottom: "4px" }}>
-                            <span>Ground Completion</span>
-                            <span style={{ fontWeight: 700 }}>{progress}%</span>
-                          </div>
-                          <div style={{ width: "100%", height: "5px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
+
+                          {/* Progress Bar */}
+                          <div style={{ height: "6px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden", marginBottom: "12px" }}>
                             <div
                               style={{
                                 width: `${progress}%`,
@@ -793,201 +876,191 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                               }}
                             />
                           </div>
+
+                          {/* Action button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectProject(p);
+                            }}
+                            style={{
+                              width: "100%",
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              background: "#f1f5f9",
+                              border: "1px solid #cbd5e1",
+                              color: "#1e40af",
+                              fontSize: "0.75rem",
+                              fontWeight: 700,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "6px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span>Inspect Project</span>
+                            <ArrowRight size={12} />
+                          </button>
                         </div>
-
-                        {/* Action button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectProject(p);
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "6px 12px",
-                            borderRadius: "6px",
-                            background: "#f1f5f9",
-                            border: "1px solid #cbd5e1",
-                            color: "#1e40af",
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "6px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <span>Inspect Project</span>
-                          <ArrowRight size={12} />
-                        </button>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* TABLE VIEW */
-              <div className="mps-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <TableColumnHeader
-                        title="Work ID & Title"
-                        sortKey="title"
-                        currentSortKey={sortField}
-                        currentSortOrder={sortOrder}
-                        onSort={handleSort}
-                      />
-                      <TableColumnHeader
-                        title="Category"
-                        sortKey="category"
-                        currentSortKey={sortField}
-                        currentSortOrder={sortOrder}
-                        onSort={handleSort}
-                        filterOptions={categoriesList}
-                        selectedFilter={categoryFilter}
-                        onSelectFilter={setCategoryFilter}
-                      />
-                      <TableColumnHeader
-                        title="Approved Budget"
-                        sortKey="cost"
-                        currentSortKey={sortField}
-                        currentSortOrder={sortOrder}
-                        onSort={handleSort}
-                      />
-                      <TableColumnHeader
-                        title="Physical Progress"
-                        sortKey="progress"
-                        currentSortKey={sortField}
-                        currentSortOrder={sortOrder}
-                        onSort={handleSort}
-                      />
-                      <TableColumnHeader
-                        title="Status"
-                        sortKey="status"
-                        currentSortKey={sortField}
-                        currentSortOrder={sortOrder}
-                        onSort={handleSort}
-                        filterOptions={["Completed", "In Progress", "Sanctioned", "Delayed"]}
-                        selectedFilter={statusFilter}
-                        onSelectFilter={setStatusFilter}
-                      />
-                      <th style={{ textAlign: "right", padding: "10px 14px" }}>Inspect</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProjects.map((p) => {
-                      const cost = p.sanctioned_amount || p.cost || 0;
-                      const status = (p.status || "In Progress").toLowerCase();
-                      const progress = p.physical_progress ?? p.physicalProgress ?? 60;
+                    );
+                  })}
+                </div>
+              ) : (
+                /* TABLE VIEW */
+                <div className="mps-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <TableColumnHeader
+                          title="Work ID & Title"
+                          sortKey="title"
+                          currentSortKey={sortField}
+                          currentSortOrder={sortOrder}
+                          onSort={handleSort}
+                        />
+                        <TableColumnHeader
+                          title="Category"
+                          sortKey="category"
+                          currentSortKey={sortField}
+                          currentSortOrder={sortOrder}
+                          onSort={handleSort}
+                          filterOptions={categoriesList}
+                          selectedFilter={categoryFilter}
+                          onSelectFilter={setCategoryFilter}
+                        />
+                        <TableColumnHeader
+                          title="Sanctioned Amount"
+                          sortKey="sanctioned_amount"
+                          currentSortKey={sortField}
+                          currentSortOrder={sortOrder}
+                          onSort={handleSort}
+                        />
+                        <TableColumnHeader
+                          title="Progress"
+                          sortKey="physical_progress"
+                          currentSortKey={sortField}
+                          currentSortOrder={sortOrder}
+                          onSort={handleSort}
+                        />
+                        <TableColumnHeader
+                          title="Status"
+                          sortKey="status"
+                          currentSortKey={sortField}
+                          currentSortOrder={sortOrder}
+                          onSort={handleSort}
+                          filterOptions={statusesList}
+                          selectedFilter={statusFilter}
+                          onSelectFilter={setStatusFilter}
+                        />
+                        <th style={{ textAlign: "right" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProjects.map((p) => {
+                        const cost = p.sanctioned_amount || p.cost || 0;
+                        const status = (p.status || "In Progress").toLowerCase();
+                        const progress = p.physical_progress ?? p.physicalProgress ?? 60;
 
-                      return (
-                        <tr key={p.project_id || p.id}>
-                          <td style={{ maxWidth: "340px" }}>
-                            <div style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "#64748b", fontWeight: 600 }}>
-                              {p.project_id || p.id}
-                            </div>
-                            <button
-                              onClick={() => onSelectProject(p)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                padding: 0,
-                                textAlign: "left",
-                                fontWeight: 700,
-                                color: "#1e293b",
-                                cursor: "pointer",
-                                fontSize: "0.9rem",
-                                marginTop: "2px",
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.color = "#2563eb")}
-                              onMouseLeave={(e) => (e.currentTarget.style.color = "#1e293b")}
-                            >
-                              {p.project_name || p.title || "MPLADS Community Project"}
-                            </button>
-                          </td>
-                          <td>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                padding: "2px 8px",
-                                borderRadius: "4px",
-                                fontSize: "0.76rem",
-                                fontWeight: 600,
-                                background: "#f8fafc",
-                                border: "1px solid #e2e8f0",
-                                color: "#475569",
-                              }}
-                            >
-                              {p.category || "Development"}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: 700, color: "#1e293b" }}>
-                            {formatINRCompact(cost)}
-                          </td>
-                          <td style={{ minWidth: "120px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
-                                <div
-                                  style={{
-                                    height: "100%",
-                                    width: `${progress}%`,
-                                    background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
-                                    borderRadius: "9999px",
-                                  }}
-                                />
+                        return (
+                          <tr
+                            key={p.project_id || p.id}
+                            style={{ cursor: "pointer" }}
+                            onClick={() => onSelectProject(p)}
+                          >
+                            <td>
+                              <div style={{ display: "flex", flexDirection: "column" }}>
+                                <span style={{ fontWeight: 700, color: "#0f172a" }}>
+                                  {p.title || p.work_name || "Community Development Work"}
+                                </span>
+                                <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                                  ID: {p.work_id || p.id} | {p.district || p.location || mp.state}
+                                </span>
                               </div>
-                              <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>{progress}%</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                padding: "3px 10px",
-                                borderRadius: "9999px",
-                                fontSize: "0.75rem",
-                                fontWeight: 700,
-                                textTransform: "capitalize",
-                                background: status === "completed" ? "#dcfce7" : status === "delayed" ? "#fee2e2" : "#eff6ff",
-                                color: status === "completed" ? "#15803d" : status === "delayed" ? "#b91c1c" : "#1d4ed8",
-                                border: `1px solid ${status === "completed" ? "#bbf7d0" : status === "delayed" ? "#fecaca" : "#bfdbfe"}`,
-                              }}
-                            >
-                              {p.status || "In Progress"}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: "right" }}>
-                            <button
-                              onClick={() => onSelectProject(p)}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                padding: "6px 12px",
-                                borderRadius: "6px",
-                                background: "#f1f5f9",
-                                border: "1px solid #cbd5e1",
-                                color: "#2c5282",
-                                fontSize: "0.8rem",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                transition: "all 0.15s ease",
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
-                              onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                            >
-                              <Eye size={13} />
-                              <span>Inspect</span>
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  background: "#f1f5f9",
+                                  color: "#334155",
+                                }}
+                              >
+                                {p.category || "Development"}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 700, color: "#1e293b" }}>
+                              {formatINRCompact(cost)}
+                            </td>
+                            <td style={{ minWidth: "120px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "9999px", overflow: "hidden" }}>
+                                  <div
+                                    style={{
+                                      height: "100%",
+                                      width: `${progress}%`,
+                                      background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
+                                      borderRadius: "9999px",
+                                    }}
+                                  />
+                                </div>
+                                <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>{progress}%</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  padding: "3px 10px",
+                                  borderRadius: "9999px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 700,
+                                  textTransform: "capitalize",
+                                  background: status === "completed" ? "#dcfce7" : status === "delayed" ? "#fee2e2" : "#eff6ff",
+                                  color: status === "completed" ? "#15803d" : status === "delayed" ? "#b91c1c" : "#1d4ed8",
+                                  border: `1px solid ${status === "completed" ? "#bbf7d0" : status === "delayed" ? "#fecaca" : "#bfdbfe"}`,
+                                }}
+                              >
+                                {p.status || "In Progress"}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              <button
+                                onClick={() => onSelectProject(p)}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  background: "#f1f5f9",
+                                  border: "1px solid #cbd5e1",
+                                  color: "#2c5282",
+                                  fontSize: "0.8rem",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  transition: "all 0.15s ease",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                              >
+                                <Eye size={13} />
+                                <span>Inspect</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

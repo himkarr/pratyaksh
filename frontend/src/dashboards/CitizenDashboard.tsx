@@ -5,6 +5,7 @@ import {
   ChevronRight, Sparkles, Building2, Database
 } from "lucide-react";
 import { Header } from "../components/Header";
+import { Navbar } from "../components/Navbar";
 import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button } from "../components/ui";
@@ -479,20 +480,100 @@ export const CitizenDashboard: React.FC = () => {
         t={t}
       />
 
-      {/* Clean Compact Citizen Navigation Bar with Notifications and Account Dropdown */}
-      <CitizenNavbar
-        activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab)}
-        unreadCount={2}
-        currentConstituency={currentConstituency}
-        onOpenLogin={() => setIsLoginOpen(true)}
+      {/* Official MPLADS Top Navigation Bar (Emblem, MoSPI, Role Switcher) */}
+      <Navbar
+        activeTab="citizen"
+        setActiveTab={() => setActiveTab("home")}
+        onOpenPolicy={() => setIsPolicyOpen(true)}
+        onOpenLogin={(role) => {
+          setTargetLoginRole(role);
+          setIsLoginOpen(true);
+        }}
       />
 
       {/* Centered Main Content Container */}
       <main className="mplads-main" style={{ flex: 1, padding: "1.5rem 0 3.5rem" }}>
         <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        
+          {/* Top Admin Standard Tab Navigation Bar */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              borderBottom: "2px solid #e2e8f0",
+              paddingBottom: "0.5rem",
+              marginBottom: "0.75rem",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab("home")}
+                className={`gov-tab ${activeTab === "home" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <Home size={16} />
+                <span>Citizen Portal Home</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("find_works")}
+                className={`gov-tab ${activeTab === "find_works" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <Search size={16} />
+                <span>Find Works</span>
+                <span className="civic-tab-badge">{displayWorks.length}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("my_reports")}
+                className={`gov-tab ${activeTab === "my_reports" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <FileText size={16} />
+                <span>My Reports & Recommendations</span>
+                <span className="civic-tab-badge">{issues.length}</span>
+              </button>
+            </div>
+
+            {/* Right Status Badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 14px",
+                  borderRadius: "9999px",
+                  background: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  color: "#065f46",
+                }}
+              >
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: "#10b981",
+                    boxShadow: "0 0 6px #10b981",
+                  }}
+                />
+                <span>{displayWorks.length} Works in {currentConstituency}</span>
+              </div>
+            </div>
+          </div>
+
         {/* Compact Location Header & Area Switcher */}
-        <div className="civic-card" style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div className="gov-card" style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flexWrap: "wrap" }}>
             <MapPin size={18} color="#d97706" style={{ flexShrink: 0 }} />
             <span style={{ fontSize: "0.88rem", color: "var(--text-main, #0f172a)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -530,64 +611,41 @@ export const CitizenDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Civic Navigation Tabs */}
-        <div className="civic-nav-tabs">
-          <button
-            type="button"
-            onClick={() => setActiveTab("home")}
-            className={`civic-tab-btn ${activeTab === "home" ? "active" : ""}`}
-          >
-            <Home size={15} />
-            <span>Citizen Portal Home</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("find_works")}
-            className={`civic-tab-btn ${activeTab === "find_works" ? "active" : ""}`}
-          >
-            <Search size={15} />
-            <span>Find Works</span>
-            <span className="civic-tab-badge">{displayWorks.length}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("my_reports")}
-            className={`civic-tab-btn ${activeTab === "my_reports" ? "active" : ""}`}
-          >
-            <FileText size={15} />
-            <span>My Reports & Recommendations</span>
-            <span className="civic-tab-badge">{issues.length}</span>
-          </button>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* TAB 1: HOME VIEW */}
-        {/* ========================================================================= */}
-        {activeTab === "home" && (
+        {/* Tab Views with Smooth Animated Transition */}
+        <div key={activeTab} className="view-transition-container">
+          {/* ========================================================================= */}
+          {/* TAB 1: HOME VIEW */}
+          {/* ========================================================================= */}
+          {activeTab === "home" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             
-            {/* Hero Card */}
+            {/* Hero Section (Admin Reference Standard) */}
             <div 
-              className="civic-card"
+              className="gov-card"
               style={{ 
-                background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)", 
-                color: "#ffffff", 
+                background: "#ffffff", 
                 padding: "26px 30px", 
-                borderRadius: "14px", 
-                border: "1px solid rgba(255, 255, 255, 0.12)",
-                boxShadow: "0 4px 20px rgba(15, 23, 42, 0.12)",
+                borderRadius: "16px", 
+                border: "1px solid var(--border-light, #e2e8f0)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "16px"
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.45rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "#e0f2fe", color: "#0369a1", textTransform: "uppercase" }}>
+                    Citizen Transparency & Public Engagement
+                  </span>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "9999px", background: "#ecfdf5", color: "#065f46" }}>
+                    Public Portal
+                  </span>
+                </div>
+                <h2 style={{ fontSize: "1.65rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
                   Find development works near you
                 </h2>
-                <p style={{ fontSize: "0.86rem", color: "#cbd5e1", maxWidth: "660px", lineHeight: 1.45, margin: 0 }}>
+                <p style={{ fontSize: "0.90rem", color: "#64748b", maxWidth: "760px", lineHeight: 1.45, margin: 0 }}>
                   Search approved MPLADS community projects, propose new project recommendations to your Hon'ble MP with photo evidence, or report on-ground issues.
                 </p>
               </div>
@@ -605,8 +663,8 @@ export const CitizenDashboard: React.FC = () => {
                       width: "100%",
                       padding: "10px 14px 10px 36px",
                       borderRadius: "8px",
-                      border: "none",
-                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      background: "#f8fafc",
                       color: "#0f172a",
                       fontSize: "0.86rem",
                       outline: "none",
@@ -621,7 +679,7 @@ export const CitizenDashboard: React.FC = () => {
                     variant="primary"
                     size="md"
                     icon={<Search size={14} />}
-                    style={{ background: "#d97706", borderColor: "#d97706", borderRadius: "8px", fontWeight: 700 }}
+                    style={{ background: "#2563eb", borderColor: "#2563eb", borderRadius: "8px", fontWeight: 700 }}
                   >
                     Find Works
                   </Button>
@@ -652,7 +710,7 @@ export const CitizenDashboard: React.FC = () => {
             </div>
 
             {/* Combined Section: "Development works near you" with compact stats + max 3 cards */}
-            <div className="civic-card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "18px" }}>
+            <div className="gov-card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "18px" }}>
               {/* Section Header & Compact Inline Statistics */}
               <div className="citizen-works-header">
                 <div>
@@ -691,14 +749,16 @@ export const CitizenDashboard: React.FC = () => {
                   return (
                     <div
                       key={work.id}
-                      className="civic-card"
+                      className="card-hover-accent accent-sky cursor-pointer"
                       style={{
                         padding: "18px 20px",
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
                         boxSizing: "border-box",
-                        borderTop: "3.5px solid #d97706"
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        border: "1px solid var(--border-light, #e2e8f0)"
                       }}
                     >
                       <div>
@@ -780,7 +840,7 @@ export const CitizenDashboard: React.FC = () => {
             </div>
 
             {/* Compact Recent Reports & Proposals Section */}
-            <div className="civic-card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="gov-card" style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                 <div>
                   <h3 style={{ fontSize: "1.02rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0 }}>
@@ -813,23 +873,19 @@ export const CitizenDashboard: React.FC = () => {
                       <div
                         key={report.id}
                         onClick={() => setActiveTab("my_reports")}
+                        className={`card-hover-accent ${isRec ? "accent-emerald" : "accent-amber"} cursor-pointer`}
                         style={{
-                          padding: "12px 14px",
-                          borderRadius: "var(--radius-xs)",
-                          border: "1px solid var(--border-light)",
-                          borderLeft: isRec ? "4px solid #059669" : "4px solid #d97706",
-                          background: "var(--bg-surface-subtle)",
+                          padding: "14px 16px",
+                          borderRadius: "10px",
+                          border: "1px solid var(--border-light, #e2e8f0)",
+                          background: "#ffffff",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
                           flexWrap: "wrap",
                           gap: "8px",
-                          cursor: "pointer",
-                          transition: "background 0.15s ease",
                           boxSizing: "border-box"
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-surface-subtle)"}
                       >
                         <div style={{ flex: "1 1 200px", minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px", flexWrap: "wrap" }}>
@@ -885,6 +941,12 @@ export const CitizenDashboard: React.FC = () => {
             issues={issues}
             onOpenReportModal={handleOpenGeneralReport}
             onOpenRecommendModal={handleOpenRecommend}
+            onSelectWork={(workId) => {
+              const matched = displayWorks.find(w => w.id === workId) || works.find(w => w.id === workId);
+              if (matched) {
+                setSelectedWork(matched);
+              }
+            }}
           />
         )}
 
@@ -894,6 +956,7 @@ export const CitizenDashboard: React.FC = () => {
         {activeTab === "notifications" && (
           <CitizenNotifications />
         )}
+        </div>
 
         </div>
       </main>

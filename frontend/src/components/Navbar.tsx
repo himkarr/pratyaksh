@@ -135,47 +135,7 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
 
           {/* Quick Nav Links & Top Right House Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600 }}>
-            <button
-              type="button"
-              onClick={() => setActiveTab('dashboard')}
-              style={{
-                background: activeTab === 'dashboard' ? 'rgba(2, 132, 199, 0.12)' : 'transparent',
-                border: 'none',
-                color: activeTab === 'dashboard' ? 'var(--gov-accent, #0284c7)' : 'var(--text-body, #475569)',
-                padding: '5px 10px',
-                borderRadius: '6px',
-                fontWeight: activeTab === 'dashboard' ? 700 : 500,
-                cursor: 'pointer',
-                fontSize: '0.86rem',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {t?.dashboard || (lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard')}
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenPolicy}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-body, #475569)',
-                padding: '5px 10px',
-                borderRadius: '6px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontSize: '0.86rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <BookOpen size={14} />
-              <span>{t?.howItWorks || (lang === 'hi' ? 'दिशानिर्देश' : 'Guidelines')}</span>
-            </button>
-
-            {/* Parliamentary House Filter Dropdown (Top Navbar, right side of How it works) */}
+            {/* Parliamentary House Filter Dropdown (Top Navbar) */}
             {adminHouseFilter !== undefined && onAdminHouseFilterChange && (
               <div 
                 style={{ 
@@ -296,13 +256,77 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                   <span>Area: <strong>{user.district ? `${user.district}, ${user.state || ''}` : 'National Apex Scope'}</strong></span>
                 </div>
 
-                {/* Redirect to Home / Switch Perspective & Logout (Point 2) */}
+                {/* Quick Perspective / Role Switcher */}
+                <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '8px' }}>
+                  <div style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '6px' }}>
+                    {lang === 'hi' ? 'भूमिका बदलें (त्वरित नेविगेशन)' : 'Switch Role (Quick Navigation)'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '230px', overflowY: 'auto' }}>
+                    {rolesList.map((r) => {
+                      const Icon = r.icon;
+                      const isActive = r.id === user.role;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => handleSelectRole(r.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            border: isActive ? '1px solid #bfdbfe' : '1px solid transparent',
+                            background: isActive ? '#eff6ff' : 'transparent',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'all 0.12s ease'
+                          }}
+                          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = '#f8fafc'; }}
+                          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '6px',
+                              background: isActive ? 'var(--gov-primary, #0f2942)' : '#f1f5f9',
+                              color: isActive ? '#ffffff' : '#475569',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              <Icon size={13} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.78rem', fontWeight: isActive ? 800 : 600, color: isActive ? '#1e40af' : '#1e293b', lineHeight: 1.2 }}>
+                                {r.label}
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: '#64748b', lineHeight: 1.1 }}>
+                                {r.desc}
+                              </div>
+                            </div>
+                          </div>
+                          {isActive && (
+                            <span style={{ fontSize: '0.60rem', fontWeight: 800, color: '#1e40af', background: '#dbeafe', padding: '1px 5px', borderRadius: '4px' }}>
+                              Active
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Switch Account via Login & Logout */}
                 <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <button
                     type="button"
                     onClick={() => {
                       setIsRoleDropdownOpen(false);
-                      logout();
+                      onOpenLogin();
                     }}
                     style={{
                       width: '100%',
@@ -310,18 +334,18 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      padding: '7px 10px',
+                      padding: '6px 10px',
                       borderRadius: '6px',
                       border: '1px solid var(--border-main, #cbd5e1)',
                       background: 'var(--bg-surface-subtle, #f8fafc)',
                       color: 'var(--gov-accent, #155eef)',
-                      fontSize: '0.78rem',
+                      fontSize: '0.76rem',
                       fontWeight: 700,
                       cursor: 'pointer'
                     }}
                   >
-                    <Home size={13} />
-                    <span>Return to Home / Switch Role</span>
+                    <UserCheck size={13} />
+                    <span>Login as Different User</span>
                   </button>
 
                   <button
@@ -336,12 +360,12 @@ export function Navbar({ activeTab, setActiveTab, onOpenPolicy, onOpenLogin, t: 
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      padding: '7px 10px',
+                      padding: '6px 10px',
                       borderRadius: '6px',
                       border: '1px solid var(--status-danger-border, #fecaca)',
                       background: 'var(--status-danger-bg, #fef2f2)',
                       color: 'var(--status-danger-text, #991b1b)',
-                      fontSize: '0.78rem',
+                      fontSize: '0.76rem',
                       fontWeight: 700,
                       cursor: 'pointer'
                     }}

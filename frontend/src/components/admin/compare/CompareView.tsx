@@ -28,7 +28,7 @@ export const CompareView: React.FC<CompareViewProps> = ({ mps, onSelectMP }) => 
   });
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
   const formatCurrency = (amt: number) => {
     if (amt >= 10000000) return `₹${(amt / 10000000).toFixed(2)} Cr`;
@@ -137,26 +137,6 @@ export const CompareView: React.FC<CompareViewProps> = ({ mps, onSelectMP }) => 
             }}
           >
             <button
-              onClick={() => setViewMode("cards")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "5px 10px",
-                borderRadius: "6px",
-                border: "none",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                background: viewMode === "cards" ? "#ffffff" : "transparent",
-                color: viewMode === "cards" ? "#1e40af" : "#64748b",
-                boxShadow: viewMode === "cards" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
-              }}
-            >
-              <LayoutGrid size={13} />
-              <span>Cards</span>
-            </button>
-            <button
               onClick={() => setViewMode("table")}
               style={{
                 display: "flex",
@@ -175,6 +155,26 @@ export const CompareView: React.FC<CompareViewProps> = ({ mps, onSelectMP }) => 
             >
               <TableIcon size={13} />
               <span>Matrix Table</span>
+            </button>
+            <button
+              onClick={() => setViewMode("cards")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "5px 10px",
+                borderRadius: "6px",
+                border: "none",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                background: viewMode === "cards" ? "#ffffff" : "transparent",
+                color: viewMode === "cards" ? "#1e40af" : "#64748b",
+                boxShadow: viewMode === "cards" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+              }}
+            >
+              <LayoutGrid size={13} />
+              <span>Cards</span>
             </button>
           </div>
 
@@ -309,8 +309,9 @@ export const CompareView: React.FC<CompareViewProps> = ({ mps, onSelectMP }) => 
         </div>
       )}
 
-      {/* VIEW MODE 1: CARDS VIEW */}
-      {viewMode === "cards" ? (
+      {/* VIEW MODE CARDS VS TABLE (with smooth animation) */}
+      <div key={viewMode} className="view-transition-container">
+        {viewMode === "cards" ? (
         <div
           style={{
             display: "grid",
@@ -326,11 +327,11 @@ export const CompareView: React.FC<CompareViewProps> = ({ mps, onSelectMP }) => 
           {selectedMPs.map((mp) => (
             <div
               key={mp.mpId}
+              className="gov-card card-hover-accent accent-sky"
               style={{
                 background: "#ffffff",
                 borderRadius: "16px",
                 border: "1px solid var(--border-color, #e2e8f0)",
-                boxShadow: "var(--shadow-card, 0 2px 8px rgba(0,0,0,0.04))",
                 padding: "20px",
                 position: "relative",
                 display: "flex",
@@ -868,6 +869,7 @@ export const CompareView: React.FC<CompareViewProps> = ({ mps, onSelectMP }) => 
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

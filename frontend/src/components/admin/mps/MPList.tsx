@@ -5,9 +5,9 @@ import {
   LayoutGrid,
   List,
   ArrowUpDown,
-  Award,
   ArrowRight,
-  TrendingUp,
+  X,
+  User,
 } from "lucide-react";
 import { MPSummary } from "../../../api/adminDataService";
 import { MPCard } from "./MPCard";
@@ -25,15 +25,26 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
   const [houseFilter, setHouseFilter] = useState<string>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [partyFilter, setPartyFilter] = useState<string>("all");
+  const [filterTier, setFilterTier] = useState<string>("all");
   const [sortField, setSortField] = useState<string>("rank");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   // Format currency
   const formatCurrency = (amt: number) => {
     if (amt >= 10000000) return `₹${(amt / 10000000).toFixed(2)} Cr`;
     if (amt >= 100000) return `₹${(amt / 100000).toFixed(2)} L`;
     return `₹${amt.toLocaleString("en-IN")}`;
+  };
+
+  const formatExactCurrency = (amt: number) => {
+    return `₹${Math.round(amt).toLocaleString("en-IN")}`;
+  };
+
+  const getUtilColor = (pct: number) => {
+    if (pct >= 70) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+    if (pct >= 40) return "text-amber-700 bg-amber-50 border-amber-200";
+    return "text-rose-700 bg-rose-50 border-rose-200";
   };
 
   // Distinct states list
@@ -54,32 +65,47 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
     return Array.from(set).sort();
   }, [mps]);
 
-  // Memoized national aggregate stats
+  // Memoized national aggregate stats (Exact figures)
   const aggregateStats = useMemo(() => {
     let totalSanctioned = 0;
     let totalUtilized = 0;
-    let totalUtilPct = 0;
     let highEfficiency = 0;
     let moderate = 0;
     let needsAttention = 0;
+    let lsCount = 0;
+    let rsCount = 0;
+    let totalWorks = 0;
+    let completedWorks = 0;
 
     for (let i = 0; i < mps.length; i++) {
       const m = mps[i];
       totalSanctioned += m.totalSanctioned || 0;
       totalUtilized += m.totalUtilized || 0;
-      totalUtilPct += m.utilizationPercentage || 0;
+      totalWorks += m.worksRecommendedCount || 0;
+      completedWorks += m.worksCompletedCount || 0;
+
+      if (m.house === "Lok Sabha") lsCount++;
+      else if (m.house === "Rajya Sabha") rsCount++;
 
       if (m.utilizationPercentage >= 70) highEfficiency++;
       else if (m.utilizationPercentage >= 40) moderate++;
       else needsAttention++;
     }
 
-    const avgUtilPct = mps.length > 0 ? Math.round(totalUtilPct / mps.length) : 0;
+    const unspentBalance = totalSanctioned - totalUtilized;
+    const exactUtilization =
+      totalSanctioned > 0 ? ((totalUtilized / totalSanctioned) * 100).toFixed(2) : "0.00";
 
     return {
+      totalMps: mps.length,
+      lsCount,
+      rsCount,
       totalSanctioned,
       totalUtilized,
-      avgUtilPct,
+      unspentBalance,
+      exactUtilization,
+      totalWorks,
+      completedWorks,
       highEfficiency,
       moderate,
       needsAttention,
@@ -91,7 +117,7 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortOrder(field === "name" || field === "constituency" ? "asc" : "desc");
+      setSortOrder(field === "name" || field === "state" || field === "constituency" ? "asc" : "desc");
     }
   };
 
@@ -102,6 +128,10 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
         if (houseFilter !== "all" && m.house.toLowerCase() !== houseFilter.toLowerCase()) return false;
         if (stateFilter !== "all" && m.state.toLowerCase() !== stateFilter.toLowerCase()) return false;
         if (partyFilter !== "all" && (m.party || "").toLowerCase() !== partyFilter.toLowerCase()) return false;
+
+        if (filterTier === "high" && m.utilizationPercentage < 70) return false;
+        if (filterTier === "medium" && (m.utilizationPercentage < 40 || m.utilizationPercentage >= 70)) return false;
+        if (filterTier === "low" && m.utilizationPercentage >= 40) return false;
 
         if (deferredSearchQuery.trim()) {
           const q = deferredSearchQuery.toLowerCase();
@@ -122,6 +152,8 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
           diff = a.totalSanctioned - b.totalSanctioned;
         else if (sortField === "totalUtilized")
           diff = a.totalUtilized - b.totalUtilized;
+        else if (sortField === "worksRecommendedCount")
+          diff = (a.worksRecommendedCount || 0) - (b.worksRecommendedCount || 0);
         else if (sortField === "name") diff = a.name.localeCompare(b.name);
         else if (sortField === "state") diff = a.state.localeCompare(b.state);
         else if (sortField === "constituency") diff = a.constituency.localeCompare(b.constituency);
@@ -129,107 +161,175 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
 
         return sortOrder === "desc" ? -diff : diff;
       });
-  }, [mps, deferredSearchQuery, houseFilter, stateFilter, partyFilter, sortField, sortOrder]);
+  }, [mps, deferredSearchQuery, houseFilter, stateFilter, partyFilter, filterTier, sortField, sortOrder]);
 
   return (
     <div className="mps-page">
-      {/* 1. Header & National Statistics */}
-      <div className="mps-header">
-        <div className="header-content">
-          <div className="title-row">
-            <h1>Members of Parliament Performance</h1>
-          </div>
-          <p>
-            Ranked parliamentary performance tracking and fund utilization analysis for Lok Sabha and Rajya Sabha MPs
+      {/* 1. Header & Live Statistics (Normal Text View - Matching States & UTs) */}
+      <div
+        className="mps-header"
+        style={{
+          background: "#ffffff",
+          borderRadius: "12px",
+          border: "1px solid #e2e8f0",
+          padding: "1.5rem 1.75rem",
+          marginBottom: "1.5rem",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+        }}
+      >
+        <div style={{ marginBottom: "1.25rem" }}>
+          <h1 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+            Members of Parliament Performance & Allocations
+          </h1>
+          <p style={{ fontSize: "0.875rem", color: "#64748b", margin: "4px 0 0 0" }}>
+            Exact verified financial disbursements, certified expenditures, and works progress across Lok Sabha and Rajya Sabha Parliamentarians.
           </p>
         </div>
 
-        <div className="national-stats">
-          <div className="stat-box">
-            <span className="stat-label">Active MPs Tracked</span>
-            <span className="stat-value">{mps.length}</span>
-            <span className="stat-period">Both Houses</span>
-          </div>
-          <div className="stat-box">
-            <span className="stat-label">Total Allocated</span>
-            <span className="stat-value">
-              {formatCurrency(aggregateStats.totalSanctioned)}
+        {/* Normal Text Metrics Summary (Clean High-Precision Layout) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "1.5rem",
+            paddingTop: "1.25rem",
+            borderTop: "1px solid #e2e8f0",
+          }}
+        >
+          {/* Exact Sanctioned Outlay */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Sanctioned Outlay
             </span>
-            <span className="stat-period">Sanctioned Outlay</span>
-          </div>
-          <div className="stat-box">
-            <span className="stat-label">Recorded Expenditure</span>
-            <span className="stat-value" style={{ color: "#059669" }}>
-              {formatCurrency(aggregateStats.totalUtilized)}
+            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a" }}>
+              {formatExactCurrency(aggregateStats.totalSanctioned)}
             </span>
-            <span className="stat-period">Disbursed on Ground</span>
-          </div>
-          <div className="stat-box">
-            <span className="stat-label">Average Utilization</span>
-            <span className="stat-value">
-              {aggregateStats.avgUtilPct}%
+            <span style={{ fontSize: "0.775rem", color: "#64748b" }}>
+              Across {aggregateStats.totalMps} MPs ({aggregateStats.lsCount} LS · {aggregateStats.rsCount} RS)
             </span>
-            <span className="stat-period">National Benchmark</span>
+          </div>
+
+          {/* Exact Recorded Expenditure */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Recorded Expenditure
+            </span>
+            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#059669" }}>
+              {formatExactCurrency(aggregateStats.totalUtilized)}
+            </span>
+            <span style={{ fontSize: "0.775rem", color: "#64748b" }}>
+              Certified Disbursed
+            </span>
+          </div>
+
+          {/* Exact Unspent Treasury Balance */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Unspent Balance
+            </span>
+            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#d97706" }}>
+              {formatExactCurrency(aggregateStats.unspentBalance)}
+            </span>
+            <span style={{ fontSize: "0.775rem", color: "#64748b" }}>
+              Available with District Nodal Auth
+            </span>
+          </div>
+
+          {/* Exact Utilization Rate */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Fund Utilization
+            </span>
+            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#2563eb" }}>
+              {aggregateStats.exactUtilization}%
+            </span>
+            <span style={{ fontSize: "0.775rem", color: "#64748b" }}>
+              Weighted National Benchmark
+            </span>
+          </div>
+
+          {/* Exact Works Portfolio */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Works Portfolio
+            </span>
+            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: "#0f172a" }}>
+              {aggregateStats.totalWorks.toLocaleString("en-IN")} Total Works
+            </span>
+            <span style={{ fontSize: "0.775rem", color: "#64748b" }}>
+              {aggregateStats.completedWorks.toLocaleString("en-IN")} Completed Works
+            </span>
           </div>
         </div>
       </div>
 
-      {/* 2. Performance Insights Banner */}
-      <div className="performance-insights">
-        <div className="insights-grid">
-          <div className="insight-card">
-            <div className="insight-icon high">
-              <TrendingUp size={24} />
-            </div>
-            <div className="insight-content">
-              <h3>High Efficiency</h3>
-              <p className="insight-count">
-                {aggregateStats.highEfficiency}
-              </p>
-              <p className="insight-desc">MPs with &ge; 70% utilization</p>
-            </div>
-          </div>
-
-          <div className="insight-card">
-            <div className="insight-icon medium">
-              <Award size={24} />
-            </div>
-            <div className="insight-content">
-              <h3>Moderate</h3>
-              <p className="insight-count">
-                {aggregateStats.moderate}
-              </p>
-              <p className="insight-desc">MPs with 40% - 69% utilization</p>
-            </div>
-          </div>
-
-          <div className="insight-card">
-            <div className="insight-icon low">
-              <Users size={24} />
-            </div>
-            <div className="insight-content">
-              <h3>Needs Attention</h3>
-              <p className="insight-count">
-                {aggregateStats.needsAttention}
-              </p>
-              <p className="insight-desc">MPs with &lt; 40% utilization</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Controls Toolbar */}
+      {/* 2. Controls Toolbar */}
       <div className="mps-controls">
         {/* Search */}
         <div className="search-section">
-          <div className="search-box">
-            <Search size={18} />
+          <div className="search-box" style={{ position: "relative", width: "100%", maxWidth: "420px" }}>
+            <Search
+              size={18}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#94a3b8",
+                pointerEvents: "none",
+                zIndex: 1,
+              }}
+            />
             <input
               type="text"
-              placeholder="Search by MP name, constituency, state..."
+              placeholder="Search by MP name, constituency, state, party..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: "100%",
+                height: "40px",
+                paddingLeft: "38px",
+                paddingRight: searchQuery ? "36px" : "12px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e1",
+                fontSize: "0.875rem",
+                background: "#ffffff",
+                color: "#1e293b",
+                outline: "none",
+                boxSizing: "border-box",
+                transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = "#2563eb";
+                e.target.style.boxShadow = "0 0 0 3px rgba(37, 99, 235, 0.1)";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "#cbd5e1";
+                e.target.style.boxShadow = "none";
+              }}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  padding: "2px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+                title="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -245,8 +345,8 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
                 className="filter-select"
               >
                 <option value="all">Both Houses</option>
-                <option value="lok sabha">Lok Sabha</option>
-                <option value="rajya sabha">Rajya Sabha</option>
+                <option value="lok sabha">Lok Sabha ({aggregateStats.lsCount})</option>
+                <option value="rajya sabha">Rajya Sabha ({aggregateStats.rsCount})</option>
               </select>
             </div>
 
@@ -268,6 +368,21 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
               </select>
             </div>
 
+            {/* Performance Tier */}
+            <div className="filter-group">
+              <label>Tier:</label>
+              <select
+                value={filterTier}
+                onChange={(e) => setFilterTier(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Tiers</option>
+                <option value="high">High (≥ 70%)</option>
+                <option value="medium">Average (40% - 69%)</option>
+                <option value="low">Needs Attention (&lt; 40%)</option>
+              </select>
+            </div>
+
             {/* Sort Control */}
             <div className="sort-controls">
               <label>Sort:</label>
@@ -277,16 +392,19 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
                 className="sort-select"
               >
                 <option value="rank">Efficiency Rank</option>
-                <option value="utilizationPercentage">Utilization %</option>
+                <option value="utilizationPercentage">Fund Utilization %</option>
                 <option value="totalSanctioned">Sanctioned Outlay</option>
+                <option value="totalUtilized">Certified Spent</option>
+                <option value="worksRecommendedCount">Total Works</option>
                 <option value="name">MP Name</option>
+                <option value="state">State</option>
               </select>
             </div>
 
             <button
               onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
               className="sort-controls cursor-pointer hover:bg-slate-50 transition-colors"
-              title="Toggle Sort Direction"
+              title={`Sort ${sortOrder === "asc" ? "Ascending" : "Descending"}`}
               style={{ padding: "0.5rem 0.85rem" }}
             >
               <ArrowUpDown size={15} />
@@ -294,45 +412,59 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
             </button>
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="view-controls">
+          {/* View Mode Toggle (Segmented Pill Switch with Animation) */}
+          <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
             <button
-              onClick={() => setViewMode("grid")}
-              className={`view-btn ${viewMode === "grid" ? "active" : ""}`}
+              type="button"
+              onClick={() => setViewMode("list")}
               style={{
-                padding: "8px 14px",
-                border: "none",
-                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
-                fontWeight: 600,
-                fontSize: "0.85rem",
+                padding: "6px 14px",
+                borderRadius: "6px",
+                border: "none",
+                background: viewMode === "list" ? "#ffffff" : "transparent",
+                color: viewMode === "list" ? "#0f172a" : "#64748b",
+                fontWeight: viewMode === "list" ? 700 : 500,
+                fontSize: "0.82rem",
+                boxShadow: viewMode === "list" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
               }}
+              aria-pressed={viewMode === "list"}
             >
-              <LayoutGrid size={15} /> Grid
+              <List size={15} />
+              <span>Table View</span>
             </button>
             <button
-              onClick={() => setViewMode("list")}
-              className={`view-btn ${viewMode === "list" ? "active" : ""}`}
+              type="button"
+              onClick={() => setViewMode("grid")}
               style={{
-                padding: "8px 14px",
-                border: "none",
-                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
-                fontWeight: 600,
-                fontSize: "0.85rem",
+                padding: "6px 14px",
+                borderRadius: "6px",
+                border: "none",
+                background: viewMode === "grid" ? "#ffffff" : "transparent",
+                color: viewMode === "grid" ? "#0f172a" : "#64748b",
+                fontWeight: viewMode === "grid" ? 700 : 500,
+                fontSize: "0.82rem",
+                boxShadow: viewMode === "grid" ? "0 1px 2px rgba(15,23,42,0.10)" : "none",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
               }}
+              aria-pressed={viewMode === "grid"}
             >
-              <List size={15} /> Table
+              <LayoutGrid size={15} />
+              <span>Grid View</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* 4. MP Cards Grid / Table */}
+      {/* 3. MP Cards Grid / Table View with Animated View Transition */}
       {isLoading ? (
         <div style={{ padding: "64px 0", textAlign: "center", color: "var(--text-secondary)" }}>
           <div style={{ width: "32px", height: "32px", border: "3px solid var(--primary-600)", borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 12px", animation: "spin 1s linear infinite" }} />
@@ -346,25 +478,27 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
             Try adjusting your search criteria or filter options.
           </p>
         </div>
-      ) : viewMode === "grid" ? (
-        <div className="mps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "24px" }}>
-          {filteredMPs.map((mp) => (
-            <MPCard key={mp.mpId} mp={mp} onSelectMP={onSelectMP} />
-          ))}
-        </div>
       ) : (
-        <div style={{ background: "white", borderRadius: "12px", border: "1px solid var(--border-color)", overflow: "hidden" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
+        <div key={viewMode} className="view-transition-container">
+          {viewMode === "grid" ? (
+            <div className="mps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>
+              {filteredMPs.map((mp) => (
+                <MPCard key={mp.mpId} mp={mp} onSelectMP={onSelectMP} />
+              ))}
+            </div>
+          ) : (
+            <div className="mp-table-container" style={{ background: "white", borderRadius: "12px", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03)" }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
               <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)" }}>
+                <tr style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>
                   <TableColumnHeader
                     title="Rank"
                     field="rank"
                     currentSortField={sortField}
                     currentSortDirection={sortOrder}
                     onSort={handleSortChange}
-                    style={{ width: "90px" }}
+                    style={{ width: "80px", padding: "18px 24px" }}
                   />
                   <TableColumnHeader
                     title="Member of Parliament"
@@ -375,6 +509,7 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
                     filterOptions={statesList.map(s => ({ label: `State: ${s}`, value: s.toLowerCase() }))}
                     selectedFilter={stateFilter}
                     onFilterChange={setStateFilter}
+                    style={{ padding: "18px 24px" }}
                   />
                   <TableColumnHeader
                     title="House & Party"
@@ -396,27 +531,31 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
                         setPartyFilter(val);
                       }
                     }}
+                    style={{ padding: "18px 24px" }}
                   />
                   <TableColumnHeader
-                    title="Constituency"
-                    field="constituency"
+                    title="Works Portfolio"
+                    field="worksRecommendedCount"
                     currentSortField={sortField}
                     currentSortDirection={sortOrder}
                     onSort={handleSortChange}
+                    style={{ padding: "18px 24px" }}
                   />
                   <TableColumnHeader
-                    title="Sanctioned"
+                    title="Sanctioned Outlay"
                     field="totalSanctioned"
                     currentSortField={sortField}
                     currentSortDirection={sortOrder}
                     onSort={handleSortChange}
+                    style={{ padding: "18px 24px" }}
                   />
                   <TableColumnHeader
-                    title="Utilized"
+                    title="Expenditure"
                     field="totalUtilized"
                     currentSortField={sortField}
                     currentSortDirection={sortOrder}
                     onSort={handleSortChange}
+                    style={{ padding: "18px 24px" }}
                   />
                   <TableColumnHeader
                     title="Utilization Rate"
@@ -424,9 +563,17 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
                     currentSortField={sortField}
                     currentSortDirection={sortOrder}
                     onSort={handleSortChange}
-                    style={{ width: "170px" }}
+                    filterOptions={[
+                      { label: "All Tiers", value: "all" },
+                      { label: "High (>= 70%)", value: "high" },
+                      { label: "Average (40-69%)", value: "medium" },
+                      { label: "Needs Attention (< 40%)", value: "low" },
+                    ]}
+                    selectedFilter={filterTier}
+                    onFilterChange={setFilterTier}
+                    style={{ width: "220px", padding: "18px 24px" }}
                   />
-                  <th style={{ padding: "12px 16px", textAlign: "right", color: "var(--text-secondary)", fontWeight: 700 }}>Actions</th>
+                  <th style={{ padding: "18px 24px", textAlign: "right", color: "#64748b", fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -434,55 +581,118 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
                   <tr
                     key={mp.mpId}
                     onClick={() => onSelectMP(mp)}
-                    style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", transition: "background 0.15s" }}
-                    className="hover:bg-blue-50/40"
+                    className="hover:bg-slate-50/90 cursor-pointer transition-all border-b border-slate-200 text-sm group"
+                    style={{ borderBottom: "1px solid #e2e8f0" }}
                   >
-                    <td style={{ padding: "14px 16px", fontWeight: 700, color: "var(--text-secondary)" }}>
-                      #{mp.rank}
+                    {/* Rank */}
+                    <td style={{ padding: "22px 24px", width: "80px", verticalAlign: "middle" }} className="font-bold text-slate-500">
+                      <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-700 text-slate-700 text-xs font-bold transition-colors">
+                        #{mp.rank}
+                      </span>
                     </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{mp.name}</div>
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{mp.state}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <span className="house-badge">{mp.house}</span>
-                      {mp.party && (
-                        <span className="house-badge" style={{ background: "#eff6ff", color: "#1d4ed8", marginLeft: "4px" }}>
-                          {mp.party}
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: "14px 16px", color: "var(--text-secondary)" }}>{mp.constituency}</td>
-                    <td style={{ padding: "14px 16px", fontWeight: 600 }}>
-                      {formatCurrency(mp.totalSanctioned)}
-                    </td>
-                    <td style={{ padding: "14px 16px", fontWeight: 600, color: "#059669" }}>
-                      {formatCurrency(mp.totalUtilized)}
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 700, marginBottom: "4px" }}>
-                        <span>{mp.utilizationPercentage}%</span>
+
+                    {/* Member of Parliament */}
+                    <td style={{ padding: "22px 24px", verticalAlign: "middle" }}>
+                      <div className="font-semibold text-slate-900 flex items-center gap-2 text-[0.975rem]">
+                        <User className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>{mp.name}</span>
                       </div>
-                      <div style={{ width: "100%", height: "6px", background: "#f1f5f9", borderRadius: "9999px", overflow: "hidden" }}>
+                      <div className="text-xs text-slate-500 mt-2 flex items-center gap-2">
+                        <span className="font-medium text-slate-700">{mp.state}</span>
+                        {mp.constituency && (
+                          <>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-500">{mp.constituency}</span>
+                          </>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* House & Party */}
+                    <td style={{ padding: "22px 24px", verticalAlign: "middle" }}>
+                      <div className="flex flex-col gap-1.5 items-start">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                          mp.house === "Lok Sabha"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : "bg-purple-50 text-purple-700 border-purple-200"
+                        }`}>
+                          {mp.house}
+                        </span>
+                        {mp.party && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                            {mp.party}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Works Portfolio */}
+                    <td style={{ padding: "22px 24px", verticalAlign: "middle" }} className="text-slate-700">
+                      <div className="font-semibold text-slate-900 text-[0.95rem]">
+                        {(mp.worksRecommendedCount || 0).toLocaleString("en-IN")} Works
+                      </div>
+                      <div className="text-xs text-slate-500 mt-2">
+                        <span className="text-emerald-600 font-semibold">
+                          {(mp.worksCompletedCount || 0).toLocaleString("en-IN")} done
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Sanctioned Outlay */}
+                    <td style={{ padding: "22px 24px", verticalAlign: "middle" }} className="font-semibold text-slate-900" title={`Exact: ₹${mp.totalSanctioned.toLocaleString("en-IN")}`}>
+                      <div className="text-[0.95rem]">{formatCurrency(mp.totalSanctioned)}</div>
+                      <div className="text-[11px] text-slate-400 font-normal mt-1.5">Sanctioned Outlay</div>
+                    </td>
+
+                    {/* Expenditure */}
+                    <td style={{ padding: "22px 24px", verticalAlign: "middle" }} className="font-semibold text-emerald-700" title={`Exact: ₹${mp.totalUtilized.toLocaleString("en-IN")}`}>
+                      <div className="text-[0.95rem]">{formatCurrency(mp.totalUtilized)}</div>
+                      <div className="text-[11px] text-slate-400 font-normal mt-1.5">Certified Spent</div>
+                    </td>
+
+                    {/* Utilization Rate */}
+                    <td style={{ padding: "22px 24px", width: "220px", verticalAlign: "middle" }}>
+                      <div className="flex items-center justify-between text-xs mb-2.5">
+                        <span className="font-bold text-slate-900 text-sm">
+                          {mp.utilizationPercentage}%
+                        </span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${getUtilColor(
+                            mp.utilizationPercentage
+                          )}`}
+                        >
+                          {mp.utilizationPercentage >= 70
+                            ? "High"
+                            : mp.utilizationPercentage >= 40
+                              ? "Moderate"
+                              : "Low"}
+                        </span>
+                      </div>
+                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                         <div
-                          style={{
-                            height: "100%",
-                            borderRadius: "inherit",
-                            background: mp.utilizationPercentage >= 70 ? "#059669" : mp.utilizationPercentage >= 40 ? "#d97706" : "#dc2626",
-                            width: `${Math.min(100, mp.utilizationPercentage)}%`,
-                          }}
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            mp.utilizationPercentage >= 70
+                              ? "bg-emerald-500"
+                              : mp.utilizationPercentage >= 40
+                                ? "bg-amber-500"
+                                : "bg-rose-500"
+                          }`}
+                          style={{ width: `${Math.min(100, mp.utilizationPercentage)}%` }}
                         />
                       </div>
                     </td>
-                    <td style={{ padding: "14px 16px", textAlign: "right" }}>
+
+                    {/* Action */}
+                    <td style={{ padding: "22px 24px", textAlign: "right", verticalAlign: "middle" }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           onSelectMP(mp);
                         }}
-                        style={{ padding: "6px 12px", borderRadius: "6px", border: "none", background: "#eff6ff", color: "var(--primary-600)", fontWeight: 600, fontSize: "0.8rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50/80 hover:bg-blue-100 hover:text-blue-800 transition-all border border-blue-200/60 shadow-xs cursor-pointer"
                       >
-                        Dossier <ArrowRight size={13} />
+                        <span>View Details</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>
@@ -490,6 +700,8 @@ export const MPList: React.FC<MPListProps> = ({ mps, onSelectMP, isLoading = fal
               </tbody>
             </table>
           </div>
+        </div>
+      )}
         </div>
       )}
     </div>
