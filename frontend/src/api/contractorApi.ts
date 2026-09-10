@@ -34,6 +34,60 @@ export interface SubmitStagePayload {
   notes: string;
 }
 
+// Helper functions for persistent local storage of evidence submissions and project overrides
+const STORAGE_KEY_SUBMISSIONS = "mplads_contractor_submissions_v2";
+const STORAGE_KEY_PROJECT_OVERRIDES = "mplads_contractor_project_overrides_v2";
+
+function getStoredSubmissionsMap(): Record<string, EvidenceSubmissionRecord[]> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SUBMISSIONS);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn("Failed to load stored submissions from localStorage:", e);
+    return {};
+  }
+}
+
+function saveSubmissionRecordToStorage(workId: string, record: EvidenceSubmissionRecord) {
+  try {
+    const map = getStoredSubmissionsMap();
+    const existing = map[workId] || [];
+    const idx = existing.findIndex(r => r.id === record.id);
+    if (idx >= 0) {
+      existing[idx] = record;
+    } else {
+      existing.unshift(record);
+    }
+    map[workId] = existing;
+    localStorage.setItem(STORAGE_KEY_SUBMISSIONS, JSON.stringify(map));
+  } catch (e) {
+    console.warn("Failed to save submission record to localStorage:", e);
+  }
+}
+
+function getStoredProjectOverridesMap(): Record<string, Partial<ContractorProject>> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PROJECT_OVERRIDES);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn("Failed to load stored project overrides from localStorage:", e);
+    return {};
+  }
+}
+
+function saveProjectOverrideToStorage(workId: string, override: Partial<ContractorProject>) {
+  try {
+    const map = getStoredProjectOverridesMap();
+    map[workId] = {
+      ...(map[workId] || {}),
+      ...override
+    };
+    localStorage.setItem(STORAGE_KEY_PROJECT_OVERRIDES, JSON.stringify(map));
+  } catch (e) {
+    console.warn("Failed to save project override to localStorage:", e);
+  }
+}
+
 // In-memory store for mutated session state
 let localProjects: ContractorProject[] = [];
 let localNotifications: ContractorNotification[] = [...INITIAL_NOTIFICATIONS];
@@ -66,9 +120,9 @@ export const contractorApi = {
   /**
    * Fetch authority-assigned works for the contractor (filtered by vendorId & district)
    */
-  async getContractorProjects(vendorId: string = "VEN-2024-MP-4120"): Promise<ContractorProject[]> {
+  async getContractorProjects(vendorId: string = "VEN-HR-GGM-01"): Promise<ContractorProject[]> {
     const targetVendor = REGISTERED_VENDORS.find(v => v.vendorId === vendorId) || REGISTERED_VENDORS[0];
-    const vendorDistrictLower = (targetVendor.district || "Jabalpur").toLowerCase().trim();
+    const vendorDistrictLower = (targetVendor.district || "Gurugram").toLowerCase().trim();
 
     // 1. Fetch raw live DB projects for contractor's district
     let rawDbProjects: any[] = [];
@@ -85,8 +139,7 @@ export const contractorApi = {
     let datasetToMap = districtFiltered;
     if (districtFiltered.length === 0) {
       if (vendorDistrictLower === "rohtak") datasetToMap = ROHTAK_WORKS as any[];
-      else if (vendorDistrictLower === "gurugram") datasetToMap = GURUGRAM_WORKS as any[];
-      else datasetToMap = JABALPUR_WORKS as any[];
+      else datasetToMap = GURUGRAM_WORKS as any[];
     }
 
     // List of empanelled vendors registered for this vendor's district
@@ -94,23 +147,27 @@ export const contractorApi = {
       (v.district || "").toLowerCase().trim() === vendorDistrictLower
     );
 
-    // Map DB rows to ContractorProject
+    const storedSubmissionsMap = getStoredSubmissionsMap();
+    const storedOverridesMap = getStoredProjectOverridesMap();
+
+    // Map DB rows to ContractorProject with exact authority quota assignments
     const mappedProjects: ContractorProject[] = datasetToMap.map((p: any, idx: number) => {
-      // Find assigned vendor matching DB contractor/tender_reference_no, or distribute evenly
-      let assignedVendor = districtVendors.find(v => v.firmName === (p.tender_reference_no || p.contractor));
-      if (!assignedVendor) {
-        assignedVendor = districtVendors[idx % Math.max(1, districtVendors.length)] || targetVendor;
+      let assignedVendor;
+      if (vendorDistrictLower === "gurugram") {
+        const v1 = districtVendors.find(v => v.vendorId === "VEN-HR-GGM-01") || districtVendors[0];
+        const v2 = districtVendors.find(v => v.vendorId === "VEN-HR-GGM-02") || districtVendors[1] || v1;
+        assignedVendor = (idx % 10 < 7) ? v1 : v2;
+      } else if (vendorDistrictLower === "rohtak") {
+        const v1 = districtVendors.find(v => v.vendorId === "VEN-HR-RTK-01") || districtVendors[0];
+        const v2 = districtVendors.find(v => v.vendorId === "VEN-HR-RTK-02") || districtVendors[1] || v1;
+        assignedVendor = (idx % 10 < 6) ? v1 : v2;
+      } else {
+        assignedVendor = districtVendors.find(v => v.firmName === (p.tender_reference_no || p.contractor)) ||
+                         districtVendors[idx % Math.max(1, districtVendors.length)] || targetVendor;
       }
 
       const workId = p.project_id || p.id || `PROJ-${idx + 1}`;
       const existingLocal = localProjects.find(lp => lp.id === workId);
-      if (existingLocal) {
-        return {
-          ...existingLocal,
-          vendorId: assignedVendor.vendorId,
-          contractorName: assignedVendor.firmName
-        };
-      }
 
       const calculatedSchedule = calculateMonitoringSchedule({
         workId: workId,
@@ -120,8 +177,57 @@ export const contractorApi = {
       });
 
       const sanctionedRs = Number(p.sanctioned_amount || (p.sanctionedAmt || 0.10) * 10000000);
-      const utilizedRs = Number(p.utilized_amount || (p.expenditureAmt || 0) * 10000000);
-      const remainingRs = Math.max(0, sanctionedRs - utilizedRs);
+      const initialUtilizedRs = Number(p.utilized_amount || (p.expenditureAmt || 0) * 10000000);
+
+      // Merge stored submissions & project overrides from localStorage
+      const localSavedRecords = storedSubmissionsMap[workId] || [];
+      const projectOverride = storedOverridesMap[workId] || {};
+
+      let currentSchedule = existingLocal?.schedule || projectOverride.schedule || calculatedSchedule.stages;
+      let submissionRecords: EvidenceSubmissionRecord[] = existingLocal?.submissionRecords && existingLocal.submissionRecords.length > 0
+        ? existingLocal.submissionRecords
+        : localSavedRecords;
+
+      localSavedRecords.forEach(lsRec => {
+        if (!submissionRecords.some(r => r.id === lsRec.id)) {
+          submissionRecords = [lsRec, ...submissionRecords];
+        }
+      });
+
+      let cumulativeSpent = 0;
+      let maxProgress = existingLocal?.physicalProgress || projectOverride.physicalProgress || (p.progress_percentage ?? p.physicalProgress ?? 35);
+
+      if (submissionRecords.length > 0) {
+        currentSchedule = currentSchedule.map(stage => {
+          const rec = submissionRecords.find(r => r.checkpointActionId === stage.stageId || r.checkpointActionName === stage.stageName);
+          if (rec) {
+            return {
+              ...stage,
+              status: "COMPLETED" as const,
+              submissionStatus: "Submitted" as const,
+              submittedDate: rec.uploadTimestamp?.split(' ')[0] || "Submitted",
+              submissionRecord: rec
+            };
+          }
+          return stage;
+        });
+
+        submissionRecords.forEach(rec => {
+          cumulativeSpent += (Number(rec.expenditureAmountRs) || 0);
+          if (rec.physicalProgressPercent > maxProgress) {
+            maxProgress = rec.physicalProgressPercent;
+          }
+        });
+      }
+
+      // Calculate total cumulative spent (adding up across all stages)
+      const maxSpent = cumulativeSpent > 0
+        ? cumulativeSpent
+        : (existingLocal?.utilizedAmountRs || projectOverride.utilizedAmountRs || initialUtilizedRs);
+
+      const remainingRs = Math.max(0, sanctionedRs - maxSpent);
+      const isCompleted = maxProgress >= 100;
+      const isAnomaly = maxSpent > sanctionedRs;
 
       return {
         id: workId,
@@ -136,19 +242,20 @@ export const contractorApi = {
         vendorId: assignedVendor.vendorId,
         sanctionAmountRs: sanctionedRs,
         recommendedAmountRs: Number(p.recommended_amount || sanctionedRs),
-        utilizedAmountRs: utilizedRs,
+        utilizedAmountRs: maxSpent,
         remainingAmountRs: remainingRs,
-        physicalProgress: p.progress_percentage ?? p.physicalProgress ?? 35,
+        physicalProgress: maxProgress,
         officialStartDate: p.start_date || p.dateSanctioned || "2024-04-01",
         officialExpectedCompletionDate: p.expected_completion_date || p.targetCompletion || "2025-03-31",
-        currentWorkStatus: p.status === "Completed" ? "Completed" : "InProgress",
-        monitoringStatus: "Active Monitoring",
-        nextRequiredSubmission: calculatedSchedule.stages[0]?.stageName || "Initial Work Evidence",
-        nextSubmissionDueDate: calculatedSchedule.stages[0]?.scheduledEndDate || p.expected_completion_date || "2025-03-31",
-        riskIndicator: (p.progress_percentage || 0) < 30 ? "Delay Risk" : "Low Risk",
+        currentWorkStatus: isCompleted ? "Completed" : (p.status === "Completed" ? "Completed" : "InProgress"),
+        monitoringStatus: isAnomaly ? "Expenditure Anomaly (Over Budget)" : (isCompleted ? "Completed" : (submissionRecords.length > 0 ? "Under Scrutiny" : "Active Monitoring")),
+        nextRequiredSubmission: currentSchedule.find(s => s.status !== "COMPLETED")?.stageName || "Final Certificate",
+        nextSubmissionDueDate: currentSchedule.find(s => s.status !== "COMPLETED")?.scheduledEndDate || p.expected_completion_date || "2025-03-31",
+        riskIndicator: isAnomaly ? "High Anomaly Risk" : (maxProgress < 30 ? "Delay Risk" : "Low Risk"),
         checkpointActions: [],
-        schedule: calculatedSchedule.stages,
-        submissionRecords: []
+        schedule: currentSchedule,
+        submissionRecords: submissionRecords,
+        ...projectOverride
       };
     });
 
@@ -174,7 +281,11 @@ export const contractorApi = {
    * Fetch single assigned project detail by ID
    */
   async getContractorProject(id: string): Promise<ContractorProject | null> {
-    const found = localProjects.find(p => p.id === id);
+    let found = localProjects.find(p => p.id === id);
+    if (!found) {
+      await this.getContractorProjects();
+      found = localProjects.find(p => p.id === id);
+    }
     return Promise.resolve(found ? { ...found } : null);
   },
 
@@ -258,20 +369,46 @@ export const contractorApi = {
           };
         }
 
-        const isCompleted = payload.physicalProgressPercent >= 100;
-        const newUtilized = payload.expenditureAmountRs;
-        const newRemaining = Math.max(0, project.sanctionAmountRs - newUtilized);
+        const existingRecordsFiltered = project.submissionRecords.filter(r => r.id !== newRecord?.id && r.checkpointActionId !== stageId);
+        const updatedSubmissionRecords = [newRecord, ...existingRecordsFiltered];
 
-        return {
+        // Sum up expenditure from ALL stage submission records (cumulative)
+        let cumulativeSpent = 0;
+        updatedSubmissionRecords.forEach(rec => {
+          cumulativeSpent += (Number(rec.expenditureAmountRs) || 0);
+        });
+
+        const isCompleted = payload.physicalProgressPercent >= 100;
+        const isAnomaly = cumulativeSpent > project.sanctionAmountRs;
+        const newRemaining = Math.max(0, project.sanctionAmountRs - cumulativeSpent);
+
+        const updatedProj = {
           ...project,
-          physicalProgress: payload.physicalProgressPercent,
-          utilizedAmountRs: newUtilized,
+          physicalProgress: Math.max(project.physicalProgress, payload.physicalProgressPercent),
+          utilizedAmountRs: cumulativeSpent,
           remainingAmountRs: newRemaining,
           currentWorkStatus: isCompleted ? ("Completed" as const) : project.currentWorkStatus,
-          monitoringStatus: isCompleted ? ("Completed" as const) : ("Under Scrutiny" as const),
+          monitoringStatus: isAnomaly 
+            ? ("Expenditure Anomaly (Over Budget)" as const)
+            : (isCompleted ? ("Completed" as const) : ("Under Scrutiny" as const)),
+          riskIndicator: isAnomaly ? ("High Anomaly Risk" as const) : project.riskIndicator,
           schedule: updatedSchedule,
-          submissionRecords: [newRecord, ...project.submissionRecords]
+          submissionRecords: updatedSubmissionRecords
         };
+
+        // Save persistently to localStorage so data survives reloads
+        saveSubmissionRecordToStorage(workId, newRecord);
+        saveProjectOverrideToStorage(workId, {
+          physicalProgress: updatedProj.physicalProgress,
+          utilizedAmountRs: cumulativeSpent,
+          remainingAmountRs: newRemaining,
+          currentWorkStatus: updatedProj.currentWorkStatus,
+          monitoringStatus: updatedProj.monitoringStatus,
+          riskIndicator: updatedProj.riskIndicator,
+          schedule: updatedSchedule
+        });
+
+        return updatedProj;
       }
       return project;
     });
@@ -312,6 +449,17 @@ export const contractorApi = {
     } else {
       localProjects.unshift(project);
     }
+    saveProjectOverrideToStorage(project.id, {
+      physicalProgress: project.physicalProgress,
+      utilizedAmountRs: project.utilizedAmountRs,
+      remainingAmountRs: project.remainingAmountRs,
+      currentWorkStatus: project.currentWorkStatus,
+      monitoringStatus: project.monitoringStatus,
+      schedule: project.schedule,
+      completionCertificateStatus: project.completionCertificateStatus,
+      completionCertificateRequestedDate: project.completionCertificateRequestedDate,
+      completionCertificateRemarks: project.completionCertificateRemarks
+    });
     return Promise.resolve();
   },
 
@@ -354,6 +502,12 @@ export const contractorApi = {
     };
 
     localProjects[projIdx] = updatedProj;
+
+    saveProjectOverrideToStorage(workId, {
+      completionCertificateStatus: 'Requested',
+      completionCertificateRequestedDate: todayStr,
+      completionCertificateRemarks: updatedProj.completionCertificateRemarks
+    });
 
     // Add notification
     localNotifications.unshift({

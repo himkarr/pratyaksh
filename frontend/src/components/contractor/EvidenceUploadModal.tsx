@@ -17,6 +17,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { ContractorProject, MonitoringScheduleItem, SubmittedFileItem } from "../../data/contractorData";
 import { SubmitStagePayload } from "../../api/contractorApi";
+import { fileToOptimizedDataUrl } from "../../utils/imageUploadHelper";
 
 interface EvidenceUploadModalProps {
   isOpen: boolean;
@@ -38,7 +39,10 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   // Form State
   const [evidenceType, setEvidenceType] = useState<string>("Geo-tagged Work Progress Photo");
   const [physicalProgress, setPhysicalProgress] = useState<number>(stage.targetProgressPercent || project.physicalProgress || 0);
-  const [expenditureAmount, setExpenditureAmount] = useState<number>(project.utilizedAmountRs || 0);
+  const [expenditureAmount, setExpenditureAmount] = useState<number>(() => {
+    const stageCount = Math.max(1, project.schedule?.length || 4);
+    return Math.round((project.sanctionAmountRs || 1000000) / stageCount);
+  });
   const [workStage, setWorkStage] = useState<string>(stage.stageName);
   const [materialStatus, setMaterialStatus] = useState<string>("Sufficient material stock available on site");
   const [notes, setNotes] = useState<string>("");
@@ -113,29 +117,27 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
     }
   };
 
-  const handleCustomPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCustomPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const filesArr = Array.from(e.target.files);
 
-    filesArr.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl) {
-          const newP: SubmittedFileItem = {
-            name: file.name,
-            url: dataUrl,
-            size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-            type: evidenceType.includes("Material") ? "Material Photo" : "Geo-tagged Photo",
-            lat: latitude || 18.5204,
-            lng: longitude || 73.8567,
-            timestamp: new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-          };
-          setPhotos((prev) => [...prev, newP]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of filesArr) {
+      try {
+        const dataUrl = await fileToOptimizedDataUrl(file);
+        const newP: SubmittedFileItem = {
+          name: file.name,
+          url: dataUrl,
+          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+          type: evidenceType.includes("Material") ? "Material Photo" : "Geo-tagged Photo",
+          lat: latitude || 18.5204,
+          lng: longitude || 73.8567,
+          timestamp: new Date().toLocaleDateString("en-GB") + " " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+        };
+        setPhotos((prev) => [...prev, newP]);
+      } catch (err) {
+        console.warn("Photo upload error:", err);
+      }
+    }
 
     if (e.target) {
       e.target.value = "";
@@ -542,7 +544,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
             <div>
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--gov-primary)", display: "block" }}>
-                Expenditure Incurred To Date (₹) *
+                Stage Expenditure Incurred (₹) *
               </label>
               <input
                 type="number"
@@ -551,6 +553,9 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                 onChange={(e) => setExpenditureAmount(Number(e.target.value))}
                 style={{ fontWeight: 700, width: "100%", marginTop: "3px" }}
               />
+              <span style={{ fontSize: "0.70rem", color: "var(--text-muted)", marginTop: "2px", display: "block" }}>
+                Enter expenditure incurred for this stage period. Stage expenditures accumulate across all stages to track total outlay vs sanctioned amount.
+              </span>
             </div>
 
             <div>

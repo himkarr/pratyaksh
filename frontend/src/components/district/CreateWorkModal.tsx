@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Building2, 
   X, 
@@ -26,7 +26,10 @@ export const CreateWorkModal: React.FC<CreateWorkModalProps> = ({
   onClose,
   onWorkCreated
 }) => {
-  const registeredVendors = districtContractorSync.getRegisteredVendors();
+  // Filter registered vendors strictly by active district (e.g. Rohtak vs Gurugram)
+  const registeredVendors = useMemo(() => {
+    return districtContractorSync.getRegisteredVendors(districtName);
+  }, [districtName]);
 
   // Form State
   const [workId, setWorkId] = useState<string>(`WORK-${stateName.slice(0, 2).toUpperCase()}-2024-00${Math.floor(Math.random() * 90 + 10)}`);
@@ -35,12 +38,18 @@ export const CreateWorkModal: React.FC<CreateWorkModalProps> = ({
   const [sanctionedAmt, setSanctionedAmt] = useState<string>("0.25"); // in Cr
   const [constituency, setConstituency] = useState<string>(`${districtName} (Gen-01)`);
   const [mpName, setMpName] = useState<string>("Hon'ble Member of Parliament");
-  const [selectedVendorId, setSelectedVendorId] = useState<string>(registeredVendors[0]?.vendorId || "");
+  const [selectedVendorId, setSelectedVendorId] = useState<string>(() => registeredVendors[0]?.vendorId || "");
   const [startDate, setStartDate] = useState<string>("2024-04-01");
   const [targetDate, setTargetDate] = useState<string>("2025-03-31");
   const [justification, setJustification] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (registeredVendors.length > 0 && !registeredVendors.some(v => v.vendorId === selectedVendorId)) {
+      setSelectedVendorId(registeredVendors[0].vendorId);
+    }
+  }, [registeredVendors, selectedVendorId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +83,7 @@ export const CreateWorkModal: React.FC<CreateWorkModalProps> = ({
         status: "Sanctioned",
         dateSanctioned: startDate,
         targetCompletion: targetDate,
-        agency: "DRDA / Executive Engineer",
+        agency: vendorObj ? vendorObj.firmName : "DRDA / Executive Engineer",
         contractor: vendorObj ? vendorObj.firmName : "Empanelled Vendor",
         justification: justification.trim() || "Sanctioned under statutory MPLADS annual development allocation.",
         attachments: [],

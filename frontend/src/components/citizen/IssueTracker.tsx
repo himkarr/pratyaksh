@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { CitizenIssue } from "../../data/citizenData";
 import { Button, EmptyState } from "../ui";
+import { getCategoryFallbackImage } from "../../utils/imageUploadHelper";
 
 export interface IssueTrackerProps {
   issues: CitizenIssue[];
@@ -186,30 +187,6 @@ export const IssueTracker: React.FC<IssueTrackerProps> = ({
             <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
               Track work recommendation requests submitted to your MP and local grievance reports
             </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {onOpenRecommendModal && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onOpenRecommendModal}
-                icon={<Sparkles size={14} />}
-                style={{ background: "#059669", borderColor: "#047857", fontWeight: 700 }}
-              >
-                Propose Recommendation
-              </Button>
-            )}
-            {onOpenReportModal && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onOpenReportModal}
-                icon={<Plus size={14} />}
-              >
-                Report Problem
-              </Button>
-            )}
           </div>
         </div>
 
@@ -514,6 +491,9 @@ export const IssueTracker: React.FC<IssueTrackerProps> = ({
                                 src={photo.url}
                                 alt={photo.caption || "Evidence"}
                                 style={{ width: "100%", height: "95px", objectFit: "cover" }}
+                                onError={(e) => {
+                                  e.currentTarget.src = getCategoryFallbackImage(issue.category);
+                                }}
                               />
                               <div style={{ padding: "4px 6px", fontSize: "0.68rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {photo.caption || "Site Photo"}

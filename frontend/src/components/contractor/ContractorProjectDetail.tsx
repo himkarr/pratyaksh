@@ -7,14 +7,13 @@ import { EvidenceUploadModal } from "./EvidenceUploadModal";
 import { RequestCompletionCertificateModal } from "./RequestCompletionCertificateModal";
 import { SubmissionHistory } from "./SubmissionHistory";
 import { Button } from "../ui/Button";
-import { CivicUtilizationGauge } from "../common/CivicUtilizationGauge";
 
 interface ContractorProjectDetailProps {
   project: ContractorProject;
   onBack: () => void;
   onSubmitStageEvidence: (
-    workId: string, 
-    stageId: string, 
+    workId: string,
+    stageId: string,
     payload: SubmitStagePayload
   ) => void;
   onRequestCompletionCertificate?: (workId: string, remarks: string) => void;
@@ -94,126 +93,6 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
           </div>
         </div>
 
-        {/* Top Visual Row: Gauge & 2x2 Overview Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: "16px", marginBottom: "8px" }}>
-          {/* Left: Speedometer Gauge */}
-          <div style={{ background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <CivicUtilizationGauge
-              utilization={(project.sanctionAmountRs && project.sanctionAmountRs > 0)
-                ? Math.min(100, Math.round(((project.utilizedAmountRs || 0) / project.sanctionAmountRs) * 100))
-                : (project.physicalProgress || 0)}
-              title={`${project.title.slice(0, 32).toUpperCase()} Utilization`}
-              cardHeader="Fund Utilization"
-              showInfoIcon={true}
-              size="sm"
-              hideCardWrap={true}
-            />
-          </div>
-
-          {/* Right: 2x2 Colored Overview Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            {/* Sanctioned */}
-            <div
-              className="card-hover-accent accent-green cursor-pointer"
-              style={{
-                background: "#ffffff",
-                border: "1px solid var(--border-light, #e2e8f0)",
-                borderRadius: "10px",
-                padding: "12px 14px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                boxSizing: "border-box"
-              }}
-            >
-              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <CheckCircle2 size={17} />
-              </div>
-              <div>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
-                  {formatCurrency(project.sanctionAmountRs)}
-                </span>
-                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Sanction Outlay</span>
-              </div>
-            </div>
-
-            {/* Recommended */}
-            <div
-              className="card-hover-accent accent-amber cursor-pointer"
-              style={{
-                background: "#ffffff",
-                border: "1px solid var(--border-light, #e2e8f0)",
-                borderRadius: "10px",
-                padding: "12px 14px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                boxSizing: "border-box"
-              }}
-            >
-              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#fffbeb", color: "#d97706", border: "1px solid #fde68a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <TrendingUp size={17} />
-              </div>
-              <div>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
-                  {formatCurrency(project.recommendedAmountRs)}
-                </span>
-                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Recommended</span>
-              </div>
-            </div>
-
-            {/* Spent */}
-            <div
-              className="card-hover-accent accent-sky cursor-pointer"
-              style={{
-                background: "#ffffff",
-                border: "1px solid var(--border-light, #e2e8f0)",
-                borderRadius: "10px",
-                padding: "12px 14px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                boxSizing: "border-box"
-              }}
-            >
-              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#f0f9ff", color: "#0284c7", border: "1px solid #bae6fd", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Target size={17} />
-              </div>
-              <div>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
-                  {formatCurrency(project.utilizedAmountRs)}
-                </span>
-                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Spent Amount</span>
-              </div>
-            </div>
-
-            {/* Physical Execution */}
-            <div
-              className="card-hover-accent accent-navy cursor-pointer"
-              style={{
-                background: "#ffffff",
-                border: "1px solid var(--border-light, #e2e8f0)",
-                borderRadius: "10px",
-                padding: "12px 14px",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                boxSizing: "border-box"
-              }}
-            >
-              <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Clock size={17} />
-              </div>
-              <div>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", display: "block", lineHeight: 1.1 }}>
-                  {project.physicalProgress || 0}%
-                </span>
-                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>Physical Progress</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Detailed Official Parameters Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "14px", fontSize: "0.8rem" }}>
           <div>
@@ -282,14 +161,29 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
 
           <div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 700 }}>CURRENT EXPENDITURE</div>
-            <div style={{ fontWeight: 700, color: project.utilizedAmountRs !== null ? "var(--status-success-text)" : "var(--text-muted)", marginTop: "2px" }}>
+            <div style={{ 
+              fontWeight: 800, 
+              color: (project.utilizedAmountRs && project.sanctionAmountRs && project.utilizedAmountRs > project.sanctionAmountRs)
+                ? "#dc2626"
+                : project.utilizedAmountRs !== null ? "var(--status-success-text)" : "var(--text-muted)", 
+              marginTop: "2px" 
+            }}>
               {formatCurrency(project.utilizedAmountRs)}
+              {(project.utilizedAmountRs && project.sanctionAmountRs && project.utilizedAmountRs > project.sanctionAmountRs) && (
+                <span style={{ fontSize: "0.68rem", background: "#fee2e2", color: "#b91c1c", padding: "1px 6px", borderRadius: "4px", marginLeft: "6px", fontWeight: 800 }}>
+                  ANOMALY OVERRUN
+                </span>
+              )}
             </div>
           </div>
 
           <div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 700 }}>AMOUNT REMAINING</div>
-            <div style={{ fontWeight: 700, color: project.remainingAmountRs !== null ? "var(--text-main)" : "var(--text-muted)", marginTop: "2px" }}>
+            <div style={{ 
+              fontWeight: 700, 
+              color: (project.utilizedAmountRs && project.sanctionAmountRs && project.utilizedAmountRs > project.sanctionAmountRs) ? "#dc2626" : (project.remainingAmountRs !== null ? "var(--text-main)" : "var(--text-muted)"), 
+              marginTop: "2px" 
+            }}>
               {formatCurrency(project.remainingAmountRs)}
             </div>
           </div>
@@ -301,16 +195,28 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
             </div>
           </div>
         </div>
+
+        {(project.utilizedAmountRs && project.sanctionAmountRs && project.utilizedAmountRs > project.sanctionAmountRs) && (
+          <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "8px", padding: "12px 16px", display: "flex", alignItems: "center", gap: "12px", color: "#991b1b" }}>
+            <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: "0.85rem" }}>EXPENDITURE ANOMALY DETECTED</div>
+              <div style={{ fontSize: "0.78rem", marginTop: "2px" }}>
+                Total cumulative stage expenditure (<strong>{formatCurrency(project.utilizedAmountRs)}</strong>) has exceeded the total sanctioned outlay (<strong>{formatCurrency(project.sanctionAmountRs)}</strong>) by <strong>{formatCurrency(project.utilizedAmountRs - project.sanctionAmountRs)}</strong>. Flagged for District Audit Inquiry.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
       {/* SECTION 2: OFFICIAL SCHEDULE PROVIDED BY AUTHORITY                         */}
       {/* ========================================================================= */}
-      <div 
-        className="civic-card" 
-        style={{ 
-          padding: "16px 20px", 
-          background: "var(--status-info-bg)", 
+      <div
+        className="civic-card"
+        style={{
+          padding: "16px 20px",
+          background: "var(--status-info-bg)",
           border: "1px solid var(--status-info-border)",
           display: "flex",
           justifyContent: "space-between",

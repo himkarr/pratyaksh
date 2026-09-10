@@ -2,16 +2,18 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { 
   MapPin, Plus, Minus, Navigation, Layers, CheckCircle2, 
   Clock, AlertTriangle, ArrowRight, X, IndianRupee, Landmark,
-  ExternalLink, Flag, Search, Filter, Compass, Maximize2
+  ExternalLink, Flag, Search, Filter, Compass, Maximize2, Minimize2, Eye
 } from "lucide-react";
 import { WorkItem } from "../../data/mpladsData";
 import { Button } from "../ui";
+import { getCategoryFallbackImage } from "../../utils/imageUploadHelper";
 
 export interface CitizenInteractiveMapProps {
   works: WorkItem[];
   currentConstituency?: string;
   onSelectWork: (work: WorkItem) => void;
   onReportProblem?: (work: WorkItem) => void;
+  onOpenReportModal?: (work: WorkItem) => void;
 }
 
 interface Coordinate {
@@ -19,12 +21,15 @@ interface Coordinate {
   lng: number;
 }
 
-type BasemapStyle = "voyager" | "satellite" | "light" | "dark";
+type BasemapStyle = "voyager" | "street" | "satellite" | "light";
 
 // Comprehensive Indian Geographic Coordinates Dictionary for States, Districts, and Constituencies
 const INDIA_GEO_COORDINATES: Record<string, Coordinate> = {
   // Maharashtra
   "pune": { lat: 18.5204, lng: 73.8567 },
+  "baramati": { lat: 18.1517, lng: 74.5770 },
+  "shirur": { lat: 18.8267, lng: 74.3789 },
+  "maval": { lat: 18.7537, lng: 73.4842 },
   "mumbai": { lat: 19.0760, lng: 72.8777 },
   "mumbai north": { lat: 19.2288, lng: 72.8541 },
   "mumbai south": { lat: 18.9667, lng: 72.8167 },
@@ -76,6 +81,7 @@ const INDIA_GEO_COORDINATES: Record<string, Coordinate> = {
 
   // Haryana
   "rohtak": { lat: 28.8955, lng: 76.6066 },
+  "jind": { lat: 29.3156, lng: 76.3148 },
   "gurugram": { lat: 28.4595, lng: 77.0266 },
   "gurgaon": { lat: 28.4595, lng: 77.0266 },
   "kurukshetra": { lat: 29.9695, lng: 76.8783 },
@@ -146,9 +152,19 @@ const INDIA_GEO_COORDINATES: Record<string, Coordinate> = {
   "jammu": { lat: 32.7266, lng: 74.8570 }
 };
 
+// Deterministic local scatter around a district center (1.5km - 4.5km radius)
+const spreadLocally = (center: Coordinate, seedStr: string, index: number, radiusScale: number = 0.02): Coordinate => {
+  const hash = (seedStr || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) + (index + 1) * 31;
+  const angle = ((hash % 360) * Math.PI) / 180;
+  const dist = radiusScale + ((hash % 35) / 1000);
+  return {
+    lat: center.lat + Math.sin(angle) * dist,
+    lng: center.lng + Math.cos(angle) * (dist * 1.05),
+  };
+};
+
 // Accurate geocoding resolver for a work item
 const resolveWorkCoordinate = (work: WorkItem, index: number, fallbackCenter: Coordinate): Coordinate => {
-  // 1. Direct explicit coordinates
   if ((work as any).latitude && (work as any).longitude) {
     const lat = Number((work as any).latitude);
     const lng = Number((work as any).longitude);
@@ -157,40 +173,25 @@ const resolveWorkCoordinate = (work: WorkItem, index: number, fallbackCenter: Co
     }
   }
 
-  // 2. Lookup district
   const normDistrict = (work.district || "").trim().toLowerCase();
   if (normDistrict && INDIA_GEO_COORDINATES[normDistrict]) {
     const center = INDIA_GEO_COORDINATES[normDistrict];
     return spreadLocally(center, work.id, index);
   }
 
-  // 3. Lookup constituency
   const normConstituency = (work.constituency || "").trim().toLowerCase();
   if (normConstituency && INDIA_GEO_COORDINATES[normConstituency]) {
     const center = INDIA_GEO_COORDINATES[normConstituency];
     return spreadLocally(center, work.id, index);
   }
 
-  // 4. Lookup state
   const normState = (work.state || "").trim().toLowerCase();
   if (normState && INDIA_GEO_COORDINATES[normState]) {
     const center = INDIA_GEO_COORDINATES[normState];
     return spreadLocally(center, work.id, index, 0.04);
   }
 
-  // 5. Fallback center with local jitter
   return spreadLocally(fallbackCenter, work.id, index);
-};
-
-// Deterministic local scatter around a district center (1km - 5km radius)
-const spreadLocally = (center: Coordinate, seedStr: string, index: number, radiusScale: number = 0.02): Coordinate => {
-  const hash = (seedStr || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) + (index + 1) * 31;
-  const angle = ((hash % 360) * Math.PI) / 180;
-  const dist = radiusScale + ((hash % 35) / 1000); // 1.5km to 4.5km
-  return {
-    lat: center.lat + Math.sin(angle) * dist,
-    lng: center.lng + Math.cos(angle) * (dist * 1.05),
-  };
 };
 
 export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
@@ -198,22 +199,55 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
   currentConstituency = "Pune",
   onSelectWork,
   onReportProblem,
+  onOpenReportModal
 }) => {
-  // Determine constituency baseline coordinate
-  const normConst = (currentConstituency || "pune").trim().toLowerCase();
+  // Aliased report problem action
+  const reportAction = onReportProblem || onOpenReportModal;
+
+  const normConst = (currentConstituency || "rohtak").trim().toLowerCase();
   const baseCenterCoord = useMemo(() => {
-    return INDIA_GEO_COORDINATES[normConst] || INDIA_GEO_COORDINATES["pune"];
+    return INDIA_GEO_COORDINATES[normConst] || 
+      Object.entries(INDIA_GEO_COORDINATES).find(([k]) => normConst.includes(k))?.[1] || 
+      INDIA_GEO_COORDINATES["rohtak"] ||
+      INDIA_GEO_COORDINATES["pune"];
   }, [normConst]);
+
+  const [searchMapQuery, setSearchMapQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [selectedPinWork, setSelectedPinWork] = useState<WorkItem | null>(null);
+  const [hoveredPinWork, setHoveredPinWork] = useState<WorkItem | null>(null);
+  const [basemapStyle, setBasemapStyle] = useState<BasemapStyle>("voyager");
+
+  // Filter works by search and category
+  const filteredWorks = useMemo(() => {
+    return works.filter((w) => {
+      if (filterCategory !== "all") {
+        const cat = (w.category || w.sectorName || "").toLowerCase();
+        if (!cat.includes(filterCategory.toLowerCase())) return false;
+      }
+      if (searchMapQuery.trim()) {
+        const q = searchMapQuery.toLowerCase();
+        const matchTitle = (w.title || "").toLowerCase().includes(q);
+        const matchId = (w.id || "").toLowerCase().includes(q);
+        const matchDist = (w.district || "").toLowerCase().includes(q);
+        if (!matchTitle && !matchId && !matchDist) return false;
+      }
+      return true;
+    });
+  }, [works, filterCategory, searchMapQuery]);
 
   // Projected works with accurate geographic coordinates
   const projectedWorks = useMemo(() => {
-    return works.map((work, idx) => {
+    return filteredWorks.map((work, idx) => {
       const coord = resolveWorkCoordinate(work, idx, baseCenterCoord);
       return { work, coord };
     });
-  }, [works, baseCenterCoord]);
+  }, [filteredWorks, baseCenterCoord]);
 
-  // Compute centroid of all actual visible works for centering
+  // Centroid
   const dynamicCentroid = useMemo<Coordinate>(() => {
     if (projectedWorks.length === 0) return baseCenterCoord;
     const totalLat = projectedWorks.reduce((sum, item) => sum + item.coord.lat, 0);
@@ -224,60 +258,49 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
     };
   }, [projectedWorks, baseCenterCoord]);
 
-  const [mapCenter, setMapCenter] = useState<Coordinate>(dynamicCentroid);
-  const [zoom, setZoom] = useState<number>(12);
-  const [basemapStyle, setBasemapStyle] = useState<BasemapStyle>("voyager");
-  const [selectedPinWork, setSelectedPinWork] = useState<WorkItem | null>(null);
-  const [hoveredPinWork, setHoveredPinWork] = useState<WorkItem | null>(null);
-  const [showDrawer, setShowDrawer] = useState(false);
-  const [tileErrorCount, setTileErrorCount] = useState(0);
+  const [mapCenter, setMapCenter] = useState<Coordinate>(baseCenterCoord);
+  const [zoom, setZoom] = useState<number>(13);
 
   // Dragging state
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ width: 800, height: 520 });
+  const [containerSize, setContainerSize] = useState({ width: 800, height: 560 });
 
-  // Update container size on resize
+  // Update container size on mount and resize with ResizeObserver
   useEffect(() => {
     const updateSize = () => {
       if (mapContainerRef.current) {
-        setContainerSize({
-          width: mapContainerRef.current.clientWidth || 800,
-          height: mapContainerRef.current.clientHeight || 520,
-        });
+        const w = mapContainerRef.current.clientWidth;
+        const h = mapContainerRef.current.clientHeight;
+        if (w > 0 && h > 0) {
+          setContainerSize({ width: w, height: h });
+        }
       }
     };
     updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
 
-  // Sync center when constituency or works change
-  useEffect(() => {
-    setMapCenter(dynamicCentroid);
-    // Set appropriate initial zoom level
-    if (projectedWorks.length <= 1) {
-      setZoom(13);
-    } else {
-      // Calculate bounding box spread
-      let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-      projectedWorks.forEach(({ coord }) => {
-        if (coord.lat < minLat) minLat = coord.lat;
-        if (coord.lat > maxLat) maxLat = coord.lat;
-        if (coord.lng < minLng) minLng = coord.lng;
-        if (coord.lng > maxLng) maxLng = coord.lng;
-      });
-      const latDiff = maxLat - minLat;
-      const lngDiff = maxLng - minLng;
-      const maxDiff = Math.max(latDiff, lngDiff);
-      if (maxDiff > 8) setZoom(5);
-      else if (maxDiff > 3) setZoom(7);
-      else if (maxDiff > 1) setZoom(9);
-      else if (maxDiff > 0.3) setZoom(11);
-      else setZoom(13);
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && mapContainerRef.current) {
+      ro = new ResizeObserver(() => updateSize());
+      ro.observe(mapContainerRef.current);
     }
-  }, [dynamicCentroid, projectedWorks.length]);
+
+    const timer = setTimeout(updateSize, 100);
+    window.addEventListener("resize", updateSize);
+    return () => {
+      clearTimeout(timer);
+      if (ro) ro.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, [isFullscreen]);
+
+  // Sync center when constituency changes
+  useEffect(() => {
+    setMapCenter(baseCenterCoord);
+    setSelectedPinWork(null);
+    setZoom(13);
+  }, [baseCenterCoord]);
 
   // Web Mercator projection helpers
   const latLngToPixel = useCallback(
@@ -335,24 +358,20 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
 
   // Robust multi-provider tile URL generator
   const getTileUrl = (provider: BasemapStyle, z: number, x: number, y: number) => {
-    const subdomains = ["a", "b", "c", "d"];
-    const s = subdomains[Math.abs(x + y) % subdomains.length];
     switch (provider) {
       case "satellite":
         return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+      case "street":
       case "light":
-        return `https://${s}.basemaps.cartocdn.com/light_all/${z}/${x}/${y}.png`;
-      case "dark":
-        return `https://${s}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`;
       case "voyager":
       default:
-        // CartoDB Voyager: high performance, reliable public CDN with clear civic landmarks & roads
-        return `https://${s}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`;
+        return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
     }
   };
 
   // Mouse pan handling
   const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest(".map-ui-control")) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
   };
@@ -379,6 +398,7 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
 
   // Touch drag handling for mobile devices
   const handleTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest(".map-ui-control")) return;
     if (e.touches.length === 1) {
       setIsDragging(true);
       setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
@@ -405,12 +425,39 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
     setIsDragging(false);
   };
 
+  // Wheel zoom handler
+  const handleWheel = (e: React.WheelEvent) => {
+    if ((e.target as HTMLElement).closest(".map-ui-control")) return;
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      setZoom((prev) => Math.min(18, prev + 1));
+    } else {
+      setZoom((prev) => Math.max(5, prev - 1));
+    }
+  };
+
   const handleZoomIn = () => setZoom((prev) => Math.min(18, prev + 1));
-  const handleZoomOut = () => setZoom((prev) => Math.max(4, prev - 1));
+  const handleZoomOut = () => setZoom((prev) => Math.max(5, prev - 1));
 
   const handleFitAllWorks = () => {
     setMapCenter(dynamicCentroid);
     setZoom(projectedWorks.length > 5 ? 11 : 13);
+  };
+
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setZoom(14);
+        setIsLocating(false);
+      },
+      () => {
+        setIsLocating(false);
+      },
+      { timeout: 6000 }
+    );
   };
 
   const handleFocusWork = (work: WorkItem) => {
@@ -424,11 +471,11 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
 
   const getMarkerColor = (status: string) => {
     const s = (status || "").toLowerCase();
-    if (s.includes("completed")) return "#059669"; // Emerald Green
-    if (s.includes("delay")) return "#dc2626";     // Crimson Red
-    if (s.includes("ongoing") || s.includes("progress")) return "#2563eb"; // Royal Blue
-    if (s.includes("sanction") || s.includes("recommend")) return "#d97706"; // Amber
-    return "#475569";
+    if (s.includes("completed")) return { bg: "#059669", ring: "#10b981", label: "Completed" };
+    if (s.includes("delay")) return { bg: "#dc2626", ring: "#ef4444", label: "Delayed" };
+    if (s.includes("ongoing") || s.includes("progress")) return { bg: "#2563eb", ring: "#3b82f6", label: "In Progress" };
+    if (s.includes("sanction") || s.includes("recommend")) return { bg: "#d97706", ring: "#f59e0b", label: "Sanctioned" };
+    return { bg: "#475569", ring: "#64748b", label: status };
   };
 
   const formatCurrency = (valInCr: number | undefined | null) => {
@@ -440,13 +487,16 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
   return (
     <div
       style={{
-        position: "relative",
-        width: "100%",
-        height: "560px",
-        borderRadius: "14px",
+        position: isFullscreen ? "fixed" : "relative",
+        top: isFullscreen ? 0 : "auto",
+        left: isFullscreen ? 0 : "auto",
+        width: isFullscreen ? "100vw" : "100%",
+        height: isFullscreen ? "100vh" : "560px",
+        zIndex: isFullscreen ? 9999 : 10,
+        borderRadius: isFullscreen ? 0 : "14px",
         overflow: "hidden",
-        border: "1px solid #cbd5e1",
-        background: basemapStyle === "dark" ? "#0f172a" : "#f1f5f9",
+        border: isFullscreen ? "none" : "1px solid #cbd5e1",
+        background: basemapStyle === "satellite" ? "#0f172a" : "#f1f5f9",
         boxShadow: "0 4px 20px rgba(15, 23, 42, 0.08)",
         userSelect: "none",
         boxSizing: "border-box",
@@ -460,6 +510,7 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onWheel={handleWheel}
     >
       <style>{`
         @keyframes pulseRing {
@@ -493,11 +544,13 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
           color: #0284c7;
         }
+        .map-ui-control {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          backdrop-filter: blur(8px);
+        }
       `}</style>
 
-      {/* ========================================================================= */}
-      {/* 1. RASTER TILE LAYER (CARTO / SATELLITE / LIGHT)                          */}
-      {/* ========================================================================= */}
+      {/* 1. RASTER TILE LAYER */}
       <div
         style={{
           position: "absolute",
@@ -517,14 +570,10 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
             crossOrigin="anonymous"
             referrerPolicy="no-referrer"
             onError={(e) => {
-              // Fallback to OSM or alternative tile provider on single tile fail
               const target = e.currentTarget;
               if (!target.dataset.fallback) {
                 target.dataset.fallback = "true";
                 target.src = `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
-              } else {
-                setTileErrorCount((c) => c + 1);
-                target.style.display = "none";
               }
             }}
             style={{
@@ -533,36 +582,84 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
               top: `${tile.top}px`,
               width: "256px",
               height: "256px",
-              opacity: basemapStyle === "satellite" ? 0.98 : 0.94,
+              opacity: basemapStyle === "satellite" ? 0.98 : 0.95,
               transition: "opacity 0.2s ease-in",
             }}
           />
         ))}
       </div>
 
-      {/* SVG Vector Fallback Grid (renders if raster network fails) */}
-      <svg
+      {/* 2. TOP TOOLBAR: SEARCH & CATEGORY FILTERS */}
+      <div
+        className="map-ui-control"
         style={{
           position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-          opacity: 0.12,
+          top: "14px",
+          left: "14px",
+          right: "14px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "8px",
+          zIndex: 35,
+          pointerEvents: "auto",
         }}
       >
-        <defs>
-          <pattern id="civic-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#64748b" strokeWidth="0.75" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#civic-grid)" />
-      </svg>
+        {/* Search Input on Map */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(255,255,255,0.95)", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.12)", width: "260px", maxWidth: "100%" }}>
+          <Search size={14} color="#64748b" />
+          <input
+            type="text"
+            placeholder="Search mapped works by title/ID..."
+            value={searchMapQuery}
+            onChange={(e) => setSearchMapQuery(e.target.value)}
+            style={{ border: "none", outline: "none", background: "transparent", fontSize: "0.78rem", width: "100%", color: "#0f172a" }}
+          />
+          {searchMapQuery && (
+            <button onClick={() => setSearchMapQuery("")} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#94a3b8", display: "flex" }}>
+              <X size={12} />
+            </button>
+          )}
+        </div>
 
-      {/* ========================================================================= */}
-      {/* 2. INTERACTIVE WORK MARKERS LAYER                                         */}
-      {/* ========================================================================= */}
+        {/* Category Filter Pills */}
+        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", background: "rgba(255,255,255,0.92)", padding: "4px 8px", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.1)" }}>
+          {[
+            { id: "all", label: "All Works" },
+            { id: "road", label: "Roads" },
+            { id: "water", label: "Water" },
+            { id: "school", label: "Education" },
+            { id: "health", label: "Health" },
+            { id: "solar", label: "Solar" }
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setFilterCategory(cat.id)}
+              style={{
+                border: "none",
+                borderRadius: "4px",
+                padding: "3px 8px",
+                fontSize: "0.70rem",
+                fontWeight: filterCategory === cat.id ? 700 : 500,
+                background: filterCategory === cat.id ? "var(--gov-primary, #0a2540)" : "transparent",
+                color: filterCategory === cat.id ? "#ffffff" : "#475569",
+                cursor: "pointer"
+              }}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Mapped Works Count Badge */}
+        <div style={{ background: "rgba(10,37,64,0.92)", color: "#ffffff", padding: "6px 12px", borderRadius: "8px", fontSize: "0.74rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+          <MapPin size={13} color="var(--gov-accent, #ff9933)" />
+          <span>{projectedWorks.length} Active Works Pinned in {currentConstituency}</span>
+        </div>
+      </div>
+
+      {/* 3. INTERACTIVE PROJECT PINS */}
       <div
         style={{
           position: "absolute",
@@ -576,7 +673,6 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
         {projectedWorks.map(({ work, coord }) => {
           const pos = latLngToPixel(coord.lat, coord.lng);
 
-          // Cull markers far outside viewport
           if (
             pos.x < -80 ||
             pos.x > containerSize.width + 80 ||
@@ -587,7 +683,7 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
           }
 
           const isSelected = selectedPinWork?.id === work.id;
-          const markerColor = getMarkerColor(work.status);
+          const colorMeta = getMarkerColor(work.status);
 
           return (
             <div
@@ -622,7 +718,7 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
                     width: "42px",
                     height: "42px",
                     borderRadius: "50%",
-                    background: markerColor,
+                    background: colorMeta.bg,
                     animation: "pulseRing 1.8s infinite ease-out",
                     pointerEvents: "none",
                   }}
@@ -663,38 +759,37 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
                 </div>
               )}
 
-              {/* Pin Badge with Progress */}
+              {/* Pin Graphics */}
               <div
                 style={{
-                  background: markerColor,
-                  color: "#ffffff",
-                  padding: "4px 8px",
-                  borderRadius: "16px",
-                  boxShadow: isSelected
-                    ? `0 0 0 4px #ffffff, 0 8px 24px rgba(0,0,0,0.4)`
-                    : "0 3px 10px rgba(0,0,0,0.3)",
+                  width: isSelected ? "36px" : "28px",
+                  height: isSelected ? "36px" : "28px",
+                  borderRadius: "50% 50% 50% 0",
+                  transform: "rotate(-45deg)",
+                  background: colorMeta.bg,
+                  border: `2.5px solid #ffffff`,
+                  boxShadow: isSelected 
+                    ? `0 0 0 4px ${colorMeta.ring}, 0 6px 16px rgba(0,0,0,0.35)` 
+                    : "0 3px 8px rgba(0,0,0,0.25)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "4px",
-                  fontSize: "0.70rem",
-                  fontWeight: 800,
-                  border: "2px solid #ffffff",
+                  justifyContent: "center",
+                  transition: "all 0.15s ease",
                 }}
               >
-                <MapPin size={12} fill="#ffffff" color={markerColor} />
-                <span>{work.physicalProgress || 0}%</span>
+                <div style={{ transform: "rotate(45deg)", color: "#ffffff", fontSize: "0.7rem", fontWeight: 800 }}>
+                  {work.status === "Completed" ? <CheckCircle2 size={13} /> : (work.status === "Delayed" ? <AlertTriangle size={13} /> : <Landmark size={12} />)}
+                </div>
               </div>
 
-              {/* Pin Point Tip */}
+              {/* Pin Base Dot */}
               <div
                 style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: "6px solid transparent",
-                  borderRight: "6px solid transparent",
-                  borderTop: `7px solid ${markerColor}`,
-                  marginTop: "-1px",
-                  filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.2))",
+                  width: "8px",
+                  height: "4px",
+                  borderRadius: "50%",
+                  background: "rgba(0,0,0,0.3)",
+                  marginTop: "-1px"
                 }}
               />
             </div>
@@ -702,230 +797,91 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
         })}
       </div>
 
-      {/* ========================================================================= */}
-      {/* 3. TOP-LEFT: AREA TITLE & SUMMARY CHIP                                    */}
-      {/* ========================================================================= */}
+      {/* 4. TOP-RIGHT: BASEMAP TOGGLE CONTROLS */}
       <div
+        className="map-ui-control"
         style={{
           position: "absolute",
-          top: "12px",
-          left: "12px",
+          top: "62px",
+          right: "14px",
           background: "rgba(255, 255, 255, 0.95)",
-          backdropFilter: "blur(8px)",
-          padding: "8px 14px",
-          borderRadius: "10px",
+          padding: "3px",
+          borderRadius: "8px",
           border: "1px solid #cbd5e1",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
           display: "flex",
-          alignItems: "center",
-          gap: "10px",
+          gap: "2px",
           zIndex: 35,
+          pointerEvents: "auto",
         }}
       >
-        <div
+        <button
+          type="button"
+          onClick={() => setBasemapStyle("voyager")}
           style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
-            background: "#eff6ff",
-            border: "1px solid #bfdbfe",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#0284c7",
+            padding: "4px 8px",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            background: basemapStyle === "voyager" ? "#0284c7" : "transparent",
+            color: basemapStyle === "voyager" ? "#ffffff" : "#475569",
+            cursor: "pointer",
           }}
         >
-          <Landmark size={18} />
-        </div>
-        <div>
-          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
-            {currentConstituency} Development Map
-          </div>
-          <div style={{ fontSize: "0.70rem", color: "#64748b", display: "flex", alignItems: "center", gap: "6px" }}>
-            <span><strong>{projectedWorks.length}</strong> Works Geotagged</span>
-            <span>•</span>
-            <span>Coordinates Active</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 4. TOP-RIGHT: BASEMAP TOGGLE & NAVIGATION CONTROLS                        */}
-      {/* ========================================================================= */}
-      <div
-        style={{
-          position: "absolute",
-          top: "12px",
-          right: "12px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-          zIndex: 35,
-          alignItems: "flex-end",
-        }}
-      >
-        {/* Basemap Style Switcher Pills */}
-        <div
+          🗺️ Topo
+        </button>
+        <button
+          type="button"
+          onClick={() => setBasemapStyle("street")}
           style={{
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(6px)",
-            padding: "3px",
-            borderRadius: "8px",
-            border: "1px solid #cbd5e1",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-            display: "flex",
-            gap: "2px",
+            padding: "4px 8px",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            background: basemapStyle === "street" ? "#0284c7" : "transparent",
+            color: basemapStyle === "street" ? "#ffffff" : "#475569",
+            cursor: "pointer",
           }}
         >
-          <button
-            type="button"
-            onClick={() => setBasemapStyle("voyager")}
-            style={{
-              padding: "4px 8px",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "0.68rem",
-              fontWeight: 700,
-              background: basemapStyle === "voyager" ? "#0284c7" : "transparent",
-              color: basemapStyle === "voyager" ? "#ffffff" : "#475569",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            🗺️ Streets
-          </button>
-          <button
-            type="button"
-            onClick={() => setBasemapStyle("satellite")}
-            style={{
-              padding: "4px 8px",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "0.68rem",
-              fontWeight: 700,
-              background: basemapStyle === "satellite" ? "#0284c7" : "transparent",
-              color: basemapStyle === "satellite" ? "#ffffff" : "#475569",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            🛰️ Satellite
-          </button>
-          <button
-            type="button"
-            onClick={() => setBasemapStyle("light")}
-            style={{
-              padding: "4px 8px",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "0.68rem",
-              fontWeight: 700,
-              background: basemapStyle === "light" ? "#0284c7" : "transparent",
-              color: basemapStyle === "light" ? "#ffffff" : "#475569",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            🏛️ Civic
-          </button>
-        </div>
-
-        {/* Zoom & Fit Controls */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            className="map-ctrl-btn"
-            title="Zoom In"
-          >
-            <Plus size={16} />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            className="map-ctrl-btn"
-            title="Zoom Out"
-          >
-            <Minus size={16} />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleFitAllWorks}
-            className="map-ctrl-btn"
-            title="Fit All Visible Works"
-            style={{ color: "#0284c7" }}
-          >
-            <Maximize2 size={14} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMapCenter(baseCenterCoord);
-              setZoom(13);
-            }}
-            className="map-ctrl-btn"
-            title={`Center on ${currentConstituency}`}
-            style={{ color: "#d97706" }}
-          >
-            <Navigation size={14} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowDrawer((prev) => !prev)}
-            className="map-ctrl-btn"
-            title="Toggle Works List Drawer"
-            style={{ color: showDrawer ? "#059669" : "#475569" }}
-          >
-            <Layers size={14} />
-          </button>
-        </div>
+          🏛️ Civic
+        </button>
+        <button
+          type="button"
+          onClick={() => setBasemapStyle("satellite")}
+          style={{
+            padding: "4px 8px",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            background: basemapStyle === "satellite" ? "#0284c7" : "transparent",
+            color: basemapStyle === "satellite" ? "#ffffff" : "#475569",
+            cursor: "pointer",
+          }}
+        >
+          🛰️ Satellite
+        </button>
+        <button
+          type="button"
+          onClick={() => setBasemapStyle("light")}
+          style={{
+            padding: "4px 8px",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            background: basemapStyle === "light" ? "#0284c7" : "transparent",
+            color: basemapStyle === "light" ? "#ffffff" : "#475569",
+            cursor: "pointer",
+          }}
+        >
+          Clean
+        </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 5. BOTTOM-LEFT: STATUS LEGEND PILL                                        */}
-      {/* ========================================================================= */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "14px",
-          left: "14px",
-          background: "rgba(255, 255, 255, 0.95)",
-          backdropFilter: "blur(8px)",
-          padding: "6px 14px",
-          borderRadius: "30px",
-          border: "1px solid #cbd5e1",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          display: "flex",
-          alignItems: "center",
-          gap: "14px",
-          fontSize: "0.72rem",
-          fontWeight: 700,
-          color: "#1e293b",
-          zIndex: 35,
-          flexWrap: "wrap",
-        }}
-      >
-        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#059669" }} /> Completed
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#2563eb" }} /> In Progress
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#dc2626" }} /> Delayed
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#d97706" }} /> Sanctioned
-        </span>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 6. SIDE DRAWER: ALL MAPPED WORKS LIST (TOGGLEABLE)                       */}
-      {/* ========================================================================= */}
+      {/* 5. SIDE DRAWER: ALL MAPPED WORKS LIST */}
       {showDrawer && (
         <div
           style={{
@@ -942,7 +898,6 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
             zIndex: 40,
             display: "flex",
             flexDirection: "column",
-            animation: "fadeIn 0.2s ease-out",
           }}
         >
           <div
@@ -981,9 +936,9 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
-            {projectedWorks.map(({ work, coord }) => {
+            {projectedWorks.map(({ work }) => {
               const isSelected = selectedPinWork?.id === work.id;
-              const markerColor = getMarkerColor(work.status);
+              const colorMeta = getMarkerColor(work.status);
               return (
                 <div
                   key={work.id}
@@ -991,7 +946,7 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
                   style={{
                     padding: "10px 12px",
                     borderRadius: "8px",
-                    border: isSelected ? `2px solid ${markerColor}` : "1px solid #e2e8f0",
+                    border: isSelected ? `2px solid ${colorMeta.bg}` : "1px solid #e2e8f0",
                     background: isSelected ? "#f0f9ff" : "#ffffff",
                     cursor: "pointer",
                     transition: "all 0.15s ease",
@@ -1004,7 +959,7 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "4px", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "0.66rem", fontWeight: 700, color: markerColor, textTransform: "uppercase" }}>
+                    <span style={{ fontSize: "0.66rem", fontWeight: 700, color: colorMeta.bg, textTransform: "uppercase" }}>
                       {work.status}
                     </span>
                     <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "#0f172a" }}>
@@ -1025,35 +980,33 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 7. SELECTED WORK DETAILS POPOVER CARD (ACCURATE CIVIC DATA)               */}
-      {/* ========================================================================= */}
+      {/* 6. SELECTED WORK DETAILS CARD */}
       {selectedPinWork && (
         <div
+          className="map-ui-control"
           style={{
             position: "absolute",
-            bottom: "14px",
-            right: "14px",
-            width: "360px",
-            maxWidth: "calc(100% - 28px)",
+            bottom: "16px",
+            left: "16px",
+            maxWidth: "380px",
+            width: "calc(100% - 32px)",
             background: "#ffffff",
+            borderRadius: "12px",
             border: "1px solid #cbd5e1",
-            borderRadius: "14px",
-            boxShadow: "0 14px 35px -5px rgba(15, 23, 42, 0.28)",
             padding: "16px",
             zIndex: 45,
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            animation: "fadeIn 0.2s ease-out",
+            pointerEvents: "auto",
+            animation: "fadeIn 0.2s ease"
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "8px" }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px", flexWrap: "wrap" }}>
-                <span
+                <span style={{ fontFamily: "monospace", fontSize: "0.74rem", fontWeight: 800, color: "var(--gov-primary)" }}>
+                  {selectedPinWork.id}
+                </span>
+                <span 
                   style={{
                     background: "#eff6ff",
                     color: "#0284c7",
@@ -1068,46 +1021,44 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
                 </span>
                 <span
                   style={{
-                    background: selectedPinWork.status === "Completed" ? "#dcfce7" : (selectedPinWork.status === "Delayed" ? "#fee2e2" : "#fef3c7"),
-                    color: getMarkerColor(selectedPinWork.status),
                     fontSize: "0.66rem",
                     fontWeight: 800,
                     padding: "2px 8px",
                     borderRadius: "4px",
+                    background: selectedPinWork.status === "Completed" ? "#dcfce7" : (selectedPinWork.status === "Delayed" ? "#fee2e2" : "#fef3c7"),
+                    color: getMarkerColor(selectedPinWork.status).bg,
                   }}
                 >
                   {selectedPinWork.status}
                 </span>
               </div>
-              <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a", margin: "2px 0 0 0", lineHeight: 1.3 }}>
+              <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "#0f172a", margin: 0, lineHeight: 1.3 }}>
                 {selectedPinWork.title}
               </h4>
             </div>
 
             <button
-              type="button"
               onClick={() => setSelectedPinWork(null)}
               style={{
                 background: "#f1f5f9",
                 border: "none",
                 borderRadius: "50%",
-                width: "26px",
-                height: "26px",
+                width: "24px",
+                height: "24px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
                 color: "#64748b",
-                flexShrink: 0,
+                flexShrink: 0
               }}
-              aria-label="Close card"
             >
               <X size={15} />
             </button>
           </div>
 
-          {/* Accurate District, State & MP Details */}
-          <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.72rem", color: "#334155", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+          {/* District & MP info */}
+          <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.72rem", color: "#334155", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "8px" }}>
             <div>
               <span style={{ color: "#64748b", display: "block" }}>District / State</span>
               <strong style={{ color: "#0f172a" }}>{selectedPinWork.district || currentConstituency}, {selectedPinWork.state || "India"}</strong>
@@ -1119,17 +1070,17 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
           </div>
 
           {/* Progress & Financials */}
-          <div>
+          <div style={{ marginBottom: "12px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", fontWeight: 700, marginBottom: "4px" }}>
               <span style={{ color: "#475569" }}>Physical Execution:</span>
-              <span style={{ color: getMarkerColor(selectedPinWork.status), fontWeight: 800 }}>{selectedPinWork.physicalProgress || 0}%</span>
+              <span style={{ color: getMarkerColor(selectedPinWork.status).bg, fontWeight: 800 }}>{selectedPinWork.physicalProgress || 0}%</span>
             </div>
             <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
               <div
                 style={{
                   width: `${Math.min(100, selectedPinWork.physicalProgress || 0)}%`,
                   height: "100%",
-                  background: getMarkerColor(selectedPinWork.status),
+                  background: getMarkerColor(selectedPinWork.status).bg,
                   borderRadius: "4px",
                   transition: "width 0.6s ease",
                 }}
@@ -1143,34 +1094,153 @@ export const CitizenInteractiveMap: React.FC<CitizenInteractiveMapProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: "flex", gap: "8px", marginTop: "2px" }}>
+          <div style={{ display: "flex", gap: "8px" }}>
             <Button
-              type="button"
               variant="primary"
               size="sm"
+              style={{ flex: 1, fontSize: "0.78rem" }}
               onClick={() => onSelectWork(selectedPinWork)}
-              icon={<ArrowRight size={14} />}
-              style={{ flex: 1, fontSize: "0.78rem", fontWeight: 700, background: "#0a2540", borderColor: "#0a2540" }}
+              icon={<Eye size={13} />}
             >
               View Full Dossier
             </Button>
 
-            {onReportProblem && (
+            {reportAction && (
               <Button
-                type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => onReportProblem(selectedPinWork)}
+                onClick={() => reportAction(selectedPinWork)}
                 icon={<Flag size={13} color="#dc2626" />}
-                style={{ fontSize: "0.78rem", color: "#dc2626", borderColor: "#fecaca" }}
-                title="Report a problem with this work"
+                style={{ color: "#dc2626", borderColor: "#fecaca" }}
+                title="Report issue with this work"
               >
-                Report
+                Report Issue
               </Button>
             )}
           </div>
         </div>
       )}
+
+      {/* 7. FLOATING CONTROLS TOOLBAR (RIGHT SIDE) */}
+      <div
+        className="map-ui-control"
+        style={{
+          position: "absolute",
+          bottom: "16px",
+          right: "16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          zIndex: 35,
+          pointerEvents: "auto",
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          className="map-ctrl-btn"
+          title="Zoom In"
+        >
+          <Plus size={16} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          className="map-ctrl-btn"
+          title="Zoom Out"
+        >
+          <Minus size={16} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleFitAllWorks}
+          className="map-ctrl-btn"
+          title="Fit All Visible Works"
+          style={{ color: "#0284c7" }}
+        >
+          <Maximize2 size={14} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMapCenter(baseCenterCoord);
+            setZoom(13);
+          }}
+          className="map-ctrl-btn"
+          title={`Center on ${currentConstituency}`}
+          style={{ color: "#d97706" }}
+        >
+          <Navigation size={14} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLocateMe}
+          className="map-ctrl-btn"
+          title="My Location"
+          style={{ color: isLocating ? "#2563eb" : "#0f172a" }}
+        >
+          <Compass size={14} className={isLocating ? "spin" : ""} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowDrawer((prev) => !prev)}
+          className="map-ctrl-btn"
+          title="Toggle Works List Drawer"
+          style={{ color: showDrawer ? "#059669" : "#475569" }}
+        >
+          <Layers size={14} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          className="map-ctrl-btn"
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Map"}
+        >
+          {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+        </button>
+      </div>
+
+      {/* 8. STATUS LEGEND */}
+      <div
+        className="map-ui-control"
+        style={{
+          position: "absolute",
+          bottom: "14px",
+          left: "14px",
+          background: "rgba(255, 255, 255, 0.95)",
+          padding: "6px 14px",
+          borderRadius: "30px",
+          border: "1px solid #cbd5e1",
+          display: "flex",
+          alignItems: "center",
+          gap: "14px",
+          fontSize: "0.72rem",
+          fontWeight: 700,
+          color: "#1e293b",
+          zIndex: 30,
+          flexWrap: "wrap",
+          pointerEvents: "none",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#059669" }} /> Completed
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#2563eb" }} /> In Progress
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#dc2626" }} /> Delayed
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#d97706" }} /> Sanctioned
+        </span>
+      </div>
     </div>
   );
 };

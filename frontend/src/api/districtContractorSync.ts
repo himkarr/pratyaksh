@@ -21,6 +21,10 @@ import { contractorApi } from './contractorApi';
 import { calculateMonitoringSchedule } from '../utils/aiTimelineGenerator';
 import { 
   saveProjectToSupabase, 
+  saveRecommendationToSupabase,
+  createVerificationRequestInSupabase,
+  logAuditEventInSupabase,
+  ensureUUID,
   fetchEvidenceFromSupabase, 
   updateEvidenceStatusInSupabase,
   seedJabalpurProjectsToSupabase
@@ -28,6 +32,33 @@ import {
 
 export type { VendorDetails };
 export { REGISTERED_VENDORS };
+
+const STORAGE_KEY_DISTRICT_CUSTOM_WORKS = "mplads_district_custom_works_v2";
+
+function getStoredCustomWorks(): WorkItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DISTRICT_CUSTOM_WORKS);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.warn("Failed to load custom works from localStorage:", e);
+    return [];
+  }
+}
+
+function saveCustomWorkToStorage(work: WorkItem): void {
+  try {
+    const existing = getStoredCustomWorks();
+    const idx = existing.findIndex(w => w.id === work.id);
+    if (idx >= 0) {
+      existing[idx] = work;
+    } else {
+      existing.unshift(work);
+    }
+    localStorage.setItem(STORAGE_KEY_DISTRICT_CUSTOM_WORKS, JSON.stringify(existing));
+  } catch (e) {
+    console.warn("Failed to save custom work to localStorage:", e);
+  }
+}
 
 class DistrictContractorSyncService {
   private works: WorkItem[] = [...INITIAL_WORKS];
@@ -38,14 +69,28 @@ class DistrictContractorSyncService {
   }
 
   /**
-   * Get all synced district works
+   * Get all synced district works (merging runtime state, static works, and persistent local storage custom works)
    */
   getWorks(): WorkItem[] {
-    return [...this.works];
+    const stored = getStoredCustomWorks();
+    const merged = [...stored];
+    this.works.forEach(w => {
+      if (!merged.some(m => m.id === w.id)) {
+        merged.push(w);
+      }
+    });
+    return merged;
   }
 
   /**
-   * Add or update a work in the central sync store & Supabase DB
+   * Get custom works created locally
+   */
+  getCustomWorks(): WorkItem[] {
+    return getStoredCustomWorks();
+  }
+
+  /**
+   * Add or update a work in the central sync store, local storage & Supabase DB
    */
   addWork(work: WorkItem): void {
     const idx = this.works.findIndex(w => w.id === work.id);
@@ -54,14 +99,18 @@ class DistrictContractorSyncService {
     } else {
       this.works.unshift(work);
     }
+    saveCustomWorkToStorage(work);
     saveProjectToSupabase(work);
   }
 
   /**
-   * Get list of registered contractors/vendors
+   * Get list of registered contractors/vendors (filtered by district if provided)
    */
-  getRegisteredVendors(): VendorDetails[] {
-    return [...REGISTERED_VENDORS];
+  getRegisteredVendors(district?: string): VendorDetails[] {
+    if (!district) return [...REGISTERED_VENDORS];
+    const dLower = district.toLowerCase().trim();
+    const filtered = REGISTERED_VENDORS.filter(v => (v.district || "").toLowerCase().trim() === dLower);
+    return filtered.length > 0 ? filtered : [...REGISTERED_VENDORS];
   }
 
   /**
@@ -144,7 +193,7 @@ class DistrictContractorSyncService {
         dateSanctioned: officialStartDate,
         targetCompletion: officialExpectedCompletionDate,
         status: "Sanctioned",
-        agency: "DRDA",
+        agency: vendor.firmName,
         contractor: vendor.firmName,
         rating: 4.5,
         reviewsCount: 0,
@@ -204,11 +253,52 @@ class DistrictContractorSyncService {
       };
     }
 
-    // Push/update in contractor store & Supabase DB
-    await contractorApi.syncAssignedProject(existingProject);
-    saveProjectToSupabase(updatedWork);
+    // Save to persistent custom works localStorage
+    saveCustomWorkToStorage(updatedWork);
 
-    // Send notification to contractor
+    // Push/update in contractor store & multi-table Supabase DB
+    await contractorApi.syncAssignedProject(existingProject);
+
+    // 1. Table `projects`
+    await saveProjectToSupabase(updatedWork);
+
+    // 2. Table `recommendations` (so MP Dashboard reflects the sanctioned project)
+    await saveRecommendationToSupabase({
+      recommendation_id: ensureUUID(),
+      project_id: updatedWork.id,
+      project_name: updatedWork.title,
+      description: updatedWork.justification || updatedWork.title,
+      category: updatedWork.category,
+      district: updatedWork.district,
+      state: updatedWork.state,
+      recommended_amount: Math.round((updatedWork.sanctionedAmt || 0.10) * 10000000),
+      status: "Sanctioned"
+    });
+
+    // 3. Table `verification_requests` (so Field Quality Inspection queue gets assigned task)
+    await createVerificationRequestInSupabase({
+      project_id: updatedWork.id,
+      priority_level: "High",
+      instructions: `Initial site inspection & milestone baseline verification for assigned contractor ${vendor.firmName}`
+    });
+
+    // 4. Table `audit_logs` (immutable audit trail across all portals)
+    await logAuditEventInSupabase(
+      "WORK_ORDER_ISSUED_AND_ASSIGNED",
+      "projects",
+      ensureUUID(updatedWork.id),
+      {
+        workId: updatedWork.id,
+        title: updatedWork.title,
+        district: updatedWork.district,
+        contractor: vendor.firmName,
+        vendorId: vendor.vendorId,
+        sanctionedAmt: updatedWork.sanctionedAmt,
+        officer: assignedByOfficer
+      }
+    );
+
+    // 5. Send real-time notification to contractor vendor inbox
     const notif: ContractorNotification = {
       id: `notif-assign-${Date.now()}`,
       workId: updatedWork.id,

@@ -21,198 +21,63 @@ export interface VendorDetails {
 
 export const REGISTERED_VENDORS: VendorDetails[] = [
   {
-    vendorId: "VEN-2024-MP-4120",
-    firmName: "M/s Apex Infra & Construction Ltd.",
+    vendorId: "2df07d35-4493-4bd4-b7e6-d6a55ea3d80d",
+    firmName: "The Sahil Co-operative Labour and Construction Society Ltd",
     registrationClass: "Class A (Apex)",
-    contactPerson: "Shri Vikram Singh (Project Director)",
-    phone: "+91 94250 99881",
-    email: "vikram@apexinfra.co.in",
-    gstin: "23AAACA8871J1Z8",
-    district: "Jabalpur",
-    state: "Madhya Pradesh",
-    activeWorksCount: 3,
-    completedWorksCount: 9,
-    performanceRating: 4.8,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-MH-8842",
-    firmName: "M/s Infra Buildcon India Ltd.",
-    registrationClass: "Class A (Apex)",
-    contactPerson: "Er. Rajesh Deshmukh (Executive Engineer)",
-    phone: "+91 98220 11234",
-    email: "projects@infrabuildcon.co.in",
-    gstin: "27AAACI1234H1Z5",
-    district: "Pune",
-    state: "Maharashtra",
-    activeWorksCount: 3,
-    completedWorksCount: 14,
-    performanceRating: 4.8,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-MP-9011",
-    firmName: "M/s Sagar Waterworks & Civil Corp",
-    registrationClass: "Class B (District)",
-    contactPerson: "Er. Alok Verma",
-    phone: "+91 98931 44321",
-    email: "contact@sagarwaterworks.com",
-    gstin: "23AACCS5512K1Z2",
-    district: "Sagar",
-    state: "Madhya Pradesh",
-    activeWorksCount: 2,
-    completedWorksCount: 6,
-    performanceRating: 4.4,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-HR-5011",
-    firmName: "M/s Haryana Civil Infra Services",
-    registrationClass: "Class A (Apex)",
-    contactPerson: "Er. Surender Malik",
-    phone: "+91 98120 44556",
-    email: "info@haryanacivilinfra.in",
-    gstin: "06AAACH5512K1Z9",
+    contactPerson: "Sahil Verma",
+    phone: "+919812033441",
+    email: "vendor.sahil.rohtak@contractor.gov.in",
+    gstin: "06AABCT1234F1Z5",
     district: "Rohtak",
+    state: "Haryana",
+    activeWorksCount: 3,
+    completedWorksCount: 8,
+    performanceRating: 4.8,
+    status: "Empanelled & Active"
+  },
+  {
+    vendorId: "bb2e6047-1b01-44f1-9d8f-9266837807e3",
+    firmName: "Deepak Govt Contractor",
+    registrationClass: "Class B (District)",
+    contactPerson: "Deepak Kumar",
+    phone: "+919812033442",
+    email: "vendor.deepak.rohtak@contractor.gov.in",
+    gstin: "06AAECD5678K1Z2",
+    district: "Rohtak",
+    state: "Haryana",
+    activeWorksCount: 2,
+    completedWorksCount: 5,
+    performanceRating: 4.6,
+    status: "Empanelled & Active"
+  },
+  {
+    vendorId: "10d11672-ed12-44e3-872a-7a050fe19149",
+    firmName: "Win Power Construction Co",
+    registrationClass: "Class A (Apex)",
+    contactPerson: "Vikram Malhotra",
+    phone: "+919818044551",
+    email: "vendor.winpower.gurugram@contractor.gov.in",
+    gstin: "06AAFCW9012M1Z8",
+    district: "Gurugram",
     state: "Haryana",
     activeWorksCount: 4,
     completedWorksCount: 11,
-    performanceRating: 4.8,
+    performanceRating: 4.9,
     status: "Empanelled & Active"
   },
   {
-    vendorId: "VEN-2024-HR-5012",
-    firmName: "M/s Rohtak Development & Builders Ltd.",
-    registrationClass: "Class A (Apex)",
-    contactPerson: "Er. Ramesh Chaudhary",
-    phone: "+91 98124 77889",
-    email: "contact@rohtakdevbuilders.com",
-    gstin: "06AAACR1234F1Z8",
-    district: "Rohtak",
-    state: "Haryana",
-    activeWorksCount: 4,
-    completedWorksCount: 9,
-    performanceRating: 4.7,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-HR-5013",
-    firmName: "M/s Apex North Infrastructure Pvt Ltd.",
+    vendorId: "a15337f8-9f87-4c04-bb04-19b4127f963d",
+    firmName: "The Lal Kripa Coop L&C Society Ltd",
     registrationClass: "Class B (District)",
-    contactPerson: "Er. Sunil Hooda",
-    phone: "+91 94160 33221",
-    email: "sunil@apexnorthinfra.co.in",
-    gstin: "06AAACA9876M1Z2",
-    district: "Rohtak",
+    contactPerson: "Rajinder Prasad Lal",
+    phone: "+919818044552",
+    email: "vendor.lalkripa.gurugram@contractor.gov.in",
+    gstin: "06AABCL7788P1Z1",
+    district: "Gurugram",
     state: "Haryana",
-    activeWorksCount: 4,
+    activeWorksCount: 3,
     completedWorksCount: 7,
-    performanceRating: 4.6,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-MP-4121",
-    firmName: "M/s Jabalpur Rural Infra Developers",
-    registrationClass: "Class B (District)",
-    contactPerson: "Er. Rameshwar Sharma",
-    phone: "+91 94251 22334",
-    email: "projects@jabalpurruralinfra.com",
-    gstin: "23AAACJ4412M1Z6",
-    district: "Jabalpur",
-    state: "Madhya Pradesh",
-    activeWorksCount: 3,
-    completedWorksCount: 8,
     performanceRating: 4.7,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-MP-4122",
-    firmName: "M/s Mahakaushal Engineering Works",
-    registrationClass: "Class A (Apex)",
-    contactPerson: "Er. Prakash Nema",
-    phone: "+91 94252 88990",
-    email: "info@mahakaushalengg.co.in",
-    gstin: "23AAACM9988P1Z3",
-    district: "Jabalpur",
-    state: "Madhya Pradesh",
-    activeWorksCount: 2,
-    completedWorksCount: 12,
-    performanceRating: 4.6,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-HR-7022",
-    firmName: "M/s Millennium City Builders & Engineers",
-    registrationClass: "Class A (Apex)",
-    contactPerson: "Er. Vikas Rao",
-    phone: "+91 99990 12345",
-    email: "contact@millenniumcitybuilders.com",
-    gstin: "06AACCM7712L1Z4",
-    district: "Gurugram",
-    state: "Haryana",
-    activeWorksCount: 4,
-    completedWorksCount: 16,
-    performanceRating: 4.9,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-HR-7023",
-    firmName: "M/s Gurugram Urban Infra Project Ltd.",
-    registrationClass: "Class A (Apex)",
-    contactPerson: "Er. Sandeep Yadav",
-    phone: "+91 98188 33445",
-    email: "sandeep@gurugramurbaninfra.in",
-    gstin: "06AAACG8811K1Z2",
-    district: "Gurugram",
-    state: "Haryana",
-    activeWorksCount: 3,
-    completedWorksCount: 14,
-    performanceRating: 4.8,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-HR-7024",
-    firmName: "M/s Cyber City Infrastructure Pvt Ltd.",
-    registrationClass: "Class B (District)",
-    contactPerson: "Er. Amit Ahluwalia",
-    phone: "+91 98189 55667",
-    email: "projects@cybercityinfra.com",
-    gstin: "06AAACC4455R1Z9",
-    district: "Gurugram",
-    state: "Haryana",
-    activeWorksCount: 3,
-    completedWorksCount: 10,
-    performanceRating: 4.7,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-MH-3312",
-    firmName: "M/s Maharashtra Rural Roadbuilders",
-    registrationClass: "Class A (Apex)",
-    contactPerson: "Shri Nilesh Patil",
-    phone: "+91 98221 77665",
-    email: "nilesh@mharoads.in",
-    gstin: "27AAACM9910F1Z4",
-    district: "Pune",
-    state: "Maharashtra",
-    activeWorksCount: 4,
-    completedWorksCount: 18,
-    performanceRating: 4.9,
-    status: "Empanelled & Active"
-  },
-  {
-    vendorId: "VEN-2024-MH-7890",
-    firmName: "M/s Vidarbha Green Infra Pvt Ltd",
-    registrationClass: "Class B (District)",
-    contactPerson: "Smt. Sunita Rao",
-    phone: "+91 97654 33221",
-    email: "sraov@vidarbhagreen.com",
-    gstin: "27AAACV4411D1Z9",
-    district: "Nagpur",
-    state: "Maharashtra",
-    activeWorksCount: 1,
-    completedWorksCount: 5,
-    performanceRating: 4.2,
     status: "Empanelled & Active"
   }
 ];
@@ -319,10 +184,10 @@ export interface ContractorProject {
   officialExpectedCompletionDate: string; // Expected completion date / official timeline
   
   currentWorkStatus: 'Sanctioned' | 'InProgress' | 'Completed' | 'Delayed';
-  monitoringStatus: 'Active Monitoring' | 'Action Pending' | 'Pending First Submission' | 'Under Scrutiny' | 'Completed';
+  monitoringStatus: 'Active Monitoring' | 'Action Pending' | 'Pending First Submission' | 'Under Scrutiny' | 'Completed' | 'Expenditure Anomaly (Over Budget)';
   nextRequiredSubmission: string;
   nextSubmissionDueDate: string;
-  riskIndicator: 'Low Risk' | 'Delay Risk' | 'Critical Delay' | 'Not available';
+  riskIndicator: 'Low Risk' | 'Delay Risk' | 'Critical Delay' | 'Not available' | 'High Anomaly Risk';
   
   checkpointActions: CheckpointAction[];
   schedule: MonitoringScheduleItem[];
@@ -336,16 +201,16 @@ export interface ContractorProject {
 
 export const DEFAULT_CONTRACTOR_PROFILE: ContractorProfile = {
   id: "USR-CONTRACTOR-01",
-  agencyName: "M/s Infra Buildcon India Ltd.",
-  vendorId: "VEN-2024-MH-8842",
-  gstin: "27AAACI1234H1Z5",
-  registrationNo: "PWD/MH/CLASS-1/8892",
-  circle: "Pune Infrastructure Division Circle",
-  district: "Pune",
-  state: "Maharashtra",
-  nodalOfficer: "Er. Rajesh Deshmukh (Executive Engineer)",
-  contactEmail: "projects@infrabuildcon.co.in",
-  contactPhone: "+91 98220 11234"
+  agencyName: "Gurugram Metropolitan Development Authority (GMDA)",
+  vendorId: "VEN-HR-GGM-01",
+  gstin: "06AACCG7712L1Z4",
+  registrationNo: "PWD/HR/CLASS-A/901",
+  circle: "Gurugram Infrastructure Division Circle",
+  district: "Gurugram",
+  state: "Haryana",
+  nodalOfficer: "Er. Vikas Rao (Chief Engineer)",
+  contactEmail: "gmda.gurugram@haryana.gov.in",
+  contactPhone: "+91 99990 12345"
 };
 
 export const MOCK_CONTRACTOR_PROJECTS: ContractorProject[] = [

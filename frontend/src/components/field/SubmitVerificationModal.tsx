@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -18,6 +18,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Alert } from "../ui/Alert";
 import { WorkItem } from "../../data/mpladsData";
+import { fileToOptimizedDataUrl, getCategoryFallbackImage } from "../../utils/imageUploadHelper";
 
 export interface VerificationReportSubmission {
   workId: string;
@@ -49,6 +50,7 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
 }) => {
   if (!work) return null;
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeStep, setActiveStep] = useState<number>(1);
   const [outcome, setOutcome] = useState<"VERIFIED" | "FLAGGED" | "REQUIRES_MORE_EVIDENCE">("VERIFIED");
   const [verifiedProgress, setVerifiedProgress] = useState<number>(work.physicalProgress || 50);
@@ -59,8 +61,8 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
   const [fieldPhotos, setFieldPhotos] = useState<Array<{ url: string; lat?: number; lng?: number; timestamp: string }>>([
     {
       url: "https://images.unsplash.com/photo-1541888946425-d0fbb18f15f6?w=800&auto=format&fit=crop&q=60",
-      lat: 18.5204,
-      lng: 73.8567,
+      lat: work.latitude || 18.5204,
+      lng: work.longitude || 73.8567,
       timestamp: new Date().toLocaleString("en-IN")
     }
   ]);
@@ -72,18 +74,71 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
 
   const handleCapturePhoto = () => {
     setIsCapturingGps(true);
-    setTimeout(() => {
-      setFieldPhotos([
-        ...fieldPhotos,
-        {
-          url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&auto=format&fit=crop&q=60",
-          lat: 18.5204 + (Math.random() - 0.5) * 0.01,
-          lng: 73.8567 + (Math.random() - 0.5) * 0.01,
-          timestamp: new Date().toLocaleString("en-IN")
-        }
-      ]);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          setIsCapturingGps(false);
+          fileInputRef.current?.click();
+        },
+        () => {
+          setIsCapturingGps(false);
+          fileInputRef.current?.click();
+        },
+        { enableHighAccuracy: true, timeout: 4000 }
+      );
+    } else {
       setIsCapturingGps(false);
-    }, 700);
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    let curLat = work.latitude || 18.5204;
+    let curLng = work.longitude || 73.8567;
+
+    try {
+      if ("geolocation" in navigator) {
+        await new Promise<void>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              curLat = parseFloat(pos.coords.latitude.toFixed(4));
+              curLng = parseFloat(pos.coords.longitude.toFixed(4));
+              resolve();
+            },
+            () => resolve(),
+            { timeout: 3000 }
+          );
+        });
+      }
+    } catch {
+      // Use fallback
+    }
+
+    const newPhotos: Array<{ url: string; lat?: number; lng?: number; timestamp: string }> = [];
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const optimizedUrl = await fileToOptimizedDataUrl(files[i], 1280, 1280, 0.85);
+        newPhotos.push({
+          url: optimizedUrl,
+          lat: curLat,
+          lng: curLng,
+          timestamp: new Date().toLocaleString("en-IN")
+        });
+      } catch (err) {
+        console.warn("Photo upload error:", err);
+      }
+    }
+
+    if (newPhotos.length > 0) {
+      setFieldPhotos(prev => [...prev, ...newPhotos]);
+    }
+
+    if (e.target) {
+      e.target.value = "";
+    }
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -425,6 +480,16 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
 
               {/* Field Camera Photo Capture */}
               <div style={{ border: "1px solid var(--border-light)", borderRadius: "var(--radius-xs)", padding: "12px 14px", background: "var(--text-white)" }}>
+                {/* Hidden input for camera / gallery */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/*"
+                  multiple
+                  style={{ display: "none" }}
+                />
+
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                   <div>
                     <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--gov-primary)" }}>
@@ -443,14 +508,19 @@ export const SubmitVerificationModal: React.FC<SubmitVerificationModalProps> = (
                     disabled={isCapturingGps}
                     icon={isCapturingGps ? <RefreshCw size={13} className="spin" /> : <Camera size={13} />}
                   >
-                    {isCapturingGps ? "Acquiring GPS..." : "Capture On-Site Photo"}
+                    {isCapturingGps ? "Acquiring GPS..." : "Capture / Upload Photo"}
                   </Button>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}>
                   {fieldPhotos.map((p, idx) => (
                     <div key={idx} style={{ border: "1px solid var(--border-main)", borderRadius: "var(--radius-xs)", overflow: "hidden", position: "relative" }}>
-                      <img src={p.url} alt="Field Photo" style={{ width: "100%", height: "85px", objectFit: "cover" }} />
+                      <img 
+                        src={p.url} 
+                        alt="Field Photo" 
+                        style={{ width: "100%", height: "85px", objectFit: "cover" }} 
+                        onError={(e) => { e.currentTarget.src = getCategoryFallbackImage(work.category); }}
+                      />
                       <div style={{ padding: "4px 6px", fontSize: "0.66rem" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "2px", color: "var(--text-muted)" }}>
                           <MapPin size={10} color="var(--gov-accent)" />
