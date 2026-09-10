@@ -1059,34 +1059,6 @@ export const DistrictDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ padding: "14px 16px", border: "1px solid var(--border-main, #cbd5e1)", borderRadius: "8px", background: "var(--bg-surface, #ffffff)" }}>
-                  <div style={{ fontWeight: 800, fontSize: "0.84rem", color: "var(--gov-primary)" }}>5. DISTRICT COLLECTORATE EXECUTIVE DIRECTIVE</div>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "3px" }}>
-                    Select administrative action to record in the official district ledger:
-                  </div>
-                  <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
-                    <Button 
-                      variant="primary" 
-                      size="sm" 
-                      onClick={() => { 
-                        handleApproveSanction(selectedWorkForDossier.id); 
-                        setSelectedWorkForDossier(null); 
-                      }}
-                    >
-                      Approve Sanction Tranche
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => { 
-                        handleFlagWork(selectedWorkForDossier.id, "Collectorate Order: Tranche held pending re-measurement"); 
-                        setSelectedWorkForDossier(null); 
-                      }}
-                    >
-                      Hold Tranche & Issue Show-Cause Notice
-                    </Button>
-                  </div>
-                </div>
 
               </div>
             </div>
