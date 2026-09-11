@@ -65,7 +65,7 @@ export const StateDetail: React.FC<StateDetailProps> = ({
   const [projectDistrictFilter, setProjectDistrictFilter] = useState("all");
   const [projectSortBy, setProjectSortBy] = useState<string>("sanctioned_amount");
   const [projectSortOrder, setProjectSortOrder] = useState<"asc" | "desc">("desc");
-  const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("grid");
+  const [projectViewMode, setProjectViewMode] = useState<"grid" | "table">("table");
 
   // Filter MPs for this state
   const stateMPs = useMemo(() => {
@@ -295,12 +295,39 @@ export const StateDetail: React.FC<StateDetailProps> = ({
 
   return (
     <div className="state-detail-page">
-      {/* Top Header */}
-      <div className="state-detail-header">
-        <button onClick={onBack} className="back-link" style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <ArrowLeft size={18} />
-          Back to All States
+      {/* Top Breadcrumb & Back Navigation */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: "8px",
+            padding: "6px 14px",
+            cursor: "pointer",
+            color: "var(--gov-primary)",
+            fontWeight: 700,
+            fontSize: "0.82rem",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+            transition: "all 0.15s ease"
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+        >
+          <ArrowLeft size={16} />
+          <span>Back to All States</span>
         </button>
+        <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>/</span>
+        <span style={{ fontSize: "0.82rem", color: "#64748b" }}>States & UTs</span>
+        <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>/</span>
+        <span style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-main)" }}>{stateName}</span>
+      </div>
+
+      <div className="state-detail-header">
 
         <div className="state-title-section">
           <h1>{stateName}</h1>
@@ -1112,26 +1139,6 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                 {/* View Toggle */}
                 <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
                   <button
-                    onClick={() => setProjectViewMode("grid")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "6px 12px",
-                      borderRadius: "6px",
-                      border: "none",
-                      background: projectViewMode === "grid" ? "#2563eb" : "transparent",
-                      color: projectViewMode === "grid" ? "#ffffff" : "#475569",
-                      fontWeight: projectViewMode === "grid" ? 700 : 500,
-                      fontSize: "0.78rem",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <LayoutGrid size={14} />
-                    <span>Grid</span>
-                  </button>
-                  <button
                     onClick={() => setProjectViewMode("table")}
                     style={{
                       display: "flex",
@@ -1151,6 +1158,26 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                     <List size={14} />
                     <span>Table</span>
                   </button>
+                  <button
+                    onClick={() => setProjectViewMode("grid")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: projectViewMode === "grid" ? "#2563eb" : "transparent",
+                      color: projectViewMode === "grid" ? "#ffffff" : "#475569",
+                      fontWeight: projectViewMode === "grid" ? 700 : 500,
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <LayoutGrid size={14} />
+                    <span>Grid</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1160,6 +1187,7 @@ export const StateDetail: React.FC<StateDetailProps> = ({
               Showing {filteredProjects.length} of {stateProjects.length} projects in {stateName}
             </div>
 
+            <div key={projectViewMode} className="view-transition-container">
             {projectViewMode === "grid" ? (
               filteredProjects.length === 0 ? (
                 <div style={{ background: "white", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "48px 24px", textAlign: "center" }}>
@@ -1204,18 +1232,17 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                     return (
                       <div
                         key={p.project_id || p.id}
+                        className="gov-card card-hover-accent accent-sky cursor-pointer"
                         onClick={() => onSelectProject(p)}
                         style={{
                           background: "#ffffff",
                           borderRadius: "12px",
                           border: "1px solid #e2e8f0",
                           padding: "18px",
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                           display: "flex",
                           flexDirection: "column",
                           justifyContent: "space-between",
                           cursor: "pointer",
-                          transition: "all 0.2s ease",
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.boxShadow = "0 8px 20px -4px rgba(0,0,0,0.1)";
@@ -1566,6 +1593,7 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                 </table>
               </div>
             )}
+            </div>
           </div>
         )}
       </div>

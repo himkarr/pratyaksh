@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { 
-  Search, Filter, Landmark, MapPin, Calendar, Clock, 
+import {
+  Search, Filter, Landmark, MapPin, Calendar, Clock,
   ArrowRight, LayoutGrid, List, Map as MapIcon,
   IndianRupee, Building, CheckCircle2, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, Plus, Sparkles
@@ -24,8 +24,8 @@ const PAGE_SIZE_OPTIONS = [
   { value: "50", label: "50 per page" }
 ];
 
-export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({ 
-  works, 
+export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
+  works,
   onSelectWork,
   onReportProblem,
   onOpenRecommendModal,
@@ -34,7 +34,7 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSector, setSelectedSector] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("list");
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,7 +72,7 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
   const totalItems = filteredWorks.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  
+
   const startIndex = (safePage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalItems);
   const paginatedWorks = filteredWorks.slice(startIndex, endIndex);
@@ -258,28 +258,6 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
           <div style={{ display: "inline-flex", background: "var(--bg-surface-subtle)", padding: "3px", borderRadius: "6px", border: "1px solid var(--border-main)" }}>
             <button
               type="button"
-              onClick={() => setViewMode("grid")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "4px 10px",
-                border: "none",
-                borderRadius: "4px",
-                fontSize: "0.75rem",
-                fontWeight: viewMode === "grid" ? 700 : 500,
-                background: viewMode === "grid" ? "var(--bg-surface)" : "transparent",
-                color: viewMode === "grid" ? "var(--gov-primary)" : "var(--text-muted)",
-                boxShadow: viewMode === "grid" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                cursor: "pointer"
-              }}
-            >
-              <LayoutGrid size={13} />
-              <span>Cards</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setViewMode("list")}
               style={{
                 display: "flex",
@@ -297,7 +275,29 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
               }}
             >
               <List size={13} />
-              <span>List</span>
+              <span>List View</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "4px 10px",
+                border: "none",
+                borderRadius: "4px",
+                fontSize: "0.75rem",
+                fontWeight: viewMode === "grid" ? 700 : 500,
+                background: viewMode === "grid" ? "var(--bg-surface)" : "transparent",
+                color: viewMode === "grid" ? "var(--gov-primary)" : "var(--text-muted)",
+                boxShadow: viewMode === "grid" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                cursor: "pointer"
+              }}
+            >
+              <LayoutGrid size={13} />
+              <span>Card Grid</span>
             </button>
 
             <button
@@ -447,292 +447,297 @@ export const CitizenProjectSearch: React.FC<CitizenProjectSearchProps> = ({
         </div>
       )}
 
-      {/* Grid Cards View: Displays Paginated Slice (10-20 items per page) */}
-      {viewMode === "grid" && paginatedWorks.length > 0 && (
-        <div className="citizen-search-cards-grid">
-          {paginatedWorks.map((work) => {
-            const sanctioned = work.sanctionedAmt || work.recommendedAmt || 0;
-            const spent = work.expenditureAmt || 0;
-            const progress = work.physicalProgress || 0;
+    {/* Grid Cards View: Displays Paginated Slice (10-20 items per page) */}
+    {viewMode === "grid" && paginatedWorks.length > 0 && (
+      <div className="citizen-search-cards-grid">
+        {paginatedWorks.map((work) => {
+          const sanctioned = work.sanctionedAmt || work.recommendedAmt || 0;
+          const spent = work.expenditureAmt || 0;
+          const progress = work.physicalProgress || 0;
 
-            return (
-              <div
-                key={work.id}
-                style={{
-                  background: "var(--bg-surface)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "1px solid var(--border-main)",
-                  padding: "16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "var(--shadow-card)",
-                  boxSizing: "border-box"
-                }}
-              >
-                <div>
-                  {/* Top Category & Status Header */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "4px" }}>
-                    <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.68rem" }}>
-                      {work.sectorName || work.category || "Public Work"}
-                    </span>
-                    {getStatusBadge(work.status)}
-                  </div>
-
-                  {/* Work Title */}
-                  <h4
-                    style={{
-                      fontSize: "0.96rem",
-                      fontWeight: 800,
-                      color: "var(--gov-primary)",
-                      margin: "0 0 6px 0",
-                      lineHeight: 1.35,
-                      wordBreak: "break-word"
-                    }}
-                  >
-                    {work.title}
-                  </h4>
-
-                  {/* Location */}
-                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px", marginBottom: "12px" }}>
-                    <MapPin size={13} color="var(--gov-accent)" style={{ flexShrink: 0 }} />
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {work.constituency}, {work.district}
-                    </span>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div style={{ marginBottom: "12px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", fontWeight: 700, marginBottom: "4px" }}>
-                      <span style={{ color: "var(--text-body)" }}>Work Progress</span>
-                      <span style={{ color: "var(--gov-accent)" }}>{progress}%</span>
-                    </div>
-                    <div style={{ width: "100%", height: "7px", background: "var(--border-light)", borderRadius: "4px", overflow: "hidden" }}>
-                      <div
-                        style={{
-                          width: `${Math.min(100, Math.max(0, progress))}%`,
-                          height: "100%",
-                          background: work.status === "Completed" ? "var(--status-success-text)" : (work.status === "Delayed" ? "var(--status-warning-text)" : "var(--gov-accent)"),
-                          borderRadius: "4px"
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Public Financial & Target Date Info */}
-                  <div
-                    style={{
-                      background: "var(--bg-surface-subtle)",
-                      padding: "8px 10px",
-                      borderRadius: "var(--radius-xs)",
-                      fontSize: "0.74rem",
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "6px",
-                      marginBottom: "12px"
-                    }}
-                  >
-                    <div>
-                      <span style={{ color: "var(--text-muted)", display: "block" }}>Sanctioned:</span>
-                      <strong style={{ color: "var(--text-main)" }}>₹{sanctioned.toFixed(2)} Cr</strong>
-                    </div>
-                    <div>
-                      <span style={{ color: "var(--text-muted)", display: "block" }}>Spent:</span>
-                      <strong style={{ color: "var(--status-success-text)" }}>₹{spent.toFixed(2)} Cr</strong>
-                    </div>
-                    <div style={{ gridColumn: "1 / -1", paddingTop: "4px", borderTop: "1px dashed var(--border-light)", color: "var(--text-muted)" }}>
-                      Target Date: <strong style={{ color: "var(--text-main)" }}>{work.targetCompletion || "2025-03-31"}</strong>
-                    </div>
-                  </div>
+          return (
+            <div
+              key={work.id}
+              className="card-hover-accent accent-sky cursor-pointer"
+              style={{
+                background: "var(--bg-surface, #ffffff)",
+                borderRadius: "12px",
+                border: "1px solid var(--border-light, #e2e8f0)",
+                padding: "18px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                boxSizing: "border-box",
+              }}
+              onClick={() => onSelectWork(work)}
+            >
+              <div>
+                {/* Top Category & Status Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "4px" }}>
+                  <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.68rem" }}>
+                    {work.sectorName || work.category || "Public Work"}
+                  </span>
+                  {getStatusBadge(work.status)}
                 </div>
 
-                {/* Single Clean Action: View Details */}
-                <div style={{ paddingTop: "10px", borderTop: "1px solid var(--border-light)" }}>
+                {/* Project Title */}
+                <h4
+                  style={{
+                    fontSize: "0.95rem",
+                    fontWeight: 700,
+                    color: "var(--gov-primary)",
+                    margin: "0 0 8px 0",
+                    lineHeight: 1.4,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden"
+                  }}
+                  title={work.title}
+                >
+                  {work.title}
+                </h4>
+
+                {/* Metadata Items */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", fontSize: "0.74rem", color: "var(--text-muted)", marginBottom: "12px" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                    <MapPin size={12} /> {work.constituency}
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                    <Building size={12} /> {work.house}
+                  </span>
+                </div>
+              </div>
+
+              {/* Financial & Physical Progress Footer */}
+              <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "6px" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Sanction: <strong>₹{sanctioned.toFixed(2)} Cr</strong></span>
+                  <span style={{ fontWeight: 700, color: progress >= 80 ? "#10b981" : "#3b82f6" }}>{progress}% Complete</span>
+                </div>
+
+                {/* Progress Bar */}
+                <div style={{ height: "6px", background: "var(--bg-surface-subtle)", borderRadius: "9999px", overflow: "hidden", marginBottom: "12px" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${progress}%`,
+                      background: progress >= 80 ? "#10b981" : progress >= 40 ? "#3b82f6" : "#f59e0b",
+                      borderRadius: "9999px"
+                    }}
+                  />
+                </div>                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: "6px" }}>
                   <Button
                     type="button"
                     variant="secondary"
                     size="sm"
-                    onClick={() => onSelectWork(work)}
-                    style={{ width: "100%", fontSize: "0.78rem", minHeight: "36px" }}
+                    onClick={(e) => { e.stopPropagation(); onSelectWork(work); }}
+                    style={{ flex: 1, minHeight: "34px", fontSize: "0.78rem", fontWeight: 700 }}
                   >
-                    View Details
+                    Inspect Dossier
                   </Button>
+                  {onReportProblem && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); onReportProblem(work); }}
+                      style={{ minHeight: "34px", fontSize: "0.78rem", color: "#b91c1c", borderColor: "#fecaca" }}
+                    >
+                      Report
+                    </Button>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
+    )}
 
-      {/* Compact List View: Displays Paginated Slice */}
-      {viewMode === "list" && paginatedWorks.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {paginatedWorks.map((work) => {
-            const sanctioned = work.sanctionedAmt || work.recommendedAmt || 0;
-            const spent = work.expenditureAmt || 0;
-            const progress = work.physicalProgress || 0;
+    {/* List View Mode: Displays Paginated Slice */}
+    {viewMode === "list" && paginatedWorks.length > 0 && (
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {paginatedWorks.map((work) => {
+          const sanctioned = work.sanctionedAmt || work.recommendedAmt || 0;
+          const spent = work.expenditureAmt || 0;
+          const progress = work.physicalProgress || 0;
 
-            return (
-              <div
-                key={work.id}
-                style={{
-                  background: "var(--bg-surface)",
-                  borderRadius: "var(--radius-xs)",
-                  border: "1px solid var(--border-main)",
-                  padding: "12px 14px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "10px",
-                  boxSizing: "border-box"
-                }}
-              >
-                <div style={{ flex: "1 1 240px", minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px", flexWrap: "wrap" }}>
-                    <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.66rem" }}>
-                      {work.sectorName || work.category || "Work"}
-                    </span>
-                    {getStatusBadge(work.status)}
-                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                      &bull; {work.constituency}
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--gov-primary)", margin: "0 0 3px 0", wordBreak: "break-word" }}>
-                    {work.title}
-                  </h4>
-                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    <span>Sanctioned: <strong>₹{sanctioned.toFixed(2)} Cr</strong></span>
-                    <span>Spent: <strong>₹{spent.toFixed(2)} Cr</strong></span>
-                    <span>Progress: <strong>{progress}%</strong></span>
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => onSelectWork(work)}
-                  style={{ minHeight: "36px" }}
-                >
-                  View Details
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Pagination Controls Bar */}
-      {totalPages > 1 && (
-        <div className="citizen-pagination-bar">
-          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
-            <span>Showing Page <strong>{safePage}</strong> of <strong>{totalPages}</strong></span>
-            <span>({totalItems} total projects)</span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
-            {/* First Button */}
-            <button
-              type="button"
-              className="citizen-page-btn"
-              onClick={() => handlePageChange(1)}
-              disabled={safePage <= 1}
-              title="First Page"
+          return (
+            <div
+              key={work.id}
+              style={{
+                background: "var(--bg-surface)",
+                borderRadius: "10px",
+                border: "1px solid var(--border-main)",
+                padding: "14px 18px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                boxSizing: "border-box",
+                transition: "all 0.2s ease",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#93c5fd";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--border-main)";
+                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+              }}
+              onClick={() => onSelectWork(work)}
             >
-              <ChevronsLeft size={14} />
-            </button>
-
-            {/* Prev Button */}
-            <button
-              type="button"
-              className="citizen-page-btn"
-              onClick={() => handlePageChange(safePage - 1)}
-              disabled={safePage <= 1}
-              title="Previous Page"
-            >
-              <ChevronLeft size={14} />
-            </button>
-
-            {/* Page Number Pills */}
-            {paginationItems.map((item, idx) => {
-              if (item === "...") {
-                return (
-                  <span key={`dots-${idx}`} style={{ padding: "0 4px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                    ...
+              <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px", flexWrap: "wrap" }}>
+                  <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.66rem" }}>
+                    {work.sectorName || work.category || "Work"}
                   </span>
-                );
-              }
-              const pageNum = Number(item);
-              const isActive = pageNum === safePage;
-              return (
-                <button
-                  key={`page-${pageNum}`}
-                  type="button"
-                  className={`citizen-page-btn ${isActive ? "active" : ""}`}
-                  onClick={() => handlePageChange(pageNum)}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
+                  {getStatusBadge(work.status)}
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                    &bull; {work.constituency}
+                  </span>
+                </div>
+                <h4 style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--gov-primary)", margin: "0 0 3px 0", wordBreak: "break-word" }}>
+                  {work.title}
+                </h4>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  <span>Sanctioned: <strong>₹{sanctioned.toFixed(2)} Cr</strong></span>
+                  <span>Spent: <strong>₹{spent.toFixed(2)} Cr</strong></span>
+                  <span>Progress: <strong>{progress}%</strong></span>
+                </div>
+              </div>
 
-            {/* Next Button */}
-            <button
-              type="button"
-              className="citizen-page-btn"
-              onClick={() => handlePageChange(safePage + 1)}
-              disabled={safePage >= totalPages}
-              title="Next Page"
-            >
-              <ChevronRight size={14} />
-            </button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onSelectWork(work); }}
+                style={{ minHeight: "36px", fontWeight: 700 }}
+              >
+                View Details
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    )}
 
-            {/* Last Button */}
-            <button
-              type="button"
-              className="citizen-page-btn"
-              onClick={() => handlePageChange(totalPages)}
-              disabled={safePage >= totalPages}
-              title="Last Page"
-            >
-              <ChevronsRight size={14} />
-            </button>
-
-            {/* Quick Jump Input */}
-            {totalPages > 5 && (
-              <form onSubmit={handleJumpSubmit} style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginLeft: "6px" }}>
-                <input
-                  type="number"
-                  min={1}
-                  max={totalPages}
-                  placeholder="Go to"
-                  value={jumpPageInput}
-                  onChange={(e) => setJumpPageInput(e.target.value)}
-                  style={{
-                    width: "48px",
-                    height: "30px",
-                    padding: "0 6px",
-                    borderRadius: "4px",
-                    border: "1px solid var(--border-main)",
-                    fontSize: "0.74rem",
-                    textAlign: "center"
-                  }}
-                />
-                <button
-                  type="submit"
-                  className="citizen-page-btn"
-                  style={{ height: "30px", fontSize: "0.72rem", padding: "0 8px" }}
-                >
-                  Go
-                </button>
-              </form>
-            )}
-          </div>
+    {/* Pagination Controls Bar */}
+    {totalPages > 1 && (
+      <div className="citizen-pagination-bar">
+        <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+          <span>Showing Page <strong>{safePage}</strong> of <strong>{totalPages}</strong></span>
+          <span>({totalItems} total projects)</span>
         </div>
-      )}
-    </div>
-  );
+
+        <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
+          {/* First Button */}
+          <button
+            type="button"
+            className="citizen-page-btn"
+            onClick={() => handlePageChange(1)}
+            disabled={safePage <= 1}
+            title="First Page"
+          >
+            <ChevronsLeft size={14} />
+          </button>
+
+          {/* Prev Button */}
+          <button
+            type="button"
+            className="citizen-page-btn"
+            onClick={() => handlePageChange(safePage - 1)}
+            disabled={safePage <= 1}
+            title="Previous Page"
+          >
+            <ChevronLeft size={14} />
+          </button>
+
+          {/* Page Number Pills */}
+          {paginationItems.map((item, idx) => {
+            if (item === "...") {
+              return (
+                <span key={`dots-${idx}`} style={{ padding: "0 4px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  ...
+                </span>
+              );
+            }
+            const pageNum = Number(item);
+            const isActive = pageNum === safePage;
+            return (
+              <button
+                key={`page-${pageNum}`}
+                type="button"
+                className={`citizen-page-btn ${isActive ? "active" : ""}`}
+                onClick={() => handlePageChange(pageNum)}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+
+          {/* Next Button */}
+          <button
+            type="button"
+            className="citizen-page-btn"
+            onClick={() => handlePageChange(safePage + 1)}
+            disabled={safePage >= totalPages}
+            title="Next Page"
+          >
+            <ChevronRight size={14} />
+          </button>
+
+          {/* Last Button */}
+          <button
+            type="button"
+            className="citizen-page-btn"
+            onClick={() => handlePageChange(totalPages)}
+            disabled={safePage >= totalPages}
+            title="Last Page"
+          >
+            <ChevronsRight size={14} />
+          </button>
+
+          {/* Quick Jump Input */}
+          {totalPages > 5 && (
+            <form onSubmit={handleJumpSubmit} style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginLeft: "6px" }}>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                placeholder="Go to"
+                value={jumpPageInput}
+                onChange={(e) => setJumpPageInput(e.target.value)}
+                style={{
+                  width: "48px",
+                  height: "30px",
+                  padding: "0 6px",
+                  borderRadius: "4px",
+                  border: "1px solid var(--border-main)",
+                  fontSize: "0.74rem",
+                  textAlign: "center"
+                }}
+              />
+              <button
+                type="submit"
+                className="citizen-page-btn"
+                style={{ height: "30px", fontSize: "0.72rem", padding: "0 8px" }}
+              >
+                Go
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
+);
 };
 
 export default CitizenProjectSearch;

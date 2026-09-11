@@ -7,7 +7,8 @@ import {
   Building2, 
   MapPin, 
   Award, 
-  ShieldCheck
+  ShieldCheck,
+  UserCheck
 } from 'lucide-react';
 import { TranslationDict } from '../data/translations';
 import { useRole, Role } from '../auth/roleContext';
@@ -49,8 +50,8 @@ const ROLES_HI: { id: Role; label: string; desc: string; icon: any }[] = [
   { id: "ministry", label: "सांख्यिकी मंत्रालय (MoSPI)", desc: "शीर्ष राष्ट्रीय पर्यवेक्षण", icon: Award }
 ];
 
-export function Navbar({ activeTab, setActiveTab, t: propT }: NavbarProps) {
-  const { user, logout } = useRole();
+export function Navbar({ activeTab, setActiveTab, onOpenLogin, t: propT, adminHouseFilter, onAdminHouseFilterChange }: NavbarProps) {
+  const { user, setRole, logout } = useRole();
   const { t: prefT, lang } = usePreferences();
   const t = prefT || propT;
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -71,6 +72,11 @@ export function Navbar({ activeTab, setActiveTab, t: propT }: NavbarProps) {
 
   const currentRoleInfo = rolesList.find(r => r.id === user.role) || rolesList[0];
   const CurrentIcon = currentRoleInfo.icon;
+
+  const handleSelectRole = (roleId: Role) => {
+    setRole(roleId);
+    setIsRoleDropdownOpen(false);
+  };
 
   const getRoleDisplayName = () => {
     if (user.role === 'mp') {
@@ -161,8 +167,9 @@ export function Navbar({ activeTab, setActiveTab, t: propT }: NavbarProps) {
         {/* Right Side Navigation Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           
-          {setActiveTab && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600 }}>
+          {/* Quick Nav Links & Top Right House Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600 }}>
+            {setActiveTab && (
               <button
                 type="button"
                 onClick={() => setActiveTab('dashboard')}
@@ -180,8 +187,57 @@ export function Navbar({ activeTab, setActiveTab, t: propT }: NavbarProps) {
               >
                 {t?.dashboard || (lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard')}
               </button>
-            </div>
-          )}
+            )}
+
+            {/* Parliamentary House Filter Dropdown (Top Navbar) */}
+            {adminHouseFilter !== undefined && onAdminHouseFilterChange && (
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  marginLeft: '4px',
+                  background: 'rgba(241, 245, 249, 0.85)',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1'
+                }}
+              >
+                <label 
+                  htmlFor="top-nav-house-filter"
+                  style={{ 
+                    fontSize: '0.72rem', 
+                    fontWeight: 700, 
+                    color: '#475569',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.3px'
+                  }}
+                >
+                  {lang === 'hi' ? 'सदन:' : 'House:'}
+                </label>
+                <select
+                  id="top-nav-house-filter"
+                  aria-label={lang === 'hi' ? 'सदन फ़िल्टर' : 'Parliamentary House Filter'}
+                  value={adminHouseFilter}
+                  onChange={(e) => onAdminHouseFilterChange(e.target.value as "both" | "Lok Sabha" | "Rajya Sabha")}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    color: '#0f2942',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    padding: '2px 0'
+                  }}
+                >
+                  <option value="both">{lang === 'hi' ? 'सभी सदन' : 'All Houses (Both)'}</option>
+                  <option value="Lok Sabha">Lok Sabha</option>
+                  <option value="Rajya Sabha">Rajya Sabha</option>
+                </select>
+              </div>
+            )}
+          </div>
 
           <div style={{ height: '24px', width: '1px', background: 'var(--border-light, #e2e8f0)' }} />
 
@@ -228,7 +284,7 @@ export function Navbar({ activeTab, setActiveTab, t: propT }: NavbarProps) {
               <ChevronDown size={13} color="var(--text-main, #0f172a)" style={{ transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease', marginLeft: '3px' }} />
             </button>
 
-            {/* Account & Profile Menu (No role switching, strictly user info and logout) */}
+            {/* Account & Profile Menu */}
             {isRoleDropdownOpen && (
               <div style={{
                 position: 'absolute',
@@ -264,8 +320,100 @@ export function Navbar({ activeTab, setActiveTab, t: propT }: NavbarProps) {
                   <span>Area: <strong>{getSubLabel()}</strong></span>
                 </div>
 
-                {/* Logout Button (No role switching dropdown in dashboard) */}
-                <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '10px' }}>
+                {/* Quick Perspective / Role Switcher */}
+                <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '8px' }}>
+                  <div style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '6px' }}>
+                    {lang === 'hi' ? 'भूमिका बदलें (त्वरित नेविगेशन)' : 'Switch Role (Quick Navigation)'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '230px', overflowY: 'auto' }}>
+                    {rolesList.map((r) => {
+                      const Icon = r.icon;
+                      const isActive = r.id === user.role;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => handleSelectRole(r.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            border: isActive ? '1px solid #bfdbfe' : '1px solid transparent',
+                            background: isActive ? '#eff6ff' : 'transparent',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'all 0.12s ease'
+                          }}
+                          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = '#f8fafc'; }}
+                          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '6px',
+                              background: isActive ? 'var(--gov-primary, #0f2942)' : '#f1f5f9',
+                              color: isActive ? '#ffffff' : '#475569',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              <Icon size={13} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.78rem', fontWeight: isActive ? 800 : 600, color: isActive ? '#1e40af' : '#1e293b', lineHeight: 1.2 }}>
+                                {r.label}
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: '#64748b', lineHeight: 1.1 }}>
+                                {r.desc}
+                              </div>
+                            </div>
+                          </div>
+                          {isActive && (
+                            <span style={{ fontSize: '0.60rem', fontWeight: 800, color: '#1e40af', background: '#dbeafe', padding: '1px 5px', borderRadius: '4px' }}>
+                              Active
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Switch Account via Login & Logout */}
+                <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {onOpenLogin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRoleDropdownOpen(false);
+                        onOpenLogin();
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-main, #cbd5e1)',
+                        background: 'var(--bg-surface-subtle, #f8fafc)',
+                        color: 'var(--gov-accent, #155eef)',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <UserCheck size={13} />
+                      <span>Login as Different User</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
@@ -278,12 +426,12 @@ export function Navbar({ activeTab, setActiveTab, t: propT }: NavbarProps) {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      padding: '8px 10px',
+                      padding: '6px 10px',
                       borderRadius: '6px',
                       border: '1px solid var(--status-danger-border, #fecaca)',
                       background: 'var(--status-danger-bg, #fef2f2)',
                       color: 'var(--status-danger-text, #991b1b)',
-                      fontSize: '0.80rem',
+                      fontSize: '0.76rem',
                       fontWeight: 700,
                       cursor: 'pointer'
                     }}

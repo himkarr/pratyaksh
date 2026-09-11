@@ -187,34 +187,38 @@ export const ContractorDashboard: React.FC = () => {
               <RefreshCw size={36} color="var(--gov-primary)" className="spin" style={{ margin: "0 auto 12px auto" }} />
               <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>Loading Contractor Portal Workspace for {profile.agencyName}...</div>
             </div>
-          ) : selectedProject ? (
-            /* CONTRACTOR PROJECT DETAIL VIEW */
-            <ContractorProjectDetail
-              project={selectedProject}
-              onBack={() => setSelectedProject(null)}
-              onSubmitStageEvidence={handleSubmitStageEvidence}
-              onRequestCompletionCertificate={handleRequestCompletionCertificate}
-            />
           ) : (
-            /* CONTRACTOR DASHBOARD MAIN VIEW */
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              {/* KPI Summary Cards */}
-              <ContractorSummaryCards projects={projects} />
-
-              {/* My Assigned Works Table */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid var(--border-light)", paddingBottom: "8px" }}>
-                  <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Building2 size={18} />
-                    My Assigned Works & Monitoring Portal — {profile.agencyName} ({projects.length})
-                  </h3>
-                </div>
-
-                <ContractorProjectTable
-                  projects={projects}
-                  onSelectProject={(proj) => setSelectedProject(proj)}
+            <div key={selectedProject ? selectedProject.id : "table-view"} className="view-transition-container">
+              {selectedProject ? (
+                /* CONTRACTOR PROJECT DETAIL VIEW */
+                <ContractorProjectDetail
+                  project={selectedProject}
+                  onBack={() => setSelectedProject(null)}
+                  onSubmitStageEvidence={handleSubmitStageEvidence}
+                  onRequestCompletionCertificate={handleRequestCompletionCertificate}
                 />
-              </div>
+              ) : (
+                /* CONTRACTOR DASHBOARD MAIN VIEW */
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                  {/* KPI Summary Cards */}
+                  <ContractorSummaryCards projects={projects} />
+
+                  {/* My Assigned Works Table */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid var(--border-light)", paddingBottom: "8px" }}>
+                      <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Building2 size={18} />
+                        My Assigned Works & Monitoring Portal — {profile.agencyName} ({projects.length})
+                      </h3>
+                    </div>
+
+                    <ContractorProjectTable
+                      projects={projects}
+                      onSelectProject={(proj) => setSelectedProject(proj)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

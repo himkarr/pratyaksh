@@ -27,13 +27,12 @@ export const ContractorSummaryCards: React.FC<ContractorSummaryCardsProps> = ({ 
     >
       {/* 1. Total Assigned Projects */}
       <div 
-        className="civic-card" 
+        className="metric-card metric-amber" 
         style={{ 
           padding: "18px 20px", 
           display: "flex",
           flexDirection: "column",
-          gap: "8px",
-          borderTop: "3.5px solid #d97706"
+          gap: "8px"
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -54,13 +53,12 @@ export const ContractorSummaryCards: React.FC<ContractorSummaryCardsProps> = ({ 
 
       {/* 2. Active Projects */}
       <div 
-        className="civic-card" 
+        className="metric-card metric-sky" 
         style={{ 
           padding: "18px 20px", 
           display: "flex",
           flexDirection: "column",
-          gap: "8px",
-          borderTop: "3.5px solid #0284c7"
+          gap: "8px"
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -81,13 +79,12 @@ export const ContractorSummaryCards: React.FC<ContractorSummaryCardsProps> = ({ 
 
       {/* 3. Projects On Track */}
       <div 
-        className="civic-card" 
+        className="metric-card metric-green" 
         style={{ 
           padding: "18px 20px", 
           display: "flex",
           flexDirection: "column",
-          gap: "8px",
-          borderTop: "3.5px solid #16a34a"
+          gap: "8px"
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -108,13 +105,12 @@ export const ContractorSummaryCards: React.FC<ContractorSummaryCardsProps> = ({ 
 
       {/* 4. Projects Requiring Attention */}
       <div 
-        className="civic-card" 
+        className="metric-card metric-rose" 
         style={{ 
           padding: "18px 20px", 
           display: "flex",
           flexDirection: "column",
-          gap: "8px",
-          borderTop: "3.5px solid #dc2626"
+          gap: "8px"
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -135,13 +131,12 @@ export const ContractorSummaryCards: React.FC<ContractorSummaryCardsProps> = ({ 
 
       {/* 5. Pending Evidence Submissions */}
       <div 
-        className="civic-card" 
+        className="metric-card metric-orange" 
         style={{ 
           padding: "18px 20px", 
           display: "flex",
           flexDirection: "column",
-          gap: "8px",
-          borderTop: "3.5px solid #ea580c"
+          gap: "8px"
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

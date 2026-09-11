@@ -8,13 +8,12 @@ import { RequestCompletionCertificateModal } from "./RequestCompletionCertificat
 import { SubmissionHistory } from "./SubmissionHistory";
 import { Button } from "../ui/Button";
 
-
 interface ContractorProjectDetailProps {
   project: ContractorProject;
   onBack: () => void;
   onSubmitStageEvidence: (
-    workId: string, 
-    stageId: string, 
+    workId: string,
+    stageId: string,
     payload: SubmitStagePayload
   ) => void;
   onRequestCompletionCertificate?: (workId: string, remarks: string) => void;
@@ -78,7 +77,7 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
       {/* ========================================================================= */}
       {/* SECTION 1: OFFICIAL PROJECT INFORMATION                                  */}
       {/* ========================================================================= */}
-      <div className="civic-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div className="gov-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
         <div style={{ borderBottom: "1px solid var(--border-light)", paddingBottom: "10px" }}>
           <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
             SECTION 1 — OFFICIAL MPLADS PROJECT INFORMATION
@@ -93,8 +92,6 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
             <span>MP: <strong>{project.mpName}</strong></span>
           </div>
         </div>
-
-
 
         {/* Detailed Official Parameters Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "14px", fontSize: "0.8rem" }}>
@@ -215,11 +212,11 @@ export const ContractorProjectDetail: React.FC<ContractorProjectDetailProps> = (
       {/* ========================================================================= */}
       {/* SECTION 2: OFFICIAL SCHEDULE PROVIDED BY AUTHORITY                         */}
       {/* ========================================================================= */}
-      <div 
-        className="civic-card" 
-        style={{ 
-          padding: "16px 20px", 
-          background: "var(--status-info-bg)", 
+      <div
+        className="civic-card"
+        style={{
+          padding: "16px 20px",
+          background: "var(--status-info-bg)",
           border: "1px solid var(--status-info-border)",
           display: "flex",
           justifyContent: "space-between",

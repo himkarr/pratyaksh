@@ -1147,8 +1147,11 @@ export const GURUGRAM_WORKS: WorkItem[] = [
   }
 ];
 
-// Official works loaded from Supabase application database
+import { HARDCODED_STATE_PROJECTS } from "./hardcodedData";
+
+// Official works loaded from Supabase application database with 10 works per State/UT
 export const INITIAL_WORKS: WorkItem[] = [
+  ...HARDCODED_STATE_PROJECTS,
   ...JABALPUR_WORKS,
   ...ROHTAK_WORKS,
   ...JIND_WORKS,

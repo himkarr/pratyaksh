@@ -19,18 +19,21 @@ import {
   Building2, 
   Building,
   Database,
-  Download
+  Download,
+  List,
+  LayoutGrid
 } from "lucide-react";
 import { Header } from "../components/Header";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { WorkDetailModal } from "../components/WorkDetailModal";
 import { AttachmentsModal } from "../components/AttachmentsModal";
+import { ReviewRatingModal } from "../components/ReviewRatingModal";
 import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button, Alert } from "../components/ui";
 
-import { INITIAL_WORKS, WorkItem } from "../data/mpladsData";
+import { INITIAL_WORKS, WorkItem, WorkReview } from "../data/mpladsData";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { adminDataService, StateSummary } from "../api/adminDataService";
@@ -41,6 +44,7 @@ export const StateNodalDashboard: React.FC = () => {
 
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState<"state_projects" | "district_performance" | "escalations" | "state_reports">("state_projects");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   // State Selection & Live Supabase Data
   const [availableStates, setAvailableStates] = useState<StateSummary[]>([]);
@@ -61,6 +65,7 @@ export const StateNodalDashboard: React.FC = () => {
   // Selected Modals
   const [selectedWorkForDetail, setSelectedWorkForDetail] = useState<WorkItem | null>(null);
   const [selectedWorkForAttachments, setSelectedWorkForAttachments] = useState<WorkItem | null>(null);
+  const [selectedWorkForReviews, setSelectedWorkForReviews] = useState<WorkItem | null>(null);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [targetLoginRole, setTargetLoginRole] = useState<Role | undefined>(undefined);
@@ -178,6 +183,7 @@ export const StateNodalDashboard: React.FC = () => {
       return {
         rank: idx + 1,
         district: dist.replace(/\(.*\)/, '').trim(),
+        rawDistrict: dist,
         totalWorks: distWorks.length,
         outlayAmt: totalOutlay,
         expenditureAmt: totalExp,
@@ -238,61 +244,159 @@ export const StateNodalDashboard: React.FC = () => {
 
       <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
         <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        
-        {/* State Nodal Workspace Branding Banner */}
-        <div 
-          className="civic-card"
-          style={{ 
-            background: "linear-gradient(135deg, #0a2540 0%, #1e3a5f 100%)", 
-            color: "#ffffff", 
-            padding: "24px 28px", 
-            borderRadius: "14px", 
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "18px",
-            boxShadow: "0 4px 20px rgba(15, 23, 42, 0.12)"
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#93c5fd", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          {/* Module Tabs Navigation Bar (Admin Reference Standard) */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              borderBottom: "2px solid #e2e8f0",
+              paddingBottom: "10px",
+              marginBottom: "1.25rem",
+              flexWrap: "wrap"
+            }}
+          >
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab("state_projects")}
+                className={`gov-tab ${activeTab === "state_projects" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <Landmark size={16} />
+                <span>Statewide Projects</span>
+                <span style={{
+                  fontSize: "0.72rem",
+                  padding: "2px 8px",
+                  borderRadius: "9999px",
+                  background: activeTab === "state_projects" ? "rgba(255,255,255,0.25)" : "#eff6ff",
+                  color: activeTab === "state_projects" ? "#ffffff" : "#1d4ed8",
+                  fontWeight: 700
+                }}>
+                  {filteredStateProjects.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("district_performance")}
+                className={`gov-tab ${activeTab === "district_performance" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <BarChart2 size={16} />
+                <span>District Performance</span>
+                <span style={{
+                  fontSize: "0.72rem",
+                  padding: "2px 8px",
+                  borderRadius: "9999px",
+                  background: activeTab === "district_performance" ? "rgba(255,255,255,0.25)" : "#f1f5f9",
+                  color: activeTab === "district_performance" ? "#ffffff" : "#64748b",
+                  fontWeight: 700
+                }}>
+                  {districtPerformance.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("escalations")}
+                className={`gov-tab ${activeTab === "escalations" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <ShieldAlert size={16} />
+                <span>High-Risk Escalations</span>
+                <span style={{
+                  fontSize: "0.72rem",
+                  padding: "2px 8px",
+                  borderRadius: "9999px",
+                  background: activeTab === "escalations" ? "rgba(255,255,255,0.25)" : "#fee2e2",
+                  color: activeTab === "escalations" ? "#ffffff" : "#b91c1c",
+                  fontWeight: 700
+                }}>
+                  {stateHighRiskProjects.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("state_reports")}
+                className={`gov-tab ${activeTab === "state_reports" ? "active" : ""}`}
+                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              >
+                <FileText size={16} />
+                <span>State Reports</span>
+              </button>
+            </div>
+
+            {/* Right Status Badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 14px",
+                  borderRadius: "9999px",
+                  background: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  color: "#065f46",
+                }}
+              >
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: "#10b981",
+                    boxShadow: "0 0 6px #10b981",
+                  }}
+                />
+                <span>{filteredStateProjects.length} Works Across {districtPerformance.length} Districts</span>
+              </div>
+            </div>
+          </div>
+
+          {/* State Nodal Department Header (Admin Reference Standard) */}
+        <div className="dashboard-header" style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+          <div className="dashboard-title-section">
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "#e0f2fe", color: "#0369a1", textTransform: "uppercase" }}>
                 State Nodal Department · Planning & Development
               </span>
-              <span style={{ color: "rgba(255, 255, 255, 0.4)" }}>•</span>
-              <span style={{ fontSize: "0.72rem", color: "#e2e8f0" }}>
+              <span style={{ color: "#94a3b8" }}>•</span>
+              <span style={{ fontSize: "0.76rem", color: "#64748b", fontWeight: 600 }}>
                 Government of {selectedState}
               </span>
               {isLiveConnected && (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#34d399", fontWeight: 600 }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#065f46", fontWeight: 600 }}>
                   <Database size={11} />
                   <span>Live Supabase Connected</span>
                 </div>
               )}
             </div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0", lineHeight: 1.25, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+            <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
               Statewide MPLADS Monitoring — {selectedState}
             </h1>
-            <p style={{ fontSize: "0.84rem", color: "#cbd5e1", maxWidth: "760px", lineHeight: 1.45, margin: 0 }}>
+            <p style={{ fontSize: "0.92rem", color: "#64748b", margin: 0, maxWidth: "780px" }}>
               Cross-district implementation monitoring, statewide fund utilization tracking, and project milestone oversight.
             </p>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-            {/* State Selector */}
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "0.70rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>
+              <label style={{ fontSize: "0.70rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#64748b", fontWeight: 700 }}>
                 Select State / UT:
               </label>
               <select
                 value={selectedState}
                 onChange={(e) => setSelectedState(e.target.value)}
                 style={{
-                  background: "rgba(255, 255, 255, 0.12)",
-                  color: "#ffffff",
-                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  border: "1px solid #cbd5e1",
                   borderRadius: "8px",
                   padding: "7px 14px",
                   fontSize: "0.82rem",
@@ -303,12 +407,12 @@ export const StateNodalDashboard: React.FC = () => {
               >
                 {availableStates.length > 0 ? (
                   availableStates.map((s) => (
-                    <option key={s.state} value={s.state} style={{ color: "#0f172a", background: "#ffffff" }}>
+                    <option key={s.state} value={s.state}>
                       {s.state} (#{s.rank} · {s.utilizationPercentage}% Utilized)
                     </option>
                   ))
                 ) : (
-                  <option value={selectedState} style={{ color: "#0f172a", background: "#ffffff" }}>
+                  <option value={selectedState}>
                     {selectedState}
                   </option>
                 )}
@@ -320,7 +424,7 @@ export const StateNodalDashboard: React.FC = () => {
               size="sm"
               onClick={() => window.print()}
               icon={<Download size={14} />}
-              style={{ background: "#ffffff", color: "var(--gov-primary, #0a2540)", borderColor: "#ffffff", fontWeight: 700, borderRadius: "8px" }}
+              style={{ background: "#ffffff", color: "var(--gov-primary, #0a2540)", borderColor: "#cbd5e1", fontWeight: 700, borderRadius: "8px" }}
             >
               Export State Report (PDF)
             </Button>
@@ -333,10 +437,20 @@ export const StateNodalDashboard: React.FC = () => {
           </Alert>
         )}
 
-        {/* KPI Summary Cards */}
+        {/* KPI Summary Cards (Admin Reference Hover-Only Top Accent) */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px" }}>
           
-          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #0a2540" }}>
+          <div 
+            className="metric-card metric-navy cursor-pointer" 
+            style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", cursor: "pointer" }}
+            title="Click to view all statewide projects"
+            onClick={() => {
+              setActiveTab("state_projects");
+              setSelectedDistrict("all");
+              setSelectedStatus("all");
+              setSearchQuery("");
+            }}
+          >
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
               Total Statewide Works
             </div>
@@ -348,7 +462,14 @@ export const StateNodalDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #0284c7" }}>
+          <div 
+            className="metric-card metric-sky cursor-pointer" 
+            style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", cursor: "pointer" }}
+            title="Click to view district performance matrix"
+            onClick={() => {
+              setActiveTab("district_performance");
+            }}
+          >
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
               State Expenditure Disbursed
             </div>
@@ -360,7 +481,15 @@ export const StateNodalDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #16a34a" }}>
+          <div 
+            className="metric-card metric-green cursor-pointer" 
+            style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", cursor: "pointer" }}
+            title="Click to filter Completed works"
+            onClick={() => {
+              setActiveTab("state_projects");
+              setSelectedStatus("Completed");
+            }}
+          >
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
               Completed Works
             </div>
@@ -372,7 +501,14 @@ export const StateNodalDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="civic-card" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "3.5px solid #dc2626" }}>
+          <div 
+            className="metric-card metric-rose cursor-pointer" 
+            style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px", cursor: "pointer" }}
+            title="Click to view High-Risk Escalations"
+            onClick={() => {
+              setActiveTab("escalations");
+            }}
+          >
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
               State High-Risk Anomalies
             </div>
@@ -386,46 +522,10 @@ export const StateNodalDashboard: React.FC = () => {
 
         </div>
 
-        {/* Civic Navigation Tabs */}
-        <div className="civic-nav-tabs">
-          <button
-            onClick={() => setActiveTab("state_projects")}
-            className={`civic-tab-btn ${activeTab === "state_projects" ? "active" : ""}`}
-          >
-            <Landmark size={15} />
-            <span>Statewide Projects</span>
-            <span className="civic-tab-badge">{filteredStateProjects.length}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("district_performance")}
-            className={`civic-tab-btn ${activeTab === "district_performance" ? "active" : ""}`}
-          >
-            <BarChart2 size={15} />
-            <span>District Performance</span>
-            <span className="civic-tab-badge">{districtPerformance.length}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("escalations")}
-            className={`civic-tab-btn ${activeTab === "escalations" ? "active" : ""}`}
-          >
-            <ShieldAlert size={15} />
-            <span>High-Risk Escalations</span>
-            <span className="civic-tab-badge">{stateHighRiskProjects.length}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("state_reports")}
-            className={`civic-tab-btn ${activeTab === "state_reports" ? "active" : ""}`}
-          >
-            <FileText size={15} />
-            <span>State Reports</span>
-          </button>
-        </div>
-
-        {/* TAB 1: STATEWIDE PROJECT MONITORING */}
-        {activeTab === "state_projects" && (
+        {/* Tab Views with Smooth Animated Transition */}
+        <div key={activeTab} className="view-transition-container">
+          {/* TAB 1: STATEWIDE PROJECT MONITORING */}
+          {activeTab === "state_projects" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             
             {/* Mandatory AI Risk Semantics Banner */}
@@ -434,7 +534,7 @@ export const StateNodalDashboard: React.FC = () => {
             </Alert>
 
             {/* Comprehensive State Filter Bar */}
-            <div className="civic-card" style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="gov-card" style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "12px" }}>
               <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--gov-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
                 <Sliders size={14} />
                 Statewide Multi-Dimensional Filters
@@ -493,77 +593,233 @@ export const StateNodalDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="civic-card" style={{ padding: "16px 20px", overflowX: "auto" }}>
-              <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
-                    <th style={{ padding: "10px 12px" }}>Work ID</th>
-                    <th style={{ padding: "10px 12px" }}>Project Name & Category</th>
-                    <th style={{ padding: "10px 12px" }}>District & MP</th>
-                    <th style={{ padding: "10px 12px" }}>Sanction Cost</th>
-                    <th style={{ padding: "10px 12px" }}>Physical Progress</th>
-                    <th style={{ padding: "10px 12px" }}>Risk Signal</th>
-                    <th style={{ padding: "10px 12px" }}>Status</th>
-                    <th style={{ padding: "10px 12px" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStateProjects.map((work) => (
-                    <tr key={work.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                      <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
-                        {work.id}
-                      </td>
-                      <td style={{ padding: "10px 12px", maxWidth: "260px" }}>
-                        <div style={{ fontWeight: 700, color: "var(--text-main)" }}>{work.title}</div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                          Category: {work.category} | Agency: {work.agency}
-                        </div>
-                      </td>
-                      <td style={{ padding: "10px 12px", fontSize: "0.78rem" }}>
-                        <div style={{ fontWeight: 600 }}>{work.district}</div>
-                        <div style={{ color: "var(--text-muted)" }}>MP: {work.mpName}</div>
-                      </td>
-                      <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--gov-primary)" }}>
-                        ₹{work.sanctionedAmt.toFixed(2)} Cr
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <div style={{ width: "60px", height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
-                          </div>
-                          <span style={{ fontWeight: 700 }}>{work.physicalProgress}%</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        {work.status === "Delayed" ? (
-                          <span className="gov-badge gov-badge-danger">HIGH RISK (P1)</span>
-                        ) : (
-                          <span className="gov-badge gov-badge-info">NORMAL RISK</span>
-                        )}
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
-                          {work.status.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
-                          Inspect Dossier
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Toolbar: Results Count and Segmented View Mode Toggle */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", margin: "4px 0" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-main)" }}>
+                  Statewide Projects ({filteredStateProjects.length} Works)
+                </div>
+                {selectedDistrict !== "all" && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#eff6ff", border: "1px solid #bfdbfe", padding: "2px 8px", borderRadius: "9999px", fontSize: "0.74rem" }}>
+                    <span style={{ color: "#1e40af", fontWeight: 600 }}>District: <strong>{selectedDistrict}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDistrict("all")}
+                      style={{ background: "none", border: "none", color: "#1e40af", fontWeight: 800, cursor: "pointer", padding: "0 2px", fontSize: "0.80rem" }}
+                      title="Clear District Filter (Show All Districts)"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "5px", padding: "5px 12px", borderRadius: "6px", fontSize: "0.76rem",
+                    fontWeight: viewMode === "list" ? 700 : 500, border: "none",
+                    background: viewMode === "list" ? "#ffffff" : "transparent",
+                    color: viewMode === "list" ? "#0f172a" : "#64748b",
+                    boxShadow: viewMode === "list" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                    cursor: "pointer", transition: "all 0.15s ease"
+                  }}
+                >
+                  <List size={13} />
+                  <span>Table View</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "5px", padding: "5px 12px", borderRadius: "6px", fontSize: "0.76rem",
+                    fontWeight: viewMode === "grid" ? 700 : 500, border: "none",
+                    background: viewMode === "grid" ? "#ffffff" : "transparent",
+                    color: viewMode === "grid" ? "#0f172a" : "#64748b",
+                    boxShadow: viewMode === "grid" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                    cursor: "pointer", transition: "all 0.15s ease"
+                  }}
+                >
+                  <LayoutGrid size={13} />
+                  <span>Card Grid</span>
+                </button>
+              </div>
             </div>
+
+            {/* View Mode: Card Grid or Table View */}
+            {viewMode === "grid" ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
+                {filteredStateProjects.map((work) => (
+                  <div
+                    key={work.id}
+                    className="gov-card card-hover-accent accent-sky cursor-pointer"
+                    style={{
+                      padding: "18px 20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      gap: "14px",
+                      borderRadius: "12px",
+                      border: "1px solid #e2e8f0",
+                      background: "#ffffff",
+                      position: "relative"
+                    }}
+                    onClick={() => setSelectedWorkForDetail(work)}
+                  >
+                    <div>
+                      {/* Top Bar: Work ID & Status Badge */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                        <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.82rem", color: "var(--gov-primary)" }}>
+                          {work.id}
+                        </span>
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          {work.status === "Delayed" && (
+                            <span className="gov-badge gov-badge-danger" style={{ fontSize: "0.68rem" }}>HIGH RISK</span>
+                          )}
+                          <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`} style={{ fontSize: "0.68rem" }}>
+                            {work.status.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Work Title */}
+                      <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-main)", marginBottom: "6px", lineHeight: 1.35 }}>
+                        {work.title}
+                      </h4>
+
+                      {/* Category & Agency */}
+                      <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginBottom: "12px" }}>
+                        Category: <strong style={{ color: "var(--text-main)" }}>{work.category}</strong> | Agency: {work.agency}
+                      </div>
+
+                      {/* District & MP info */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "8px 10px", background: "var(--bg-surface-subtle, #f8fafc)", borderRadius: "6px", fontSize: "0.75rem", marginBottom: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <MapPin size={12} style={{ color: "var(--gov-primary)", flexShrink: 0 }} />
+                          <span style={{ fontWeight: 600, color: "var(--text-main)" }}>District:</span> {work.district}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <Building2 size={12} style={{ color: "var(--gov-primary)", flexShrink: 0 }} />
+                          <span style={{ fontWeight: 600, color: "var(--text-main)" }}>MP:</span> {work.mpName}
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", marginBottom: "4px" }}>
+                          <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>Physical Progress</span>
+                          <span style={{ fontWeight: 700, color: "var(--text-main)" }}>{work.physicalProgress}%</span>
+                        </div>
+                        <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                          <div
+                            style={{
+                              width: `${work.physicalProgress}%`,
+                              height: "100%",
+                              background: work.status === "Completed" ? "#10b981" : work.status === "Delayed" ? "#f59e0b" : "#3b82f6",
+                              borderRadius: "4px"
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom: Financial Outlay & Action Button */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
+                      <div>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>Sanction Cost</div>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--gov-primary)" }}>
+                          ₹{work.sanctionedAmt.toFixed(2)} Cr
+                        </div>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedWorkForDetail(work);
+                        }}
+                        icon={<Eye size={12} />}
+                      >
+                        Inspect Dossier
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Table */
+              <div className="gov-card" style={{ padding: "16px 20px", overflowX: "auto" }}>
+                <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
+                      <th style={{ padding: "10px 12px" }}>Work ID</th>
+                      <th style={{ padding: "10px 12px" }}>Project Name & Category</th>
+                      <th style={{ padding: "10px 12px" }}>District & MP</th>
+                      <th style={{ padding: "10px 12px" }}>Sanction Cost</th>
+                      <th style={{ padding: "10px 12px" }}>Physical Progress</th>
+                      <th style={{ padding: "10px 12px" }}>Risk Signal</th>
+                      <th style={{ padding: "10px 12px" }}>Status</th>
+                      <th style={{ padding: "10px 12px" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStateProjects.map((work) => (
+                      <tr key={work.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
+                          {work.id}
+                        </td>
+                        <td style={{ padding: "10px 12px", maxWidth: "260px" }}>
+                          <div style={{ fontWeight: 700, color: "var(--text-main)" }}>{work.title}</div>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                            Category: {work.category} | Agency: {work.agency}
+                          </div>
+                        </td>
+                        <td style={{ padding: "10px 12px", fontSize: "0.78rem" }}>
+                          <div style={{ fontWeight: 600 }}>{work.district}</div>
+                          <div style={{ color: "var(--text-muted)" }}>MP: {work.mpName}</div>
+                        </td>
+                        <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--gov-primary)" }}>
+                          ₹{work.sanctionedAmt.toFixed(2)} Cr
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ width: "60px", height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                              <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
+                            </div>
+                            <span style={{ fontWeight: 700 }}>{work.physicalProgress}%</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          {work.status === "Delayed" ? (
+                            <span className="gov-badge gov-badge-danger">HIGH RISK (P1)</span>
+                          ) : (
+                            <span className="gov-badge gov-badge-info">NORMAL RISK</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
+                            {work.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
+                            Inspect Dossier
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
         {/* TAB 2: DISTRICT PERFORMANCE MATRIX */}
         {activeTab === "district_performance" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div className="civic-card" style={{ padding: "20px 24px" }}>
+            <div className="gov-card" style={{ padding: "20px 24px" }}>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-main, #0f172a)", marginBottom: "4px", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
                 Cross-District Performance & Utilization Matrix
               </h3>
@@ -583,13 +839,29 @@ export const StateNodalDashboard: React.FC = () => {
                       <th style={{ padding: "10px 12px" }}>Utilization Rate (%)</th>
                       <th style={{ padding: "10px 12px" }}>High-Risk Works</th>
                       <th style={{ padding: "10px 12px" }}>Performance Status</th>
+                      <th style={{ padding: "10px 12px" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {districtPerformance.map((d) => (
-                      <tr key={d.district} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                      <tr 
+                        key={d.district} 
+                        style={{ borderBottom: "1px solid var(--border-light)", transition: "background 0.15s ease" }}
+                        className="hover:bg-slate-50"
+                      >
                         <td style={{ padding: "10px 12px", fontWeight: 800, color: "var(--gov-primary)" }}>#{d.rank}</td>
-                        <td style={{ padding: "10px 12px", fontWeight: 700 }}>{d.district} District</td>
+                        <td style={{ padding: "10px 12px", fontWeight: 700 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedDistrict(d.rawDistrict);
+                              setActiveTab("state_projects");
+                            }}
+                            style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "var(--gov-primary)", cursor: "pointer", textAlign: "left", fontSize: "0.82rem" }}
+                          >
+                            {d.district} District
+                          </button>
+                        </td>
                         <td style={{ padding: "10px 12px" }}>{d.totalWorks} Works</td>
                         <td style={{ padding: "10px 12px", fontWeight: 700 }}>₹{d.outlayAmt.toFixed(2)} Cr</td>
                         <td style={{ padding: "10px 12px" }}>₹{d.expenditureAmt.toFixed(2)} Cr</td>
@@ -609,6 +881,19 @@ export const StateNodalDashboard: React.FC = () => {
                             {d.status.toUpperCase()}
                           </span>
                         </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedDistrict(d.rawDistrict);
+                              setActiveTab("state_projects");
+                            }}
+                            icon={<Eye size={12} />}
+                          >
+                            View Works ({d.totalWorks})
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -626,7 +911,7 @@ export const StateNodalDashboard: React.FC = () => {
             </Alert>
 
             {stateHighRiskProjects.map((work) => (
-              <div key={work.id} className="civic-card" style={{ padding: "18px 22px", borderLeft: "4px solid var(--status-danger-text, #dc2626)" }}>
+              <div key={work.id} className="card-hover-accent accent-rose" style={{ padding: "18px 22px", background: "#ffffff", borderRadius: "10px", border: "1px solid var(--border-light, #e2e8f0)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -658,7 +943,7 @@ export const StateNodalDashboard: React.FC = () => {
         {/* TAB 4: STATE REPORTS */}
         {activeTab === "state_reports" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div className="civic-card" style={{ padding: "20px 24px" }}>
+            <div className="gov-card" style={{ padding: "20px 24px" }}>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-main, #0f172a)", marginBottom: "4px", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
                 Statewide Sector Outlays & MoSPI Statutory Returns
               </h3>
@@ -677,6 +962,7 @@ export const StateNodalDashboard: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
 
         </div>
       </main>
@@ -685,12 +971,29 @@ export const StateNodalDashboard: React.FC = () => {
         work={selectedWorkForDetail}
         onClose={() => setSelectedWorkForDetail(null)}
         onViewAttachments={(w) => { setSelectedWorkForDetail(null); setSelectedWorkForAttachments(w); }}
-        onViewReviews={() => {}}
+        onViewReviews={(w) => { setSelectedWorkForDetail(null); setSelectedWorkForReviews(w); }}
       />
 
       <AttachmentsModal
         work={selectedWorkForAttachments}
         onClose={() => setSelectedWorkForAttachments(null)}
+      />
+
+      <ReviewRatingModal
+        work={selectedWorkForReviews}
+        onClose={() => setSelectedWorkForReviews(null)}
+        onAddReview={(workId, newReview) => {
+          setProjects(prev => prev.map(w => {
+            if (w.id === workId) {
+              const updatedReviews = [newReview, ...(w.reviews || [])];
+              const newAvg = Number((updatedReviews.reduce((s, r) => s + r.rating, 0) / updatedReviews.length).toFixed(1));
+              return { ...w, reviews: updatedReviews, reviewsCount: updatedReviews.length, rating: newAvg };
+            }
+            return w;
+          }));
+          setActionNotice(`Social audit feedback logged for Work #${workId}. Rating: ${newReview.rating}★`);
+          setTimeout(() => setActionNotice(null), 4000);
+        }}
       />
 
       <PolicyModal

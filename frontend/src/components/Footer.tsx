@@ -67,9 +67,21 @@ export function Footer({ t: _t, onOpenPolicy }: FooterProps) {
             <li>
               <button
                 onClick={onOpenPolicy}
-                style={{ background: 'transparent', color: '#cbd5e1', padding: 0, fontSize: '0.76rem', cursor: 'pointer', textAlign: 'left', fontWeight: 600 }}
+                style={{
+                  background: 'transparent',
+                  color: '#93c5fd',
+                  padding: 0,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  border: 'none',
+                }}
               >
-                • e-SAKSHI Guidelines (1-Year Completion Standard)
+                • How MPLADS Works (e-SAKSHI Guidelines & Norms)
               </button>
             </li>
             <li>

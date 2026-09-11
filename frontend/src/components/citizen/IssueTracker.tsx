@@ -35,7 +35,8 @@ const RECOMMENDATION_STEPS = [
 export const IssueTracker: React.FC<IssueTrackerProps> = ({
   issues,
   onOpenReportModal,
-  onOpenRecommendModal
+  onOpenRecommendModal,
+  onSelectWork
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<"all" | "recommendations" | "reports">("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -301,11 +302,11 @@ export const IssueTracker: React.FC<IssueTrackerProps> = ({
             return (
               <div
                 key={issue.id}
+                className={`card-hover-accent ${isRec ? "accent-emerald" : "accent-amber"} cursor-pointer`}
                 style={{
-                  background: "var(--bg-surface)",
-                  borderRadius: "var(--radius-sm)",
-                  border: `1px solid ${isExpanded ? (isRec ? "#059669" : "var(--gov-accent)") : "var(--border-main)"}`,
-                  borderLeft: isRec ? "4px solid #059669" : "4px solid #d97706",
+                  background: "var(--bg-surface, #ffffff)",
+                  borderRadius: "10px",
+                  border: `1px solid ${isExpanded ? (isRec ? "#059669" : "var(--gov-accent)") : "var(--border-light, #e2e8f0)"}`,
                   overflow: "hidden",
                   transition: "all 0.15s ease",
                   boxShadow: isExpanded ? "var(--shadow-card)" : "none",
@@ -434,6 +435,33 @@ export const IssueTracker: React.FC<IssueTrackerProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {/* Linked MPLADS Work Inspection (if reported against an existing work) */}
+                    {issue.linkedWorkId && (
+                      <div style={{ background: "rgba(10, 37, 64, 0.04)", border: "1px solid var(--border-light)", padding: "10px 14px", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                        <div>
+                          <div style={{ fontSize: "0.70rem", fontWeight: 700, color: "var(--gov-primary)", textTransform: "uppercase" }}>
+                            Linked MPLADS Public Work
+                          </div>
+                          <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-main)" }}>
+                            {issue.linkedWorkTitle || `Work #${issue.linkedWorkId}`}
+                          </div>
+                        </div>
+                        {onSelectWork && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectWork(issue.linkedWorkId!);
+                            }}
+                            icon={<Eye size={12} />}
+                          >
+                            Inspect Work Dossier
+                          </Button>
+                        )}
+                      </div>
+                    )}
 
                     {/* Attached Photo Evidence Gallery */}
                     {issue.photos && issue.photos.length > 0 && (
