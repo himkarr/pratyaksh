@@ -254,8 +254,8 @@ export function WorksTable({
             <thead>
               <tr>
                 <TableColumnHeader
-                  title="Work ID & Status"
-                  field="id"
+                  title="Status"
+                  field="status"
                   currentSortField={sortField}
                   currentSortDirection={sortDirection}
                   onSort={handleSort}
@@ -269,7 +269,7 @@ export function WorksTable({
                   ]}
                   selectedFilter={statusColFilter}
                   onFilterChange={(v) => { setStatusColFilter(v); setCurrentPage(1); }}
-                  style={{ width: '140px' }}
+                  style={{ width: '130px' }}
                 />
                 <TableColumnHeader
                   title="Project & Location"
@@ -368,7 +368,7 @@ export function WorksTable({
               ) : (
                 paginatedWorks.map((work) => (
                   <tr key={work.id} onClick={() => inspectWork(work)}>
-                    <td><span className="work-id">{work.id}</span><span className={`work-status ${statusClass[work.status]}`}>{work.status}</span></td>
+                    <td><span className={`work-status ${statusClass[work.status]}`}>{work.status}</span></td>
                     <td>
                       <strong className="work-title">{work.title}</strong>
                       <span className="work-subtitle">{work.district}, {work.state} · {work.constituency}</span>
@@ -417,7 +417,7 @@ export function WorksTable({
         <div className="works-grid">
           {paginatedWorks.map((work) => (
             <article className="work-card" key={work.id} onClick={() => inspectWork(work)}>
-              <div className="work-card__topline"><span className="work-id">{work.id}</span><span className={`work-status ${statusClass[work.status]}`}>{work.status}</span></div>
+              <div className="work-card__topline"><span className={`work-status ${statusClass[work.status]}`}>{work.status}</span><span className="work-sector">{work.sectorName}</span></div>
               <h3>{work.title}</h3>
               <p>{work.district}, {work.state} · {work.constituency}</p>
               <div className="work-card__meta"><span className="work-sector">{work.sectorName}</span>{renderSignal(work)}</div>

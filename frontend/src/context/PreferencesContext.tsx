@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { TRANSLATIONS, TranslationDict } from "../data/translations";
+import { TRANSLATIONS, TranslationDict, translate } from "../data/translations";
 
 export type ThemeMode = "light" | "dark";
 export type FontScale = "sm" | "base" | "lg";
@@ -22,6 +22,7 @@ interface PreferencesContextType {
   setLang: (lang: Language) => void;
   toggleLang: () => void;
   t: TranslationDict;
+  tr: (text: string | null | undefined) => string;
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
@@ -91,6 +92,7 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [theme, fontScale, lang]);
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const tr = (text: string | null | undefined) => translate(text, lang);
 
   return (
     <PreferencesContext.Provider
@@ -103,7 +105,8 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
         lang,
         setLang,
         toggleLang,
-        t
+        t,
+        tr
       }}
     >
       {children}
@@ -123,7 +126,8 @@ export const usePreferences = () => {
       lang: "en" as Language,
       setLang: () => {},
       toggleLang: () => {},
-      t: TRANSLATIONS.en
+      t: TRANSLATIONS.en,
+      tr: (text: string | null | undefined) => text || ""
     };
   }
   return context;

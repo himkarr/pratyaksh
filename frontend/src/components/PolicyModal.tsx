@@ -40,12 +40,12 @@ export function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
         className="gov-modal-content"
         style={{ 
           maxWidth: '720px', 
-          maxHeight: 'min(90vh, 720px)',
+          maxHeight: 'min(90vh, 740px)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           padding: '0',
-          overscrollBehavior: 'contain'
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -98,9 +98,11 @@ export function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
             flexDirection: 'column', 
             gap: '12px', 
             overflowY: 'auto',
+            overscrollBehavior: 'auto',
             flex: '1 1 auto',
             minHeight: 0,
-            overscrollBehavior: 'contain'
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y'
           }}
         >
           <div style={{

@@ -35,6 +35,7 @@ import { ReviewRatingModal } from "../components/ReviewRatingModal";
 import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Modal } from "../components/ui";
+import { TableColumnHeader } from "../components/common/TableColumnHeader";
 
 import { WorkItem, WorkReview, ROHTAK_WORKS, GURUGRAM_WORKS, JABALPUR_WORKS, ALL_WORKS } from "../data/mpladsData";
 import { ContractorsManagementTab } from "../components/district/ContractorsManagementTab";
@@ -48,7 +49,7 @@ import { ContractorProject, EvidenceSubmissionRecord } from "../data/contractorD
 
 export const DistrictDashboard: React.FC = () => {
   const { user } = useRole();
-  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t, tr } = usePreferences();
 
   // Active Section Navigation
   const [activeTab, setActiveTab] = useState<"district_projects" | "verifications_review" | "anomaly_dossiers" | "contractors_management">("district_projects");
@@ -58,6 +59,17 @@ export const DistrictDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [districtSortBy, setDistrictSortBy] = useState<string>("sanctionedAmt");
+  const [districtSortOrder, setDistrictSortOrder] = useState<"asc" | "desc">("desc");
+
+  const handleDistrictSort = (field: string) => {
+    if (districtSortBy === field) {
+      setDistrictSortOrder(districtSortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setDistrictSortBy(field);
+      setDistrictSortOrder(field === "title" || field === "agency" ? "asc" : "desc");
+    }
+  };
 
   // Local Projects State (Hydrated from live Supabase projects)
   const [projects, setProjects] = useState<WorkItem[]>(() => districtContractorSync.getWorks());
@@ -262,12 +274,12 @@ export const DistrictDashboard: React.FC = () => {
     return inDist.length > 0 ? inDist : projects;
   }, [projects, selectedDistrict]);
 
-  // Filtered District Projects matching active tab filters & search
+  // Filtered District Projects matching active tab filters, search, and sorting
   const districtProjects = useMemo(() => {
-    return projectsInDistrict.filter((w) => {
-      if (statusFilter !== "all" && w.status !== statusFilter) return false;
+    let list = projectsInDistrict.filter((w) => {
+      if (statusFilter !== "all" && (w.status || "").toLowerCase() !== statusFilter.toLowerCase()) return false;
       const priority = getWorkPriority(w);
-      if (priorityFilter !== "all" && priority !== priorityFilter) return false;
+      if (priorityFilter !== "all" && priority.toLowerCase() !== priorityFilter.toLowerCase()) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = (w.title || "").toLowerCase().includes(q);
@@ -279,7 +291,37 @@ export const DistrictDashboard: React.FC = () => {
       }
       return true;
     });
-  }, [projectsInDistrict, statusFilter, priorityFilter, searchQuery]);
+
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      let valA: any = 0;
+      let valB: any = 0;
+      switch (districtSortBy) {
+        case "title":
+          return districtSortOrder === "asc" ? (a.title || "").localeCompare(b.title || "") : (b.title || "").localeCompare(a.title || "");
+        case "agency":
+          return districtSortOrder === "asc" ? (a.agency || "").localeCompare(b.agency || "") : (b.agency || "").localeCompare(a.agency || "");
+        case "sanctionedAmt":
+          valA = a.sanctionedAmt || 0;
+          valB = b.sanctionedAmt || 0;
+          break;
+        case "physicalProgress":
+          valA = a.physicalProgress || 0;
+          valB = b.physicalProgress || 0;
+          break;
+        case "priority":
+          return districtSortOrder === "asc" ? getWorkPriority(a).localeCompare(getWorkPriority(b)) : getWorkPriority(b).localeCompare(getWorkPriority(a));
+        case "status":
+          return districtSortOrder === "asc" ? (a.status || "").localeCompare(b.status || "") : (b.status || "").localeCompare(a.status || "");
+        default:
+          valA = a.sanctionedAmt || 0;
+          valB = b.sanctionedAmt || 0;
+          break;
+      }
+      return districtSortOrder === "asc" ? valA - valB : valB - valA;
+    });
+    return sorted;
+  }, [projectsInDistrict, statusFilter, priorityFilter, searchQuery, districtSortBy, districtSortOrder]);
 
   // High Priority Flagged Projects in District
   const highRiskProjects = useMemo(() => {
@@ -385,68 +427,36 @@ export const DistrictDashboard: React.FC = () => {
             <div className="dashboard-title-section">
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "#e0f2fe", color: "#0369a1", textTransform: "uppercase" }}>
-                  Office of District Magistrate & Collector
+                  {tr("Office of District Magistrate & Collector")}
                 </span>
                 <span style={{ color: "#94a3b8" }}>•</span>
                 <span style={{ fontSize: "0.76rem", color: "#64748b", fontWeight: 600 }}>
-                  Government of {stateName}
+                  {tr("Government of")} {stateName}
                 </span>
-                {isLiveConnected && (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#065f46", fontWeight: 600 }}>
-                    <Database size={11} />
-                    <span>Live Supabase Connected</span>
-                  </div>
-                )}
               </div>
               <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
-                District Authority Workspace — {selectedDistrict}
+                {tr("District Authority Workspace")} — {selectedDistrict}
               </h1>
               <p style={{ fontSize: "0.92rem", color: "#64748b", margin: 0, maxWidth: "780px" }}>
-                {collectorName} ({collectorDesignation}) • Single Nodal Agency (SNA) Fund Administration & Field Inspection Sign-off
+                {collectorName} ({tr("District Authority")}) • {tr("Single Nodal Agency (SNA) Fund Administration & Field Inspection Sign-off")}
               </p>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "0.70rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#64748b", fontWeight: 700 }}>
-                District Jurisdiction:
-              </label>
-              <select
-                value={selectedDistrict}
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                style={{
-                  background: "#ffffff",
-                  color: "#0f172a",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "8px",
-                  padding: "7px 14px",
-                  fontSize: "0.82rem",
-                  fontWeight: 600,
-                  outline: "none",
-                  cursor: "pointer"
-                }}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+                icon={<Download size={14} />}
+                style={{ background: "#ffffff", color: "var(--gov-primary, #0a2540)", borderColor: "#cbd5e1", fontWeight: 700, borderRadius: "8px" }}
               >
-                {availableDistricts.map((d) => (
-                  <option key={d} value={d}>
-                    {d} District
-                  </option>
-                ))}
-              </select>
+                {tr("Export District Audit (PDF)")}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportPDF}
-              icon={<Download size={14} />}
-              style={{ background: "#ffffff", color: "var(--gov-primary, #0a2540)", borderColor: "#cbd5e1", fontWeight: 700, borderRadius: "8px" }}
-            >
-              Export District Audit (PDF)
-            </Button>
-          </div >
-        </div >
+          </div>
 
   { actionNotice && (
-    <Alert type="success" title="District Collectorate Order Recorded">
+    <Alert type="success" title={tr("District Collectorate Order Recorded") || "District Collectorate Order Recorded"}>
       {actionNotice}
     </Alert>
   )}
@@ -471,14 +481,14 @@ export const DistrictDashboard: React.FC = () => {
         <Building2 size={16} color="#d97706" />
       </div>
       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-        Total Sanctioned
+        {tr("Total Sanctioned")}
       </span>
     </div>
     <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--text-main, #0f172a)", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
       {kpiData.totalWorksCount.toLocaleString()}
     </div>
     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-      Outlay: <strong>₹{kpiData.totalSanctionedCr} Cr</strong>
+      {tr("Sanctioned Amount")}: <strong>₹{kpiData.totalSanctionedCr} Cr</strong>
     </div>
   </div>
 
@@ -496,14 +506,14 @@ export const DistrictDashboard: React.FC = () => {
         <IndianRupee size={16} color="#0284c7" />
       </div>
       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-        Disbursed (PFMS)
+        {tr("Disbursed (PFMS)")}
       </span>
     </div>
     <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0284c7", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
       ₹{kpiData.totalDisbursedCr} Cr
     </div>
     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-      SNA Balance: <strong>₹{kpiData.unspentBalanceCr} Cr</strong>
+      {tr("Remaining Balance")}: <strong>₹{kpiData.unspentBalanceCr} Cr</strong>
     </div>
   </div>
 
@@ -522,14 +532,14 @@ export const DistrictDashboard: React.FC = () => {
         <CheckCircle2 size={16} color="#16a34a" />
       </div>
       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-        Completed
+        {tr("Completed")}
       </span>
     </div>
     <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#16a34a", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
       {kpiData.completedCount}
     </div>
     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-      Certified by Field Engineers
+      {tr("Certified by Field Engineers")}
     </div>
   </div>
 
@@ -548,14 +558,14 @@ export const DistrictDashboard: React.FC = () => {
         <Clock size={16} color="#0d9488" />
       </div>
       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-        In Progress
+        {tr("In Progress")}
       </span>
     </div>
     <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0d9488", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
       {kpiData.ongoingCount}
     </div>
     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-      Active on-site construction
+      {tr("Active on-site construction")}
     </div>
   </div>
 
@@ -574,14 +584,14 @@ export const DistrictDashboard: React.FC = () => {
         <AlertCircle size={16} color="#ea580c" />
       </div>
       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-        Delayed Works
+        {tr("Delayed Works")}
       </span>
     </div>
     <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#ea580c", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
       {kpiData.delayedCount}
     </div>
     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-      Exceeds milestone timeline
+      {tr("Exceeds milestone timeline")}
     </div>
   </div>
 
@@ -599,14 +609,14 @@ export const DistrictDashboard: React.FC = () => {
         <AlertTriangle size={16} color="#dc2626" />
       </div>
       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-        Audit Flags
+        {tr("Audit Flags")}
       </span>
     </div>
     <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#dc2626", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
       {kpiData.flaggedInquiriesCount}
     </div>
     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-      Under vigilance scrutiny
+      {tr("Under vigilance scrutiny")}
     </div>
   </div>
 
@@ -620,7 +630,7 @@ export const DistrictDashboard: React.FC = () => {
             className={`civic-tab-btn ${activeTab === "district_projects" ? "active" : ""}`}
           >
             <Layers size={15} />
-            <span>District Works Directory</span>
+            <span>{tr("District Works Directory")}</span>
             <span className="civic-tab-badge">{districtProjects.length}</span>
           </button>
 
@@ -630,7 +640,7 @@ export const DistrictDashboard: React.FC = () => {
             className={`civic-tab-btn ${activeTab === "contractors_management" ? "active" : ""}`}
           >
             <Building2 size={15} />
-            <span>Contractors & Vendors</span>
+            <span>{tr("Contractors & Vendors")}</span>
           </button>
 
           <button
@@ -639,7 +649,7 @@ export const DistrictDashboard: React.FC = () => {
             className={`civic-tab-btn ${activeTab === "verifications_review" ? "active" : ""}`}
           >
             <FileCheck size={15} />
-            <span>Inspection Approvals</span>
+            <span>{tr("Inspection Approvals")}</span>
             <span className="civic-tab-badge">3</span>
           </button>
 
@@ -649,7 +659,7 @@ export const DistrictDashboard: React.FC = () => {
             className={`civic-tab-btn ${activeTab === "anomaly_dossiers" ? "active" : ""}`}
           >
             <ShieldAlert size={15} />
-            <span>Inquiries & Dossiers</span>
+            <span>{tr("Inquiries & Dossiers")}</span>
             <span className="civic-tab-badge">{highRiskProjects.length}</span>
           </button>
         </div>
@@ -682,10 +692,10 @@ export const DistrictDashboard: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap", gap: "12px" }}>
           <div>
             <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "var(--text-main, #0f172a)", margin: "0 0 4px 0" }}>
-              District Works Register — {districtName}
+              {tr("District Works Register")} — {districtName}
             </h3>
             <div style={{ fontSize: "0.78rem", color: "var(--text-muted, #64748b)" }}>
-              Showing <strong>{districtProjects.length}</strong> of <strong>{projectsInDistrict.length}</strong> sanctioned works in {districtName} District Jurisdiction
+              {tr("Showing")} <strong>{districtProjects.length}</strong> {tr("of")} <strong>{projectsInDistrict.length}</strong> {tr("sanctioned works in")} {districtName} {tr("District Jurisdiction")}
             </div>
           </div>
 
@@ -696,7 +706,7 @@ export const DistrictDashboard: React.FC = () => {
             style={{ fontSize: "0.82rem", padding: "8px 16px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}
           >
             <Plus size={16} />
-            <span>+ Issue New Work Order / Sanction</span>
+            <span>+ {tr("Issue New Work Order / Sanction")}</span>
           </button>
         </div>
 
@@ -707,7 +717,7 @@ export const DistrictDashboard: React.FC = () => {
               <Search size={14} color="var(--text-muted)" style={{ position: "absolute", left: "10px" }} />
               <input
                 type="text"
-                placeholder="Search Work ID, title, agency, block..."
+                placeholder={t.searchPlaceholder || "Search Work ID, title, agency, block..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -867,8 +877,8 @@ export const DistrictDashboard: React.FC = () => {
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                    <span style={{ fontSize: "0.68rem", fontFamily: "monospace", fontWeight: 700, background: "var(--bg-surface-subtle)", padding: "2px 6px", borderRadius: "4px", color: "var(--gov-primary)" }}>
-                      MPLADS-{workNum}
+                    <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
+                      {work.category || "Public Infrastructure"}
                     </span>
                     <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
                       {work.status.toUpperCase()}
@@ -940,12 +950,55 @@ export const DistrictDashboard: React.FC = () => {
     <table className="gov-table">
       <thead>
         <tr>
-          <th style={{ minWidth: "260px", padding: "14px 18px" }}>Work & Project Title</th>
-          <th style={{ minWidth: "160px", padding: "14px 18px" }}>Implementing Agency & Block</th>
-          <th style={{ minWidth: "150px", padding: "14px 18px" }}>Outlay & Disbursed (₹)</th>
-          <th style={{ minWidth: "170px", padding: "14px 18px" }}>Milestone Execution Stage</th>
-          <th style={{ minWidth: "110px", padding: "14px 18px" }}>Audit Priority</th>
-          <th style={{ minWidth: "220px", padding: "14px 18px", textAlign: "right" }}>Official Actions</th>
+          <TableColumnHeader
+            title="Work & Project Title"
+            field="title"
+            currentSortField={districtSortBy}
+            currentSortDirection={districtSortOrder}
+            onSort={handleDistrictSort}
+            style={{ minWidth: "260px" }}
+          />
+          <TableColumnHeader
+            title="Implementing Agency & Block"
+            field="agency"
+            currentSortField={districtSortBy}
+            currentSortDirection={districtSortOrder}
+            onSort={handleDistrictSort}
+            style={{ minWidth: "160px" }}
+          />
+          <TableColumnHeader
+            title="Outlay & Disbursed (₹)"
+            field="sanctionedAmt"
+            currentSortField={districtSortBy}
+            currentSortDirection={districtSortOrder}
+            onSort={handleDistrictSort}
+            style={{ minWidth: "150px" }}
+          />
+          <TableColumnHeader
+            title="Milestone Execution Stage"
+            field="physicalProgress"
+            currentSortField={districtSortBy}
+            currentSortDirection={districtSortOrder}
+            onSort={handleDistrictSort}
+            style={{ minWidth: "170px" }}
+          />
+          <TableColumnHeader
+            title="Audit Priority"
+            field="priority"
+            currentSortField={districtSortBy}
+            currentSortDirection={districtSortOrder}
+            onSort={handleDistrictSort}
+            filterOptions={[
+              { label: "All Audit Priorities", value: "all" },
+              { label: "High Priority Alert", value: "high" },
+              { label: "Medium Priority", value: "medium" },
+              { label: "Routine Monitoring", value: "routine" },
+            ]}
+            selectedFilter={priorityFilter}
+            onFilterChange={setPriorityFilter}
+            style={{ minWidth: "130px" }}
+          />
+          <th style={{ minWidth: "220px", padding: "14px 18px", textAlign: "right", color: "var(--text-secondary)", fontWeight: 700 }}>Official Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -963,13 +1016,8 @@ export const DistrictDashboard: React.FC = () => {
                 <div style={{ fontWeight: 700, color: "var(--text-main)", lineHeight: 1.35, fontSize: "0.84rem" }}>
                   {work.title}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
-                  <span style={{ fontSize: "0.72rem", color: "var(--gov-primary)", fontFamily: "monospace", fontWeight: 700, background: "var(--bg-surface-subtle, #f1f5f9)", padding: "1px 6px", borderRadius: "4px", border: "1px solid var(--border-light, #e2e8f0)" }}>
-                    ID: MPLADS-{workNum}
-                  </span>
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                    Category: {work.category || "Public Infrastructure"}
-                  </span>
+                <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "3px" }}>
+                  Category: {work.category || "Public Infrastructure"}
                 </div>
               </td>
 
@@ -1098,8 +1146,8 @@ export const DistrictDashboard: React.FC = () => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                 <div style={{ maxWidth: "68%" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.82rem", color: "var(--gov-primary)" }}>{work.id}</span>
                     <span className="gov-badge gov-badge-info">Field Report Submitted</span>
+                    <span className="gov-badge gov-badge-neutral">{work.category || "Public Infrastructure"}</span>
                     <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
                       Sanctioned Outlay: <strong>{formatCost(work.sanctionedAmt)}</strong>
                     </span>
@@ -1194,7 +1242,7 @@ export const DistrictDashboard: React.FC = () => {
             <div style={{ maxWidth: "68%" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <span className="gov-badge gov-badge-danger">Priority 1 Review</span>
-                <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.82rem" }}>{work.id}</span>
+                <span className="gov-badge gov-badge-neutral">{work.category || "Public Infrastructure"}</span>
                 <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>Agency: {work.agency}</span>
               </div>
 

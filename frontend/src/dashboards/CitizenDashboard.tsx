@@ -35,7 +35,7 @@ import {
 import { adminDataService } from "../api/adminDataService";
 
 export const CitizenDashboard: React.FC = () => {
-  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t, tr } = usePreferences();
   const { user } = useRole();
 
   // 4 Core Citizen Portal Actions: "home" | "find_works" | "my_reports" | "notifications"
@@ -551,7 +551,7 @@ export const CitizenDashboard: React.FC = () => {
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <Home size={16} />
-                <span>Citizen Portal Home</span>
+                <span>{tr("Citizen Portal") || "Citizen Portal Home"}</span>
               </button>
 
               <button
@@ -561,7 +561,7 @@ export const CitizenDashboard: React.FC = () => {
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <Search size={16} />
-                <span>Find Works</span>
+                <span>{tr("Find Works")}</span>
                 <span className="civic-tab-badge">{displayWorks.length}</span>
               </button>
 
@@ -572,7 +572,7 @@ export const CitizenDashboard: React.FC = () => {
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <FileText size={16} />
-                <span>My Reports & Recommendations</span>
+                <span>{tr("My Reports")}</span>
                 <span className="civic-tab-badge">{issues.length}</span>
               </button>
             </div>

@@ -129,7 +129,7 @@ export function AnomalySection({ flags, works, t: _t }: AnomalySectionProps) {
 
       {/* 2. Anomaly Risk Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
-        <div className="gov-card" style={{ padding: '12px 14px', borderLeft: '4px solid var(--status-danger-text)' }}>
+        <div className="card-hover-accent accent-rose" style={{ padding: '14px 16px', background: '#ffffff', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
             Critical Risk Escalations
           </div>
@@ -141,7 +141,7 @@ export function AnomalySection({ flags, works, t: _t }: AnomalySectionProps) {
           </div>
         </div>
 
-        <div className="gov-card" style={{ padding: '12px 14px', borderLeft: '4px solid var(--status-warning-text)' }}>
+        <div className="card-hover-accent accent-amber" style={{ padding: '14px 16px', background: '#ffffff', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
             High Discrepancy Warnings
           </div>
@@ -153,7 +153,7 @@ export function AnomalySection({ flags, works, t: _t }: AnomalySectionProps) {
           </div>
         </div>
 
-        <div className="gov-card" style={{ padding: '12px 14px', borderLeft: '4px solid var(--gov-primary)' }}>
+        <div className="card-hover-accent accent-sky" style={{ padding: '14px 16px', background: '#ffffff', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
             Medium Advisory Signals
           </div>
@@ -165,7 +165,7 @@ export function AnomalySection({ flags, works, t: _t }: AnomalySectionProps) {
           </div>
         </div>
 
-        <div className="gov-card" style={{ padding: '12px 14px', borderLeft: '4px solid var(--status-success-text)' }}>
+        <div className="card-hover-accent accent-green" style={{ padding: '14px 16px', background: '#ffffff', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
             Clean Audited Works
           </div>

@@ -201,10 +201,10 @@ export const ContractorProjectTable: React.FC<ContractorProjectTableProps> = ({
                   onClick={() => onSelectProject(project)}
                 >
                   <div>
-                    {/* Top: Work ID & Status Badge */}
+                    {/* Top: Category & Status Badge */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                      <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.82rem", color: "var(--gov-primary)" }}>
-                        {project.id}
+                      <span className="civic-badge civic-badge-neutral" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
+                        {project.category}
                       </span>
                       <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                         {getWorkStatusBadge(project.currentWorkStatus)}
@@ -218,7 +218,7 @@ export const ContractorProjectTable: React.FC<ContractorProjectTableProps> = ({
 
                     {/* Category & Authority */}
                     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginBottom: "12px" }}>
-                      Category: <strong style={{ color: "var(--text-main)" }}>{project.category}</strong> | Authority: {project.implementingAuthority}
+                      Authority: {project.implementingAuthority}
                     </div>
 
                     {/* Timeline & Schedule Info */}
@@ -295,7 +295,6 @@ export const ContractorProjectTable: React.FC<ContractorProjectTableProps> = ({
           <table style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left", borderBottom: "2px solid var(--border-light)" }}>
-                <th style={{ padding: "10px 12px" }}>Work ID</th>
                 <th style={{ padding: "10px 12px" }}>Project Title & Description</th>
                 <th style={{ padding: "10px 12px" }}>Sanction Amount</th>
                 <th style={{ padding: "10px 12px" }}>Official Start Date</th>
@@ -310,7 +309,7 @@ export const ContractorProjectTable: React.FC<ContractorProjectTableProps> = ({
             <tbody>
               {filteredProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: "center", padding: "28px", color: "var(--text-muted)" }}>
+                  <td colSpan={9} style={{ textAlign: "center", padding: "28px", color: "var(--text-muted)" }}>
                     No assigned projects match the selected search or filter criteria.
                   </td>
                 </tr>
@@ -319,18 +318,13 @@ export const ContractorProjectTable: React.FC<ContractorProjectTableProps> = ({
                   const daysRemaining = calculateDaysRemaining(project.officialExpectedCompletionDate, project.currentWorkStatus);
                   return (
                     <tr key={project.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                      {/* Work ID */}
-                      <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)", whiteSpace: "nowrap" }}>
-                        {project.id}
-                      </td>
-
                       {/* Project Title */}
-                      <td style={{ padding: "10px 12px", maxWidth: "240px" }}>
+                      <td style={{ padding: "10px 12px", maxWidth: "260px" }}>
                         <div style={{ fontWeight: 700, color: "var(--text-main)", lineHeight: 1.3 }}>
                           {project.title}
                         </div>
                         <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                          Authority: {project.implementingAuthority}
+                          Category: {project.category} | Authority: {project.implementingAuthority}
                         </div>
                       </td>
 

@@ -20,7 +20,11 @@ import {
   ArrowRight,
   Database,
   LayoutGrid,
-  List
+  List,
+  X,
+  Camera,
+  MapPin,
+  Maximize2
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -42,28 +46,60 @@ import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Card, CardHeader, CardBody } from "../components/ui";
 import { CreateRecommendationModal } from "../components/mp/CreateRecommendationModal";
+import { TableColumnHeader } from "../components/common/TableColumnHeader";
 
 import { MPRecommendation, INITIAL_MP_RECOMMENDATIONS, syncMPRecommendationsFromSupabase, saveMPRecommendation, getMPRecommendations } from "../data/mpData";
 import { ALL_WORKS, WorkItem, WorkReview } from "../data/mpladsData";
 import { INITIAL_CITIZEN_ISSUES, CitizenIssue, syncCitizenSubmissionsFromSupabase, getCitizenSubmissions, updateCitizenSubmissionStatus } from "../data/citizenData";
+import { districtContractorSync } from "../api/districtContractorSync";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { adminDataService, MPSummary } from "../api/adminDataService";
 
+const HARYANA_MPS: MPSummary[] = [
+  { mpId: "Rohtak", name: "Shri Deepender Singh Hooda", constituency: "Rohtak", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.80, totalSanctioned: 4.20, totalUtilized: 3.48, utilizationPercentage: 70, worksRecommendedCount: 5, worksCompletedCount: 2, rank: 1 },
+  { mpId: "Kurukshetra", name: "Shri Naveen Jindal", constituency: "Kurukshetra", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.50, totalSanctioned: 3.90, totalUtilized: 3.12, utilizationPercentage: 62, worksRecommendedCount: 6, worksCompletedCount: 2, rank: 2 },
+  { mpId: "Gurugram", name: "Shri Rao Inderjit Singh", constituency: "Gurugram", state: "Haryana", house: "Lok Sabha", totalRecommended: 5.00, totalSanctioned: 4.80, totalUtilized: 4.25, utilizationPercentage: 85, worksRecommendedCount: 8, worksCompletedCount: 3, rank: 3 },
+  { mpId: "Karnal", name: "Shri Manohar Lal Khattar", constituency: "Karnal", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.90, totalSanctioned: 4.50, totalUtilized: 3.90, utilizationPercentage: 78, worksRecommendedCount: 7, worksCompletedCount: 3, rank: 4 },
+  { mpId: "Sirsa", name: "Kumari Selja", constituency: "Sirsa", state: "Haryana", house: "Lok Sabha", totalRecommended: 3.80, totalSanctioned: 3.20, totalUtilized: 2.80, utilizationPercentage: 56, worksRecommendedCount: 5, worksCompletedCount: 1, rank: 5 },
+  { mpId: "Faridabad", name: "Shri Krishan Pal Gurjar", constituency: "Faridabad", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.60, totalSanctioned: 4.10, totalUtilized: 3.65, utilizationPercentage: 73, worksRecommendedCount: 6, worksCompletedCount: 2, rank: 6 },
+  { mpId: "Sonipat", name: "Shri Satpal Brahamchari", constituency: "Sonipat", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.20, totalSanctioned: 3.70, totalUtilized: 3.30, utilizationPercentage: 66, worksRecommendedCount: 5, worksCompletedCount: 2, rank: 7 },
+  { mpId: "Hisar", name: "Shri Jai Parkash", constituency: "Hisar", state: "Haryana", house: "Lok Sabha", totalRecommended: 3.90, totalSanctioned: 3.40, totalUtilized: 2.95, utilizationPercentage: 59, worksRecommendedCount: 4, worksCompletedCount: 1, rank: 8 },
+  { mpId: "Ambala", name: "Shri Varun Chaudhary", constituency: "Ambala", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.30, totalSanctioned: 3.80, totalUtilized: 3.10, utilizationPercentage: 62, worksRecommendedCount: 5, worksCompletedCount: 2, rank: 9 },
+  { mpId: "Bhiwani-Mahendragarh", name: "Shri Dharambir Singh", constituency: "Bhiwani-Mahendragarh", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.70, totalSanctioned: 4.00, totalUtilized: 3.40, utilizationPercentage: 68, worksRecommendedCount: 6, worksCompletedCount: 2, rank: 10 }
+];
+
 export const MPDashboard: React.FC = () => {
   const { user } = useRole();
-  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t, tr } = usePreferences();
 
   // Active Section Navigation
-  const [activeTab, setActiveTab] = useState<"my_recommendations" | "constituency_works" | "fund_details" | "citizen_reports" | "risk_alerts">("my_recommendations");
+  const [activeTab, setActiveTab] = useState<"constituency_works" | "my_recommendations" | "fund_details" | "citizen_reports" | "risk_alerts">("constituency_works");
   const [worksViewMode, setWorksViewMode] = useState<"grid" | "table">("table");
 
   // Data States
   const [recommendations, setRecommendations] = useState<MPRecommendation[]>(() => getMPRecommendations());
   const [citizenIssues, setCitizenIssues] = useState<CitizenIssue[]>(() => getCitizenSubmissions());
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  
+  // Tab 1: Constituency Works Sorting & Filtering States
+  const [worksSearchQuery, setWorksSearchQuery] = useState<string>("");
+  const [worksCategoryFilter, setWorksCategoryFilter] = useState<string>("all");
+  const [worksStatusFilter, setWorksStatusFilter] = useState<string>("all");
+  const [worksSortBy, setWorksSortBy] = useState<string>("sanctionedAmt");
+  const [worksSortOrder, setWorksSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Tab 2: MP Recommendations Sorting & Filtering States
+  const [recSearchQuery, setRecSearchQuery] = useState<string>("");
+  const [recCategoryFilter, setRecCategoryFilter] = useState<string>("all");
+  const [recStatusFilter, setRecStatusFilter] = useState<string>("all");
+  const [recSortBy, setRecSortBy] = useState<string>("dateProposed");
+  const [recSortOrder, setRecSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Tab 3: Fund Details / Ledger Sorting & Filtering States
+  const [ledgerSearchQuery, setLedgerSearchQuery] = useState<string>("");
+  const [ledgerUcFilter, setLedgerUcFilter] = useState<string>("all");
+  const [ledgerSortBy, setLedgerSortBy] = useState<string>("voucherNo");
+  const [ledgerSortOrder, setLedgerSortOrder] = useState<"asc" | "desc">("asc");
 
   // Modal Controls
   const [isRecommendModalOpen, setIsRecommendModalOpen] = useState(false);
@@ -79,7 +115,20 @@ export const MPDashboard: React.FC = () => {
   // Live Supabase Data State
   const [liveMps, setLiveMps] = useState<MPSummary[]>([]);
   const [liveProjects, setLiveProjects] = useState<any[]>([]);
-  const [selectedMPId, setSelectedMPId] = useState<string>("Rohtak");
+  const [selectedMPId, setSelectedMPId] = useState<string>(() => user.constituency || "Rohtak");
+
+  // Dynamic Multi-Source Evidence Cache (Contractor, Citizen, District Inspections)
+  const [workEvidenceMap, setWorkEvidenceMap] = useState<Record<string, {
+    totalPhotos: number;
+    contractorCount: number;
+    citizenCount: number;
+    samplePhoto?: string;
+    hasGeoTag: boolean;
+  }>>({});
+  const [previewPhotoModal, setPreviewPhotoModal] = useState<{ url: string; title: string; metadata?: string } | null>(null);
+
+  // Determine state of the logged-in MP (defaults to Haryana)
+  const mpState = user.state || "Haryana";
 
   useEffect(() => {
     async function loadLiveData() {
@@ -92,7 +141,6 @@ export const MPDashboard: React.FC = () => {
         ]);
         if (mpsList && mpsList.length > 0) {
           setLiveMps(mpsList);
-          setSelectedMPId(mpsList[0].mpId);
         }
         if (projs && projs.length > 0) {
           setLiveProjects(projs);
@@ -110,31 +158,49 @@ export const MPDashboard: React.FC = () => {
     loadLiveData();
   }, []);
 
-  // Active MP identity
-  const userConstituency = user.constituency || "Rohtak";
-  const matchedLiveMP = liveMps.find(
-    (m) => m.constituency.toLowerCase() === userConstituency.toLowerCase()
-  ) || liveMps.find(
-    (m) => m.mpId.toLowerCase() === userConstituency.toLowerCase() || m.name.toLowerCase().includes(userConstituency.toLowerCase())
-  );
-  const mpName = user.name || "Member of Parliament";
-  const constituency = user.constituency || matchedLiveMP?.constituency || "Rohtak";
-  const mpState = user.state || matchedLiveMP?.state || "Haryana";
-  const mpHouse = matchedLiveMP?.house || "Lok Sabha";
-  const constituencyCode = user.constituency_code || (matchedLiveMP
-    ? `${mpState.slice(0, 2).toUpperCase()}-${constituency.slice(0, 4).toUpperCase()}-01`
-    : "HR-ROH-01");
-  const district = user.district || constituency;
+  // Filter available MPs to only those belonging to the logged-in MP's state
+  const availableStateMps = useMemo(() => {
+    const sLower = mpState.toLowerCase();
+    const filtered = liveMps.filter((m) => (m.state || "").toLowerCase() === sLower);
+    if (filtered.length > 0) {
+      return filtered;
+    }
+    return HARYANA_MPS;
+  }, [liveMps, mpState]);
 
-  // Filtered Constituency Projects (Scoped to MP from Supabase live projects)
+  // Active Selected MP identity
+  const activeSelectedMP = useMemo(() => {
+    const target = selectedMPId.toLowerCase();
+    return (
+      availableStateMps.find((m) => m.mpId.toLowerCase() === target || m.constituency.toLowerCase() === target) ||
+      availableStateMps.find((m) => (user.constituency && m.constituency.toLowerCase() === user.constituency.toLowerCase())) ||
+      availableStateMps[0]
+    );
+  }, [availableStateMps, selectedMPId, user.constituency]);
+
+  const constituency = activeSelectedMP?.constituency || user.constituency || "Rohtak";
+  const mpName = user.name && user.name !== "Member of Parliament"
+    ? user.name
+    : (activeSelectedMP?.name || "Shri Deepender Singh Hooda");
+  const mpHouse = activeSelectedMP?.house || "Lok Sabha";
+  const constituencyCode = user.constituency_code || (activeSelectedMP
+    ? `HR-${constituency.slice(0, 3).toUpperCase()}-01`
+    : "HR-ROH-01");
+  const district = (activeSelectedMP as any)?.district || user.district || constituency;
+
+  // Filtered Constituency Projects (Scoped strictly to MP's state & constituency)
   const constituencyWorks: WorkItem[] = useMemo(() => {
-    if (liveProjects.length > 0 && matchedLiveMP) {
+    const sLower = mpState.toLowerCase();
+    const cLower = constituency.toLowerCase();
+    const dLower = district.toLowerCase();
+
+    if (liveProjects.length > 0) {
       const filtered = liveProjects.filter((p) => {
         const pState = (p.state || "").toLowerCase();
         const pDist = (p.district || "").toLowerCase();
-        const mDist = constituency.toLowerCase();
-        const mState = mpState.toLowerCase();
-        return pDist.includes(mDist) || mDist.includes(pDist) || pState === mState;
+        const stateMatches = !pState || pState === sLower || pState.includes(sLower) || sLower.includes(pState);
+        if (!stateMatches) return false;
+        return pDist.includes(cLower) || cLower.includes(pDist) || pDist.includes(dLower) || dLower.includes(pDist);
       });
 
       if (filtered.length > 0) {
@@ -169,37 +235,136 @@ export const MPDashboard: React.FC = () => {
       }
     }
 
-    // Fallback to ALL_WORKS matching
+    // Match from ALL_WORKS scoped strictly to mpState and constituency/district
     const matched = ALL_WORKS.filter((w) => {
-      const cLower = constituency.toLowerCase();
-      const dLower = district.toLowerCase();
-      const sLower = mpState.toLowerCase();
+      const wState = (w.state || "").toLowerCase();
+      if (wState && wState !== sLower && !wState.includes(sLower) && !sLower.includes(wState)) {
+        return false;
+      }
       if (w.constituency_code && constituencyCode && w.constituency_code.toLowerCase() === constituencyCode.toLowerCase()) return true;
       if (w.constituency && (w.constituency.toLowerCase().includes(cLower) || cLower.includes(w.constituency.toLowerCase()))) return true;
       if (w.district && (w.district.toLowerCase().includes(dLower) || dLower.includes(w.district.toLowerCase()))) return true;
-      if (w.state && (w.state.toLowerCase() === sLower || sLower.includes(w.state.toLowerCase()))) return true;
       return false;
     });
-    return matched.length > 0 ? matched : ALL_WORKS.slice(0, 25);
-  }, [liveProjects, matchedLiveMP, constituencyCode, constituency, district, mpHouse, mpName, mpState]);
 
+    if (matched.length > 0) return matched;
+
+    // Scoped fallback only to state-level works
+    const stateMatched = ALL_WORKS.filter((w) => (w.state || "").toLowerCase() === sLower);
+    return stateMatched.length > 0 ? stateMatched : ALL_WORKS.filter(w => (w.state || "").toLowerCase() === "haryana");
+  }, [liveProjects, constituencyCode, constituency, district, mpHouse, mpName, mpState]);
+
+  // Dynamically load evidence statistics for all displayed constituency works
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAllEvidence() {
+      const map: Record<string, {
+        totalPhotos: number;
+        contractorCount: number;
+        citizenCount: number;
+        samplePhoto?: string;
+        hasGeoTag: boolean;
+      }> = {};
+
+      const allCitizens = getCitizenSubmissions();
+
+      await Promise.all(
+        constituencyWorks.map(async (work) => {
+          let contractorPhotos: any[] = [];
+          try {
+            const subs = await districtContractorSync.getStageSubmissionsForWork(work.id);
+            subs.forEach((s: any) => {
+              if (s.files && Array.isArray(s.files)) {
+                s.files.forEach((f: any) => {
+                  if (f.url && (f.type?.includes("image") || f.url.startsWith("http") || f.url.startsWith("data:") || f.name?.match(/\.(jpg|jpeg|png|webp)/i))) {
+                    contractorPhotos.push(f);
+                  }
+                });
+              }
+            });
+          } catch (e) {
+            // Ignore error
+          }
+
+          const citizenPhotos: any[] = [];
+          allCitizens
+            .filter((c) => c.linkedWorkId === work.id || c.mpRecommendationId === work.id)
+            .forEach((c) => {
+              if (c.photos && Array.isArray(c.photos)) {
+                c.photos.forEach((p) => {
+                  if (p.url) citizenPhotos.push(p);
+                });
+              }
+            });
+
+          const defaultAttachments = (work.attachments || []).filter(
+            (a) => a.type === "image" || (a.type as any) === "photo" || a.url?.startsWith("http") || a.url?.startsWith("data:")
+          );
+
+          const totalPhotos = contractorPhotos.length + citizenPhotos.length + defaultAttachments.length;
+          const samplePhoto = contractorPhotos[0]?.url || citizenPhotos[0]?.url || defaultAttachments[0]?.url || undefined;
+          const hasGeoTag = contractorPhotos.some((f) => f.lat && f.lng) || citizenPhotos.some((p) => p.lat && p.lng);
+
+          map[work.id] = {
+            totalPhotos,
+            contractorCount: contractorPhotos.length,
+            citizenCount: citizenPhotos.length,
+            samplePhoto,
+            hasGeoTag,
+          };
+        })
+      );
+
+      if (isMounted) {
+        setWorkEvidenceMap(map);
+      }
+    }
+
+    loadAllEvidence();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [constituencyWorks, citizenIssues]);
+
+  // Filtered recommendations strictly for this MP and state
   const displayedRecommendations = useMemo(() => {
-    return recommendations.filter((rec) => {
-      return !constituency || rec.constituency_code === constituencyCode ||
-        (rec.constituency && rec.constituency.toLowerCase() === constituency.toLowerCase()) ||
-        (rec.district && rec.district.toLowerCase() === district.toLowerCase()) ||
-        recommendations.length <= 10;
-    });
-  }, [recommendations, constituencyCode, constituency, district]);
+    const sLower = mpState.toLowerCase();
+    const cLower = constituency.toLowerCase();
+    const dLower = district.toLowerCase();
 
-  // Filter citizen issues for the selected constituency from live Supabase list
-  const filteredCitizenIssues = useMemo(() => {
-    return citizenIssues.filter((issue) => {
-      return (issue.constituency && constituency && issue.constituency.toLowerCase() === constituency.toLowerCase()) ||
-        (district && issue.district && issue.district.toLowerCase() === district.toLowerCase()) ||
-        citizenIssues.length <= 5;
+    const filtered = recommendations.filter((rec) => {
+      const rState = (rec.state || "").toLowerCase();
+      if (rState && rState !== sLower && !rState.includes(sLower) && !sLower.includes(rState)) {
+        return false;
+      }
+      if (rec.constituency_code && constituencyCode && rec.constituency_code.toLowerCase() === constituencyCode.toLowerCase()) return true;
+      if (rec.constituency && (rec.constituency.toLowerCase().includes(cLower) || cLower.includes(rec.constituency.toLowerCase()))) return true;
+      if (rec.district && (rec.district.toLowerCase().includes(dLower) || dLower.includes(rec.district.toLowerCase()))) return true;
+      return !rState || rState === sLower;
     });
-  }, [citizenIssues, constituency, district]);
+
+    if (filtered.length > 0) return filtered;
+    return INITIAL_MP_RECOMMENDATIONS.filter(r => (r.state || "").toLowerCase() === sLower || (r.district || "").toLowerCase() === dLower);
+  }, [recommendations, constituencyCode, constituency, district, mpState]);
+
+  // Filter citizen issues for the selected constituency from live list
+  const filteredCitizenIssues = useMemo(() => {
+    const sLower = mpState.toLowerCase();
+    const cLower = constituency.toLowerCase();
+    const dLower = district.toLowerCase();
+
+    return citizenIssues.filter((issue) => {
+      const iState = (issue.state || "").toLowerCase();
+      if (iState && iState !== sLower && !iState.includes(sLower) && !sLower.includes(iState)) {
+        return false;
+      }
+      if (issue.constituency && (issue.constituency.toLowerCase().includes(cLower) || cLower.includes(issue.constituency.toLowerCase()))) return true;
+      if (issue.district && (issue.district.toLowerCase().includes(dLower) || dLower.includes(issue.district.toLowerCase()))) return true;
+      return iState === sLower;
+    });
+  }, [citizenIssues, constituency, district, mpState]);
 
   // High Risk Projects
   const highRiskWorks = useMemo(() => {
@@ -238,9 +403,8 @@ export const MPDashboard: React.FC = () => {
     return {
       id: rec.id,
       title: rec.title,
-      house: "Lok Sabha",
-      state: (rec.district && rec.district.toLowerCase() === "varanasi") ? "Uttar Pradesh" :
-        (rec.district && rec.district.toLowerCase().includes("delhi")) ? "Delhi" : "Maharashtra",
+      house: mpHouse,
+      state: rec.state || mpState,
       district: rec.district || district,
       constituency: rec.constituency || constituency,
       constituency_code: rec.constituency_code || constituencyCode,
@@ -376,21 +540,202 @@ export const MPDashboard: React.FC = () => {
     });
   }, [constituencyWorks, constituencyCode]);
 
-  // Filtered recommendations list (including initial demo data)
-  const filteredRecommendations = useMemo(() => {
-    return displayedRecommendations.filter((r) => {
-      if (selectedCategoryFilter !== "all" && r.category !== selectedCategoryFilter) return false;
-      if (selectedStatusFilter !== "all" && r.status !== selectedStatusFilter) return false;
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchTitle = (r.title || "").toLowerCase().includes(query);
-        const matchLoc = (r.location || "").toLowerCase().includes(query);
-        const matchId = (r.id || "").toLowerCase().includes(query);
-        if (!matchTitle && !matchLoc && !matchId) return false;
+  // 1. Tab 1: Constituency Works Sort & Filter Logic
+  const handleWorksSort = (field: string) => {
+    if (worksSortBy === field) {
+      setWorksSortOrder(worksSortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setWorksSortBy(field);
+      setWorksSortOrder(field === "title" || field === "category" ? "asc" : "desc");
+    }
+  };
+
+  const constituencyCategories = useMemo(() => {
+    const set = new Set<string>();
+    constituencyWorks.forEach((w) => {
+      if (w.category) set.add(w.category);
+    });
+    return Array.from(set).sort();
+  }, [constituencyWorks]);
+
+  const sortedAndFilteredWorks = useMemo(() => {
+    let list = constituencyWorks.filter((w) => {
+      if (worksCategoryFilter !== "all" && (w.category || "").toLowerCase() !== worksCategoryFilter.toLowerCase()) {
+        return false;
+      }
+      if (worksStatusFilter !== "all" && (w.status || "").toLowerCase() !== worksStatusFilter.toLowerCase()) {
+        return false;
+      }
+      if (worksSearchQuery.trim()) {
+        const q = worksSearchQuery.toLowerCase();
+        const matchTitle = (w.title || "").toLowerCase().includes(q);
+        const matchDist = (w.district || "").toLowerCase().includes(q);
+        const matchCat = (w.category || "").toLowerCase().includes(q);
+        const matchAgency = (w.agency || "").toLowerCase().includes(q);
+        if (!matchTitle && !matchDist && !matchCat && !matchAgency) return false;
       }
       return true;
     });
-  }, [displayedRecommendations, selectedCategoryFilter, selectedStatusFilter, searchQuery]);
+
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      let valA: any = 0;
+      let valB: any = 0;
+      switch (worksSortBy) {
+        case "title":
+          return worksSortOrder === "asc" ? (a.title || "").localeCompare(b.title || "") : (b.title || "").localeCompare(a.title || "");
+        case "category":
+          return worksSortOrder === "asc" ? (a.category || "").localeCompare(b.category || "") : (b.category || "").localeCompare(a.category || "");
+        case "sanctionedAmt":
+          valA = a.sanctionedAmt || 0;
+          valB = b.sanctionedAmt || 0;
+          break;
+        case "expenditureAmt":
+          valA = a.expenditureAmt || 0;
+          valB = b.expenditureAmt || 0;
+          break;
+        case "physicalProgress":
+          valA = a.physicalProgress || 0;
+          valB = b.physicalProgress || 0;
+          break;
+        case "financialProgress":
+          valA = a.financialProgress || 0;
+          valB = b.financialProgress || 0;
+          break;
+        case "status":
+          return worksSortOrder === "asc" ? (a.status || "").localeCompare(b.status || "") : (b.status || "").localeCompare(a.status || "");
+        default:
+          valA = a.sanctionedAmt || 0;
+          valB = b.sanctionedAmt || 0;
+          break;
+      }
+      return worksSortOrder === "asc" ? valA - valB : valB - valA;
+    });
+    return sorted;
+  }, [constituencyWorks, worksCategoryFilter, worksStatusFilter, worksSearchQuery, worksSortBy, worksSortOrder]);
+
+  // 2. Tab 2: Recommendations Sort & Filter Logic
+  const handleRecSort = (field: string) => {
+    if (recSortBy === field) {
+      setRecSortOrder(recSortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setRecSortBy(field);
+      setRecSortOrder(field === "title" || field === "category" || field === "location" ? "asc" : "desc");
+    }
+  };
+
+  const recommendationCategories = useMemo(() => {
+    const set = new Set<string>();
+    displayedRecommendations.forEach((r) => {
+      if (r.category) set.add(r.category);
+    });
+    return Array.from(set).sort();
+  }, [displayedRecommendations]);
+
+  const sortedAndFilteredRecommendations = useMemo(() => {
+    let list = displayedRecommendations.filter((r) => {
+      if (recCategoryFilter !== "all" && (r.category || "").toLowerCase() !== recCategoryFilter.toLowerCase()) return false;
+      if (recStatusFilter !== "all" && (r.status || "").toLowerCase() !== recStatusFilter.toLowerCase()) return false;
+      if (recSearchQuery.trim()) {
+        const query = recSearchQuery.toLowerCase();
+        const matchTitle = (r.title || "").toLowerCase().includes(query);
+        const matchLoc = (r.location || "").toLowerCase().includes(query);
+        const matchCat = (r.category || "").toLowerCase().includes(query);
+        const matchJust = (r.justification || "").toLowerCase().includes(query);
+        if (!matchTitle && !matchLoc && !matchCat && !matchJust) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      let valA: any = 0;
+      let valB: any = 0;
+      switch (recSortBy) {
+        case "title":
+          return recSortOrder === "asc" ? (a.title || "").localeCompare(b.title || "") : (b.title || "").localeCompare(a.title || "");
+        case "category":
+          return recSortOrder === "asc" ? (a.category || "").localeCompare(b.category || "") : (b.category || "").localeCompare(a.category || "");
+        case "estimatedCost":
+          valA = a.estimatedCost || 0;
+          valB = b.estimatedCost || 0;
+          break;
+        case "location":
+          return recSortOrder === "asc" ? (a.location || "").localeCompare(b.location || "") : (b.location || "").localeCompare(a.location || "");
+        case "dateProposed":
+          return recSortOrder === "asc" ? (a.dateProposed || "").localeCompare(b.dateProposed || "") : (b.dateProposed || "").localeCompare(a.dateProposed || "");
+        case "status":
+          return recSortOrder === "asc" ? (a.status || "").localeCompare(b.status || "") : (b.status || "").localeCompare(a.status || "");
+        default:
+          return 0;
+      }
+      return recSortOrder === "asc" ? valA - valB : valB - valA;
+    });
+    return sorted;
+  }, [displayedRecommendations, recCategoryFilter, recStatusFilter, recSearchQuery, recSortBy, recSortOrder]);
+
+  // 3. Tab 3: Disbursal Ledger Sort & Filter Logic
+  const handleLedgerSort = (field: string) => {
+    if (ledgerSortBy === field) {
+      setLedgerSortOrder(ledgerSortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setLedgerSortBy(field);
+      setLedgerSortOrder(field === "voucherNo" || field === "workTitle" || field === "ucStatus" ? "asc" : "desc");
+    }
+  };
+
+  const sortedAndFilteredLedger = useMemo(() => {
+    let list = disbursalLedger.filter((row) => {
+      if (ledgerUcFilter !== "all" && !row.ucStatus.toLowerCase().includes(ledgerUcFilter.toLowerCase())) {
+        return false;
+      }
+      if (ledgerSearchQuery.trim()) {
+        const q = ledgerSearchQuery.toLowerCase();
+        const matchVoucher = row.voucherNo.toLowerCase().includes(q);
+        const matchTitle = row.workTitle.toLowerCase().includes(q);
+        const matchAgency = row.agency.toLowerCase().includes(q);
+        const matchPfms = row.pfmsRef.toLowerCase().includes(q);
+        if (!matchVoucher && !matchTitle && !matchAgency && !matchPfms) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      let valA: any = 0;
+      let valB: any = 0;
+      switch (ledgerSortBy) {
+        case "voucherNo":
+          return ledgerSortOrder === "asc" ? a.voucherNo.localeCompare(b.voucherNo) : b.voucherNo.localeCompare(a.voucherNo);
+        case "workTitle":
+          return ledgerSortOrder === "asc" ? a.workTitle.localeCompare(b.workTitle) : b.workTitle.localeCompare(a.workTitle);
+        case "sanctionedAmt":
+          valA = a.sanctionedAmt || 0;
+          valB = b.sanctionedAmt || 0;
+          break;
+        case "tranche1Amt":
+          valA = a.tranche1Amt || 0;
+          valB = b.tranche1Amt || 0;
+          break;
+        case "tranche2Amt":
+          valA = a.tranche2Amt || 0;
+          valB = b.tranche2Amt || 0;
+          break;
+        case "totalDisbursed":
+          valA = a.totalDisbursed || 0;
+          valB = b.totalDisbursed || 0;
+          break;
+        case "ucStatus":
+          return ledgerSortOrder === "asc" ? a.ucStatus.localeCompare(b.ucStatus) : b.ucStatus.localeCompare(a.ucStatus);
+        default:
+          return 0;
+      }
+      return ledgerSortOrder === "asc" ? valA - valB : valB - valA;
+    });
+    return sorted;
+  }, [disbursalLedger, ledgerUcFilter, ledgerSearchQuery, ledgerSortBy, ledgerSortOrder]);
+
+  const filteredRecommendations = sortedAndFilteredRecommendations;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)" }}>
@@ -406,8 +751,8 @@ export const MPDashboard: React.FC = () => {
       />
 
       <Navbar
-        activeTab={activeTab === "my_recommendations" ? "dashboard" : "home"}
-        setActiveTab={() => setActiveTab("my_recommendations")}
+        activeTab={activeTab === "constituency_works" ? "dashboard" : "home"}
+        setActiveTab={() => setActiveTab("constituency_works")}
         onOpenPolicy={() => setIsPolicyOpen(true)}
         onOpenLogin={(role) => {
           setTargetLoginRole(role);
@@ -417,50 +762,30 @@ export const MPDashboard: React.FC = () => {
         flagCount={highRiskWorks.length}
       />
 
-      <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
-        <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <main className="mplads-main" style={{ flex: 1, padding: "2.5rem 0 5rem" }}>
+        <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Module Tabs Navigation Bar (Admin Reference Standard) */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: "12px",
+            gap: "14px",
             borderBottom: "2px solid #e2e8f0",
-            paddingBottom: "10px",
-            marginBottom: "1.5rem",
+            paddingBottom: "12px",
+            marginBottom: "1.75rem",
             flexWrap: "wrap"
           }}
         >
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={() => setActiveTab("my_recommendations")}
-              className={`gov-tab ${activeTab === "my_recommendations" ? "active" : ""}`}
-              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
-            >
-              <Landmark size={16} />
-              <span>MP Recommendations</span>
-              <span style={{
-                fontSize: "0.72rem",
-                padding: "2px 8px",
-                borderRadius: "9999px",
-                background: activeTab === "my_recommendations" ? "rgba(255,255,255,0.25)" : "#eff6ff",
-                color: activeTab === "my_recommendations" ? "#ffffff" : "#1d4ed8",
-                fontWeight: 700
-              }}>
-                {displayedRecommendations.length}
-              </span>
-            </button>
-
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
             <button
               type="button"
               onClick={() => setActiveTab("constituency_works")}
               className={`gov-tab ${activeTab === "constituency_works" ? "active" : ""}`}
-              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", fontSize: "0.875rem", fontWeight: 700, borderRadius: "8px" }}
             >
               <FileText size={16} />
-              <span>Constituency Works Grid</span>
+              <span>{t.constituencyWorksTab || tr("Constituency Works Grid")}</span>
               <span style={{
                 fontSize: "0.72rem",
                 padding: "2px 8px",
@@ -475,22 +800,42 @@ export const MPDashboard: React.FC = () => {
 
             <button
               type="button"
+              onClick={() => setActiveTab("my_recommendations")}
+              className={`gov-tab ${activeTab === "my_recommendations" ? "active" : ""}`}
+              style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", fontSize: "0.875rem", fontWeight: 700, borderRadius: "8px" }}
+            >
+              <Landmark size={16} />
+              <span>{t.recommendationsTab || tr("MP Recommendations")}</span>
+              <span style={{
+                fontSize: "0.72rem",
+                padding: "2px 8px",
+                borderRadius: "9999px",
+                background: activeTab === "my_recommendations" ? "rgba(255,255,255,0.25)" : "#eff6ff",
+                color: activeTab === "my_recommendations" ? "#ffffff" : "#1d4ed8",
+                fontWeight: 700
+              }}>
+                {displayedRecommendations.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab("fund_details")}
               className={`gov-tab ${activeTab === "fund_details" ? "active" : ""}`}
-              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", fontSize: "0.875rem", fontWeight: 700, borderRadius: "8px" }}
             >
               <Wallet size={16} />
-              <span>Fund Flow & Ledger</span>
+              <span>{t.fundLedgerTab || tr("Fund Flow & Ledger")}</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab("citizen_reports")}
               className={`gov-tab ${activeTab === "citizen_reports" ? "active" : ""}`}
-              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", fontSize: "0.875rem", fontWeight: 700, borderRadius: "8px" }}
             >
               <UserCheck size={16} />
-              <span>Citizen Reports</span>
+              <span>{t.citizenReportsTab || tr("Citizen Reports")}</span>
               <span style={{
                 fontSize: "0.72rem",
                 padding: "2px 8px",
@@ -507,10 +852,10 @@ export const MPDashboard: React.FC = () => {
               type="button"
               onClick={() => setActiveTab("risk_alerts")}
               className={`gov-tab ${activeTab === "risk_alerts" ? "active" : ""}`}
-              style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", fontSize: "0.875rem", fontWeight: 700, borderRadius: "8px" }}
             >
               <ShieldAlert size={16} />
-              <span>High-Risk Alerts</span>
+              <span>{t.riskAlertsTab || tr("High-Risk Alerts")}</span>
               <span style={{
                 fontSize: "0.72rem",
                 padding: "2px 8px",
@@ -531,11 +876,11 @@ export const MPDashboard: React.FC = () => {
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
-                padding: "6px 14px",
+                padding: "8px 16px",
                 borderRadius: "9999px",
                 background: "#ecfdf5",
                 border: "1px solid #a7f3d0",
-                fontSize: "0.78rem",
+                fontSize: "0.80rem",
                 fontWeight: 700,
                 color: "#065f46",
               }}
@@ -549,131 +894,101 @@ export const MPDashboard: React.FC = () => {
                   boxShadow: "0 0 6px #10b981",
                 }}
               />
-              <span>{constituencyWorks.length} Works Monitored</span>
+              <span>{constituencyWorks.length} {lang === 'hi' ? 'परियोजनाएँ निगरानी में' : 'Works Monitored'}</span>
             </div>
           </div>
         </div>
 
         {/* Header Title Section (Admin Reference Standard) */}
-        <div className="dashboard-header" style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div className="dashboard-header" style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "18px" }}>
           <div className="dashboard-title-section">
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "#e0f2fe", color: "#0369a1" }}>
-                {mpHouse}
-              </span>
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "9999px", background: "#ecfdf5", color: "#065f46" }}>
-                Live Supabase Connected
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+              <span style={{ fontSize: "0.74rem", fontWeight: 700, padding: "3px 10px", borderRadius: "6px", background: "#e0f2fe", color: "#0369a1" }}>
+                {tr(mpHouse)}
               </span>
             </div>
-            <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
+            <h1 style={{ fontSize: "1.95rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 8px 0", fontFamily: "Outfit, sans-serif" }}>
               {mpName} — {constituency} ({mpState})
             </h1>
-            <p style={{ fontSize: "0.92rem", color: "#64748b", margin: 0, maxWidth: "780px" }}>
-              Recommend constituency development projects, track sanction approvals, and monitor live ground expenditure in {constituency}.
+            <p style={{ fontSize: "0.95rem", color: "#64748b", margin: 0, maxWidth: "800px", lineHeight: 1.5 }}>
+              {lang === 'hi' 
+                ? `${constituency} (${mpState}) में निर्वाचन क्षेत्र विकास परियोजनाओं की अनुशंसा करें, स्वीकृति ट्रैक करें एवं वास्तविक व्यय की निगरानी करें।`
+                : `Recommend constituency development projects, track sanction approvals, and monitor live ground expenditure in ${constituency}.`}
             </p>
           </div>
           
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <select 
-              style={{ 
-                padding: "8px 12px", 
-                borderRadius: "8px", 
-                border: "1px solid #cbd5e1", 
-                background: "#ffffff", 
-                color: "#0f172a", 
-                fontSize: "0.82rem", 
-                fontWeight: 600,
-                cursor: "pointer",
-                maxWidth: "260px"
-              }} 
-              value={selectedMPId} 
-              onChange={(e) => setSelectedMPId(e.target.value)}
-            >
-              {liveMps.length > 0 ? (
-                liveMps.slice(0, 40).map((m) => (
-                  <option key={m.mpId} value={m.mpId}>
-                    {m.name} ({m.constituency}, {m.state})
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="Pune">Murlidhar Mohol (Pune)</option>
-                  <option value="Varanasi">Narendra Modi (Varanasi)</option>
-                  <option value="New Delhi">Bansuri Swaraj (New Delhi)</option>
-                </>
-              )}
-            </select>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
             <Button 
               variant="primary" 
               size="md" 
               onClick={() => { setPrefilledCitizenId(""); setIsRecommendModalOpen(true); }} 
               icon={<Plus size={16} />} 
-              style={{ background: "#2563eb", borderColor: "#2563eb", fontWeight: 700 }}
+              style={{ background: "#2563eb", borderColor: "#2563eb", fontWeight: 700, padding: "10px 20px" }}
             >
-              Recommend New Work
+              {t.recommendNewWork || tr("Recommend New Work")}
             </Button>
           </div>
         </div>
 
         {/* Financial Cap & KPI Summary Grid (Admin Reference Hover-Only Top Accent) */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "18px" }}>
           
-          <div className="metric-card metric-blue" style={{ padding: "18px 20px" }}>
-            <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
-              Annual Budget Cap
+          <div className="metric-card metric-blue" style={{ padding: "20px 24px" }}>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
+              {t.fundsAllocated || tr("Annual Budget Cap")}
             </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#0f172a", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
+            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#0f172a", fontFamily: "Outfit, sans-serif", marginTop: "6px" }}>
               ₹{metrics.totalEntitlement.toFixed(2)} Cr
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#475569", marginTop: "4px" }}>
-              Sanctioned: <strong>₹{metrics.totalSanctionedAmt.toFixed(2)} Cr</strong> ({metrics.utilizationRate}%)
+            <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "6px" }}>
+              {tr("Sanctioned")}: <strong>₹{metrics.totalSanctionedAmt.toFixed(2)} Cr</strong> ({metrics.utilizationRate}%)
             </div>
           </div>
 
-          <div className="metric-card metric-emerald" style={{ padding: "18px 20px" }}>
-            <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
-              Works Recommended
+          <div className="metric-card metric-emerald" style={{ padding: "20px 24px" }}>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
+              {t.worksRecommended || tr("Works Recommended")}
             </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#059669", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
-              {metrics.recommendedCount} Works
+            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#059669", fontFamily: "Outfit, sans-serif", marginTop: "6px" }}>
+              {metrics.recommendedCount} {lang === 'hi' ? 'कार्य' : 'Works'}
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#475569", marginTop: "4px" }}>
-              Outlay: <strong>₹{metrics.totalRecommendedAmt.toFixed(2)} Cr</strong>
-            </div>
-          </div>
-
-          <div className="metric-card metric-sky" style={{ padding: "18px 20px" }}>
-            <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
-              Sanctioned & Ongoing
-            </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#0284c7", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
-              {metrics.ongoingCount} Active
-            </div>
-            <div style={{ fontSize: "0.75rem", color: "#475569", marginTop: "4px" }}>
-              District Approved: <strong>{metrics.sanctionedCount}</strong>
+            <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "6px" }}>
+              {lang === 'hi' ? 'अनुशंसित राशि' : 'Outlay'}: <strong>₹{metrics.totalRecommendedAmt.toFixed(2)} Cr</strong>
             </div>
           </div>
 
-          <div className="metric-card metric-green" style={{ padding: "18px 20px" }}>
-            <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
-              Completed Works
+          <div className="metric-card metric-sky" style={{ padding: "20px 24px" }}>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
+              {t.worksOngoing || tr("Sanctioned & Ongoing")}
             </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#16a34a", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
-              {metrics.completedCount} Projects
+            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#0284c7", fontFamily: "Outfit, sans-serif", marginTop: "6px" }}>
+              {metrics.ongoingCount} {lang === 'hi' ? 'सक्रिय' : 'Active'}
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#475569", marginTop: "4px" }}>
-              Verified & Handed Over
+            <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "6px" }}>
+              {lang === 'hi' ? 'ज़िला स्वीकृत' : 'District Approved'}: <strong>{metrics.sanctionedCount}</strong>
             </div>
           </div>
 
-          <div className="metric-card metric-rose" style={{ padding: "18px 20px" }}>
-            <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
+          <div className="metric-card metric-green" style={{ padding: "20px 24px" }}>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
+              {t.worksCompleted || tr("Completed Works")}
+            </div>
+            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#16a34a", fontFamily: "Outfit, sans-serif", marginTop: "6px" }}>
+              {metrics.completedCount} {lang === 'hi' ? 'परियोजनाएँ' : 'Projects'}
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "6px" }}>
+              {lang === 'hi' ? 'सत्यापित एवं हस्तांतरित' : 'Verified & Handed Over'}
+            </div>
+          </div>
+
+          <div className="metric-card metric-rose" style={{ padding: "20px 24px" }}>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}>
               High-Risk / Delayed
             </div>
-            <div style={{ fontSize: "1.6rem", fontWeight: 800, color: highRiskWorks.length > 0 ? "#e11d48" : "#16a34a", fontFamily: "Outfit, sans-serif", marginTop: "4px" }}>
+            <div style={{ fontSize: "1.65rem", fontWeight: 800, color: highRiskWorks.length > 0 ? "#e11d48" : "#16a34a", fontFamily: "Outfit, sans-serif", marginTop: "6px" }}>
               {highRiskWorks.length} Alerts
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#475569", marginTop: "4px" }}>
+            <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "6px" }}>
               Priority Field Verification
             </div>
           </div>
@@ -682,376 +997,816 @@ export const MPDashboard: React.FC = () => {
 
         {/* Tab Views with Smooth Animated Transition */}
         <div key={activeTab} className="view-transition-container">
-          {/* TAB 1: MY RECOMMENDATIONS */}
-          {activeTab === "my_recommendations" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            
-            {/* Filter Bar */}
-            <div className="gov-card" style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <Search size={14} color="var(--text-muted)" />
-                  <input
-                    type="text"
-                    className="gov-input"
-                    placeholder="Search by title, location, ID..."
-                    style={{ width: "240px" }}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
+          {/* TAB 1: CONSTITUENCY WORKS GRID & TABLE */}
+          {activeTab === "constituency_works" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+              
+              {/* General Filter & View Mode Controls Bar */}
+              <div className="gov-card" style={{ padding: "16px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Search size={15} color="var(--text-muted)" />
+                    <input
+                      type="text"
+                      className="gov-input"
+                      placeholder={lang === 'hi' ? 'कार्य आईडी, श्रेणी, एजेंसी खोजें...' : 'Search works, category, agency...'}
+                      style={{ width: "240px", padding: "7px 12px", fontSize: "0.82rem" }}
+                      value={worksSearchQuery}
+                      onChange={(e) => setWorksSearchQuery(e.target.value)}
+                    />
+                  </div>
 
-                <select
-                  className="gov-select"
-                  style={{ width: "160px" }}
-                  value={selectedCategoryFilter}
-                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                >
-                  <option value="all">All Categories</option>
-                  <option value="Drinking Water">Drinking Water</option>
-                  <option value="Education">Education</option>
-                  <option value="Roads">Roads</option>
-                  <option value="Health">Health</option>
-                  <option value="Community Assets">Community Assets</option>
-                  <option value="Renewable Energy">Renewable Energy</option>
-                  <option value="Sports">Sports</option>
-                </select>
-
-                <select
-                  className="gov-select"
-                  style={{ width: "160px" }}
-                  value={selectedStatusFilter}
-                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="PROPOSED">Proposed</option>
-                  <option value="UNDER_SCRUTINY">Under Scrutiny</option>
-                  <option value="SANCTIONED">Sanctioned</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
-              </div>
-
-              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                Showing <strong>{filteredRecommendations.length}</strong> of <strong>{displayedRecommendations.length}</strong> recommendations
-              </div>
-            </div>
-
-            {/* Recommendations Table */}
-            <div className="gov-card" style={{ overflowX: "auto" }}>
-              <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
-                    <th style={{ padding: "10px 12px" }}>Recommendation ID</th>
-                    <th style={{ padding: "10px 12px" }}>Work Title & Description</th>
-                    <th style={{ padding: "10px 12px" }}>Category</th>
-                    <th style={{ padding: "10px 12px" }}>Estimated Outlay</th>
-                    <th style={{ padding: "10px 12px" }}>Location</th>
-                    <th style={{ padding: "10px 12px" }}>Date Proposed</th>
-                    <th style={{ padding: "10px 12px" }}>Status</th>
-                    <th style={{ padding: "10px 12px" }}>District Status & Notes</th>
-                    <th style={{ padding: "10px 12px", textAlign: "center" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRecommendations.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "var(--text-muted)" }}>
-                        No work recommendations found matching your criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredRecommendations.map((rec) => (
-                      <tr 
-                        key={rec.id} 
-                        onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))}
-                        style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
-                        title="Click to inspect all project details and dossier"
-                      >
-                        <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
-                          {rec.id}
-                        </td>
-                        <td style={{ padding: "10px 12px", maxWidth: "280px" }}>
-                          <div style={{ fontWeight: 700, color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>{rec.title}</span>
-                            <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
-                          </div>
-                          <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>{rec.justification}</div>
-                          {rec.citizenRequestId && (
-                            <span className="gov-badge gov-badge-info" style={{ fontSize: "0.64rem", marginTop: "4px", display: "inline-block" }}>
-                              Citizen Request #{rec.citizenRequestId}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <span className="gov-badge gov-badge-neutral">{rec.category}</span>
-                        </td>
-                        <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--gov-primary)" }}>
-                          ₹{rec.estimatedCost.toFixed(2)} Cr
-                        </td>
-                        <td style={{ padding: "10px 12px", fontSize: "0.78rem" }}>
-                          {rec.location}
-                        </td>
-                        <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
-                          {rec.dateProposed}
-                        </td>
-                        <td style={{ padding: "10px 12px" }}>
-                          {rec.status === "SANCTIONED" && <span className="gov-badge gov-badge-success">SANCTIONED</span>}
-                          {rec.status === "UNDER_SCRUTINY" && <span className="gov-badge gov-badge-warning">UNDER SCRUTINY</span>}
-                          {rec.status === "PROPOSED" && <span className="gov-badge gov-badge-info">PROPOSED</span>}
-                          {rec.status === "REJECTED" && <span className="gov-badge gov-badge-danger">REJECTED</span>}
-                        </td>
-                        <td style={{ padding: "10px 12px", fontSize: "0.76rem", color: "var(--text-body)", maxWidth: "220px" }}>
-                          {rec.districtNotes || "Under review by District Administration"}
-                        </td>
-                        <td style={{ padding: "10px 12px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-                          <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))} 
-                            icon={<Eye size={12} />}
-                          >
-                            Inspect
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: CONSTITUENCY WORKS GRID & TABLE */}
-        {activeTab === "constituency_works" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            
-            {/* View Mode & Filter Controls */}
-            <div className="gov-card" style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-              <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
-                Showing <strong>{constituencyWorks.length}</strong> sanctioned constituency projects for <strong>{constituency}</strong>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>View Mode:</span>
-                <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                  <button
-                    type="button"
-                    onClick={() => setWorksViewMode("table")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      padding: "5px 12px",
-                      borderRadius: "6px",
-                      fontSize: "0.76rem",
-                      fontWeight: worksViewMode === "table" ? 700 : 500,
-                      border: "none",
-                      background: worksViewMode === "table" ? "#ffffff" : "transparent",
-                      color: worksViewMode === "table" ? "#0f172a" : "#64748b",
-                      boxShadow: worksViewMode === "table" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease"
-                    }}
+                  <select
+                    className="gov-select"
+                    style={{ width: "170px", padding: "7px 12px", fontSize: "0.82rem" }}
+                    value={worksCategoryFilter}
+                    onChange={(e) => setWorksCategoryFilter(e.target.value)}
                   >
-                    <List size={13} />
-                    <span>Table View</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWorksViewMode("grid")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      padding: "5px 12px",
-                      borderRadius: "6px",
-                      fontSize: "0.76rem",
-                      fontWeight: worksViewMode === "grid" ? 700 : 500,
-                      border: "none",
-                      background: worksViewMode === "grid" ? "#ffffff" : "transparent",
-                      color: worksViewMode === "grid" ? "#0f172a" : "#64748b",
-                      boxShadow: worksViewMode === "grid" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease"
-                    }}
-                  >
-                    <LayoutGrid size={13} />
-                    <span>Card Grid</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+                    <option value="all">{lang === 'hi' ? `सभी श्रेणियाँ (${constituencyCategories.length})` : `All Categories (${constituencyCategories.length})`}</option>
+                    {constituencyCategories.map((cat) => (
+                      <option key={cat} value={cat.toLowerCase()}>
+                        {tr(cat)}
+                      </option>
+                    ))}
+                  </select>
 
-            <div key={worksViewMode} className="view-transition-container">
-              {worksViewMode === "grid" ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
-                  {constituencyWorks.map((work) => (
-                    <div
-                      key={work.id}
-                      className="card-hover-accent accent-sky cursor-pointer"
-                      onClick={() => setSelectedWorkForDetail(work)}
+                  <select
+                    className="gov-select"
+                    style={{ width: "150px", padding: "7px 12px", fontSize: "0.82rem" }}
+                    value={worksStatusFilter}
+                    onChange={(e) => setWorksStatusFilter(e.target.value)}
+                  >
+                    <option value="all">{lang === 'hi' ? 'सभी स्थितियाँ' : 'All Statuses'}</option>
+                    <option value="ongoing">{lang === 'hi' ? 'प्रगतिरत' : 'Ongoing'}</option>
+                    <option value="completed">{lang === 'hi' ? 'पूर्ण' : 'Completed'}</option>
+                    <option value="delayed">{lang === 'hi' ? 'विलंबित' : 'Delayed'}</option>
+                    <option value="sanctioned">{lang === 'hi' ? 'स्वीकृत' : 'Sanctioned'}</option>
+                  </select>
+
+                  {(worksSearchQuery || worksCategoryFilter !== "all" || worksStatusFilter !== "all") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWorksSearchQuery("");
+                        setWorksCategoryFilter("all");
+                        setWorksStatusFilter("all");
+                      }}
                       style={{
-                        padding: "18px 20px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "12px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        background: "#fee2e2",
+                        border: "1px solid #fecaca",
+                        color: "#991b1b",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                        <span style={{ fontSize: "0.68rem", fontFamily: "monospace", fontWeight: 700, background: "var(--bg-surface-subtle)", padding: "2px 6px", borderRadius: "4px", color: "var(--gov-primary)" }}>
-                          {work.id}
-                        </span>
-                        <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
-                          {work.status.toUpperCase()}
-                        </span>
-                      </div>
-
-                      <div>
-                        <h4 style={{ fontSize: "0.94rem", fontWeight: 700, color: "var(--text-main)", margin: "0 0 4px 0", lineHeight: 1.35 }}>
-                          {work.title}
-                        </h4>
-                        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                          {work.district}, {work.state} • {work.category}
-                        </div>
-                      </div>
-
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", background: "var(--bg-surface-subtle)", padding: "8px 10px", borderRadius: "6px" }}>
-                        <div>
-                          <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Sanctioned</div>
-                          <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--gov-primary)" }}>₹{work.sanctionedAmt.toFixed(2)} Cr</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Expenditure</div>
-                          <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#16a34a" }}>₹{work.expenditureAmt.toFixed(2)} Cr</div>
-                        </div>
-                      </div>
-
-                      {/* Progress Bars */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.70rem", marginBottom: "2px", fontWeight: 600 }}>
-                            <span style={{ color: "var(--text-muted)" }}>Physical Progress</span>
-                            <span style={{ color: "#10b981" }}>{work.physicalProgress}%</span>
-                          </div>
-                          <div style={{ height: "5px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
-                          </div>
-                        </div>
-
-                        <div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.70rem", marginBottom: "2px", fontWeight: 600 }}>
-                            <span style={{ color: "var(--text-muted)" }}>Financial Progress</span>
-                            <span style={{ color: "#3b82f6" }}>{work.financialProgress}%</span>
-                          </div>
-                          <div style={{ height: "5px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${work.financialProgress}%`, height: "100%", background: "#3b82f6" }} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Card Footer Actions */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid var(--border-light)", marginTop: "auto" }} onClick={(e) => e.stopPropagation()}>
-                        <span style={{ fontSize: "0.70rem", color: "var(--text-muted)" }}>
-                          Agency: {work.agency ? work.agency.slice(0, 24) + "..." : "PWD"}
-                        </span>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
-                            Inspect
-                          </Button>
-                          <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForAttachments(work)} icon={<ImageIcon size={12} />}>
-                            Photos
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                      <span>{t.resetFilters || tr("Reset Filters")}</span>
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <div className="gov-card" style={{ overflowX: "auto" }}>
-                  <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
-                        <th style={{ padding: "10px 12px" }}>Work ID</th>
-                        <th style={{ padding: "10px 12px" }}>Project Name</th>
-                        <th style={{ padding: "10px 12px" }}>Sanction Cost</th>
-                        <th style={{ padding: "10px 12px" }}>Expenditure</th>
-                        <th style={{ padding: "10px 12px" }}>Physical Progress</th>
-                        <th style={{ padding: "10px 12px" }}>Financial Progress</th>
-                        <th style={{ padding: "10px 12px" }}>Status</th>
-                        <th style={{ padding: "10px 12px" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {constituencyWorks.map((work) => (
-                        <tr 
-                          key={work.id} 
+
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                    {lang === 'hi' 
+                      ? <>दर्शाए गए <strong style={{ color: "#0f172a" }}>{sortedAndFilteredWorks.length}</strong> / <strong style={{ color: "#0f172a" }}>{constituencyWorks.length}</strong> कार्य</>
+                      : <>Showing <strong style={{ color: "#0f172a" }}>{sortedAndFilteredWorks.length}</strong> of <strong style={{ color: "#0f172a" }}>{constituencyWorks.length}</strong> projects</>}
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "3px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                      <button
+                        type="button"
+                        onClick={() => setWorksViewMode("table")}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "5px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.78rem",
+                          fontWeight: worksViewMode === "table" ? 700 : 500,
+                          border: "none",
+                          background: worksViewMode === "table" ? "#ffffff" : "transparent",
+                          color: worksViewMode === "table" ? "#0f172a" : "#64748b",
+                          boxShadow: worksViewMode === "table" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        <List size={13} />
+                        <span>{t.tableView || tr("Table View")}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWorksViewMode("grid")}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "5px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.78rem",
+                          fontWeight: worksViewMode === "grid" ? 700 : 500,
+                          border: "none",
+                          background: worksViewMode === "grid" ? "#ffffff" : "transparent",
+                          color: worksViewMode === "grid" ? "#0f172a" : "#64748b",
+                          boxShadow: worksViewMode === "grid" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        <LayoutGrid size={13} />
+                        <span>{t.cardGridView || tr("Card Grid")}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div key={worksViewMode} className="view-transition-container">
+                {worksViewMode === "grid" ? (
+                  sortedAndFilteredWorks.length === 0 ? (
+                    <div className="gov-card" style={{ padding: "48px 24px", textAlign: "center", color: "var(--text-muted)" }}>
+                      <p style={{ margin: "0 0 12px 0", fontSize: "0.95rem" }}>No sanctioned constituency works match your search or filter criteria.</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWorksSearchQuery("");
+                          setWorksCategoryFilter("all");
+                          setWorksStatusFilter("all");
+                        }}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          background: "#eff6ff",
+                          color: "#2563eb",
+                          border: "1px solid #bfdbfe",
+                          fontWeight: 600,
+                          fontSize: "0.82rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Reset All Filters
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: "20px" }}>
+                      {sortedAndFilteredWorks.map((work) => {
+                        const evInfo = workEvidenceMap[work.id];
+                        const totalPhotos = evInfo?.totalPhotos || (work.attachments?.length || 0);
+
+                        return (
+                        <div
+                          key={work.id}
+                          className="card-hover-accent accent-sky cursor-pointer"
                           onClick={() => setSelectedWorkForDetail(work)}
-                          style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
-                          title="Click on project to view full official dossier and details"
+                          style={{
+                            padding: "0",
+                            display: "flex",
+                            flexDirection: "column",
+                            overflow: "hidden",
+                            cursor: "pointer",
+                            background: "var(--bg-surface)",
+                            borderRadius: "12px",
+                            border: "1px solid var(--border-light)",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
+                          }}
                         >
-                          <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
-                            {work.id}
-                          </td>
-                          <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span>{work.title}</span>
+                          {/* Evidence Photo Banner if photos exist */}
+                          {evInfo?.samplePhoto ? (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedWorkForAttachments(work);
+                              }}
+                              style={{
+                                position: "relative",
+                                height: "130px",
+                                width: "100%",
+                                background: "#0f172a",
+                                overflow: "hidden",
+                                cursor: "pointer"
+                              }}
+                              title="Click to view all linked evidence photos & field inspections"
+                            >
+                              <img
+                                src={evInfo.samplePhoto}
+                                alt={work.title}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  opacity: 0.9,
+                                  transition: "transform 0.3s ease"
+                                }}
+                              />
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "10px",
+                                  left: "10px",
+                                  display: "flex",
+                                  gap: "6px",
+                                  alignItems: "center"
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    background: "rgba(15, 23, 42, 0.85)",
+                                    color: "#38bdf8",
+                                    padding: "3px 8px",
+                                    borderRadius: "6px",
+                                    fontSize: "0.70rem",
+                                    fontWeight: 700,
+                                    backdropFilter: "blur(4px)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    border: "1px solid rgba(56, 189, 248, 0.4)"
+                                  }}
+                                >
+                                  <Camera size={11} />
+                                  {totalPhotos} Linked Photo{totalPhotos > 1 ? "s" : ""}
+                                </span>
+                                {evInfo.hasGeoTag && (
+                                  <span
+                                    style={{
+                                      background: "rgba(16, 185, 129, 0.9)",
+                                      color: "#ffffff",
+                                      padding: "3px 7px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 700,
+                                      backdropFilter: "blur(4px)",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "3px"
+                                    }}
+                                  >
+                                    <MapPin size={10} />
+                                    GPS Geotagged
+                                  </span>
+                                )}
+                              </div>
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  bottom: "8px",
+                                  right: "10px",
+                                  background: "rgba(0, 0, 0, 0.65)",
+                                  color: "#ffffff",
+                                  padding: "2px 8px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.68rem",
+                                  fontWeight: 600
+                                }}
+                              >
+                                {evInfo.contractorCount > 0 && `${evInfo.contractorCount} Contractor `}
+                                {evInfo.citizenCount > 0 && `• ${evInfo.citizenCount} Citizen`}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                              <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
+                                {work.category}
+                              </span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                {totalPhotos > 0 && !evInfo?.samplePhoto && (
+                                  <span
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedWorkForAttachments(work);
+                                    }}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "3px",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 700,
+                                      color: "#047857",
+                                      background: "#ecfdf5",
+                                      border: "1px solid #a7f3d0",
+                                      padding: "1px 6px",
+                                      borderRadius: "4px"
+                                    }}
+                                    title="View evidence photos"
+                                  >
+                                    <Camera size={10} />
+                                    {totalPhotos} Photos
+                                  </span>
+                                )}
+                                <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
+                                  {work.status.toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <h4 style={{ fontSize: "0.96rem", fontWeight: 700, color: "var(--text-main)", margin: "0 0 5px 0", lineHeight: 1.4 }}>
+                                {work.title}
+                              </h4>
+                              <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                                {work.district}, {work.state}
+                              </div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", background: "var(--bg-surface-subtle)", padding: "10px 14px", borderRadius: "8px" }}>
+                              <div>
+                                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Sanctioned</div>
+                                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--gov-primary)", marginTop: "2px" }}>₹{work.sanctionedAmt.toFixed(2)} Cr</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Expenditure</div>
+                                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#16a34a", marginTop: "2px" }}>₹{work.expenditureAmt.toFixed(2)} Cr</div>
+                              </div>
+                            </div>
+
+                            {/* Progress Bars */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                              <div>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", marginBottom: "3px", fontWeight: 600 }}>
+                                  <span style={{ color: "var(--text-muted)" }}>Physical Progress</span>
+                                  <span style={{ color: "#10b981", fontWeight: 700 }}>{work.physicalProgress}%</span>
+                                </div>
+                                <div style={{ height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                                  <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
+                                </div>
+                              </div>
+
+                              <div>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", marginBottom: "3px", fontWeight: 600 }}>
+                                  <span style={{ color: "var(--text-muted)" }}>Financial Progress</span>
+                                  <span style={{ color: "#3b82f6", fontWeight: 700 }}>{work.financialProgress}%</span>
+                                </div>
+                                <div style={{ height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                                  <div style={{ width: `${work.financialProgress}%`, height: "100%", background: "#3b82f6" }} />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Card Footer Actions */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "12px", borderTop: "1px solid var(--border-light)", marginTop: "auto" }} onClick={(e) => e.stopPropagation()}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                Agency: {work.agency ? (work.agency.length > 18 ? work.agency.slice(0, 18) + "..." : work.agency) : "PWD"}
+                              </span>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
+                                  Inspect
+                                </Button>
+                                <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForAttachments(work)} icon={<Camera size={12} />}>
+                                  Photos ({totalPhotos})
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    </div>
+                  )
+                ) : (
+                  <div className="gov-card" style={{ overflowX: "auto", borderRadius: "10px" }}>
+                    <table className="gov-table" style={{ width: "100%", fontSize: "0.84rem", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
+                          <TableColumnHeader
+                            title="Project Name & Details"
+                            field="title"
+                            currentSortField={worksSortBy}
+                            currentSortDirection={worksSortOrder}
+                            onSort={handleWorksSort}
+                          />
+                          <TableColumnHeader
+                            title="Category"
+                            field="category"
+                            currentSortField={worksSortBy}
+                            currentSortDirection={worksSortOrder}
+                            onSort={handleWorksSort}
+                            filterOptions={[
+                              { label: "All Categories", value: "all" },
+                              ...constituencyCategories.map((c) => ({ label: c, value: c.toLowerCase() })),
+                            ]}
+                            selectedFilter={worksCategoryFilter}
+                            onFilterChange={setWorksCategoryFilter}
+                          />
+                          <TableColumnHeader
+                            title="Sanction Cost"
+                            field="sanctionedAmt"
+                            currentSortField={worksSortBy}
+                            currentSortDirection={worksSortOrder}
+                            onSort={handleWorksSort}
+                          />
+                          <TableColumnHeader
+                            title="Expenditure"
+                            field="expenditureAmt"
+                            currentSortField={worksSortBy}
+                            currentSortDirection={worksSortOrder}
+                            onSort={handleWorksSort}
+                          />
+                          <TableColumnHeader
+                            title="Physical Progress"
+                            field="physicalProgress"
+                            currentSortField={worksSortBy}
+                            currentSortDirection={worksSortOrder}
+                            onSort={handleWorksSort}
+                            style={{ minWidth: "140px" }}
+                          />
+                          <TableColumnHeader
+                            title="Financial Progress"
+                            field="financialProgress"
+                            currentSortField={worksSortBy}
+                            currentSortDirection={worksSortOrder}
+                            onSort={handleWorksSort}
+                            style={{ minWidth: "140px" }}
+                          />
+                          <TableColumnHeader
+                            title="Status"
+                            field="status"
+                            currentSortField={worksSortBy}
+                            currentSortDirection={worksSortOrder}
+                            onSort={handleWorksSort}
+                            filterOptions={[
+                              { label: "All Statuses", value: "all" },
+                              { label: "Ongoing", value: "ongoing" },
+                              { label: "Completed", value: "completed" },
+                              { label: "Delayed", value: "delayed" },
+                              { label: "Sanctioned", value: "sanctioned" },
+                            ]}
+                            selectedFilter={worksStatusFilter}
+                            onFilterChange={setWorksStatusFilter}
+                          />
+                          <th style={{ padding: "12px 16px", textAlign: "center", color: "var(--text-secondary)", fontWeight: 700 }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedAndFilteredWorks.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} style={{ textAlign: "center", padding: "48px 24px", color: "var(--text-muted)" }}>
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                                <span>No constituency works match your search or filter criteria.</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setWorksSearchQuery("");
+                                    setWorksCategoryFilter("all");
+                                    setWorksStatusFilter("all");
+                                  }}
+                                  style={{
+                                    padding: "6px 14px",
+                                    borderRadius: "6px",
+                                    background: "#eff6ff",
+                                    color: "#2563eb",
+                                    border: "1px solid #bfdbfe",
+                                    fontWeight: 600,
+                                    fontSize: "0.82rem",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Reset Works Filters
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          sortedAndFilteredWorks.map((work) => {
+                            const evInfo = workEvidenceMap[work.id];
+                            const totalPhotos = evInfo?.totalPhotos || (work.attachments?.length || 0);
+
+                            return (
+                            <tr 
+                              key={work.id} 
+                              onClick={() => setSelectedWorkForDetail(work)}
+                              style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer", transition: "background 0.15s ease" }}
+                              title="Click on project to view full official dossier and details"
+                            >
+                              <td style={{ padding: "14px 16px", fontWeight: 700 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span>{work.title}</span>
+                                  <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
+                                </div>
+                                <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 400, marginTop: "2px" }}>
+                                  {work.district}, {work.state} | Agency: {work.agency}
+                                </div>
+                                {totalPhotos > 0 && (
+                                  <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedWorkForAttachments(work);
+                                      }}
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                        fontSize: "0.68rem",
+                                        fontWeight: 700,
+                                        color: "#047857",
+                                        background: "#ecfdf5",
+                                        border: "1px solid #a7f3d0",
+                                        padding: "1px 6px",
+                                        borderRadius: "4px",
+                                        cursor: "pointer"
+                                      }}
+                                      title="Click to view all linked Contractor & Citizen photos"
+                                    >
+                                      <Camera size={10} />
+                                      {totalPhotos} Photo{totalPhotos > 1 ? "s" : ""} Linked
+                                      {evInfo?.hasGeoTag ? " • GPS Geotagged" : ""}
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ padding: "14px 16px" }}>
+                                <span className="gov-badge gov-badge-neutral">{work.category}</span>
+                              </td>
+                              <td style={{ padding: "14px 16px", fontWeight: 700, color: "var(--gov-primary)" }}>₹{work.sanctionedAmt.toFixed(2)} Cr</td>
+                              <td style={{ padding: "14px 16px", fontWeight: 700, color: "#16a34a" }}>₹{work.expenditureAmt.toFixed(2)} Cr</td>
+                              <td style={{ padding: "14px 16px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <div style={{ flex: 1, minWidth: "60px", height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                                    <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
+                                  </div>
+                                  <span style={{ fontWeight: 600, fontSize: "0.78rem" }}>{work.physicalProgress}%</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: "14px 16px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <div style={{ flex: 1, minWidth: "60px", height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
+                                    <div style={{ width: `${work.financialProgress}%`, height: "100%", background: "#3b82f6" }} />
+                                  </div>
+                                  <span style={{ fontWeight: 600, fontSize: "0.78rem" }}>{work.financialProgress}%</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: "14px 16px" }}>
+                                <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
+                                  {work.status.toUpperCase()}
+                                </span>
+                              </td>
+                              <td style={{ padding: "14px 16px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                                <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                                  <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
+                                    Inspect
+                                  </Button>
+                                  <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForAttachments(work)} icon={<Camera size={12} />}>
+                                    Photos ({totalPhotos})
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: MY RECOMMENDATIONS */}
+          {activeTab === "my_recommendations" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+              
+              {/* General Filter Bar */}
+              <div className="gov-card" style={{ padding: "16px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Search size={15} color="var(--text-muted)" />
+                    <input
+                      type="text"
+                      className="gov-input"
+                      placeholder="Search by title, location, category..."
+                      style={{ width: "240px", padding: "7px 12px", fontSize: "0.82rem" }}
+                      value={recSearchQuery}
+                      onChange={(e) => setRecSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <select
+                    className="gov-select"
+                    style={{ width: "170px", padding: "7px 12px", fontSize: "0.82rem" }}
+                    value={recCategoryFilter}
+                    onChange={(e) => setRecCategoryFilter(e.target.value)}
+                  >
+                    <option value="all">All Categories ({recommendationCategories.length})</option>
+                    {recommendationCategories.map((cat) => (
+                      <option key={cat} value={cat.toLowerCase()}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="gov-select"
+                    style={{ width: "160px", padding: "7px 12px", fontSize: "0.82rem" }}
+                    value={recStatusFilter}
+                    onChange={(e) => setRecStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="proposed">Proposed</option>
+                    <option value="under_scrutiny">Under Scrutiny</option>
+                    <option value="sanctioned">Sanctioned</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+
+                  {(recSearchQuery || recCategoryFilter !== "all" || recStatusFilter !== "all") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecSearchQuery("");
+                        setRecCategoryFilter("all");
+                        setRecStatusFilter("all");
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        background: "#fee2e2",
+                        border: "1px solid #fecaca",
+                        color: "#991b1b",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span>Reset Filters</span>
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                  Showing <strong style={{ color: "#0f172a" }}>{sortedAndFilteredRecommendations.length}</strong> of <strong style={{ color: "#0f172a" }}>{displayedRecommendations.length}</strong> recommendations
+                </div>
+              </div>
+
+              {/* Recommendations Table */}
+              <div className="gov-card" style={{ overflowX: "auto", borderRadius: "10px" }}>
+                <table className="gov-table" style={{ width: "100%", fontSize: "0.84rem", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
+                      <TableColumnHeader
+                        title="Work Title & Description"
+                        field="title"
+                        currentSortField={recSortBy}
+                        currentSortDirection={recSortOrder}
+                        onSort={handleRecSort}
+                      />
+                      <TableColumnHeader
+                        title="Category"
+                        field="category"
+                        currentSortField={recSortBy}
+                        currentSortDirection={recSortOrder}
+                        onSort={handleRecSort}
+                        filterOptions={[
+                          { label: "All Categories", value: "all" },
+                          ...recommendationCategories.map((c) => ({ label: c, value: c.toLowerCase() })),
+                        ]}
+                        selectedFilter={recCategoryFilter}
+                        onFilterChange={setRecCategoryFilter}
+                      />
+                      <TableColumnHeader
+                        title="Estimated Outlay"
+                        field="estimatedCost"
+                        currentSortField={recSortBy}
+                        currentSortDirection={recSortOrder}
+                        onSort={handleRecSort}
+                      />
+                      <TableColumnHeader
+                        title="Location"
+                        field="location"
+                        currentSortField={recSortBy}
+                        currentSortDirection={recSortOrder}
+                        onSort={handleRecSort}
+                      />
+                      <TableColumnHeader
+                        title="Date Proposed"
+                        field="dateProposed"
+                        currentSortField={recSortBy}
+                        currentSortDirection={recSortOrder}
+                        onSort={handleRecSort}
+                      />
+                      <TableColumnHeader
+                        title="Status"
+                        field="status"
+                        currentSortField={recSortBy}
+                        currentSortDirection={recSortOrder}
+                        onSort={handleRecSort}
+                        filterOptions={[
+                          { label: "All Statuses", value: "all" },
+                          { label: "Proposed", value: "proposed" },
+                          { label: "Under Scrutiny", value: "under_scrutiny" },
+                          { label: "Sanctioned", value: "sanctioned" },
+                          { label: "Rejected", value: "rejected" },
+                        ]}
+                        selectedFilter={recStatusFilter}
+                        onFilterChange={setRecStatusFilter}
+                      />
+                      <th style={{ padding: "12px 16px", color: "var(--text-secondary)", fontWeight: 700 }}>District Status & Notes</th>
+                      <th style={{ padding: "12px 16px", textAlign: "center", color: "var(--text-secondary)", fontWeight: 700 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedAndFilteredRecommendations.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: "center", padding: "48px 24px", color: "var(--text-muted)" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                            <span>No work recommendations found matching your search or filter criteria.</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRecSearchQuery("");
+                                setRecCategoryFilter("all");
+                                setRecStatusFilter("all");
+                              }}
+                              style={{
+                                padding: "6px 14px",
+                                borderRadius: "6px",
+                                background: "#eff6ff",
+                                color: "#2563eb",
+                                border: "1px solid #bfdbfe",
+                                fontWeight: 600,
+                                fontSize: "0.82rem",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Reset Recommendation Filters
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      sortedAndFilteredRecommendations.map((rec) => (
+                        <tr 
+                          key={rec.id} 
+                          onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))}
+                          style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer", transition: "background 0.15s ease" }}
+                          title="Click to inspect all project details and dossier"
+                        >
+                          <td style={{ padding: "14px 16px", maxWidth: "320px" }}>
+                            <div style={{ fontWeight: 700, color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span>{rec.title}</span>
                               <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 400 }}>
-                              {work.district}, {work.state} | Agency: {work.agency}
-                            </div>
+                            <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "3px", lineHeight: 1.35 }}>{rec.justification}</div>
                           </td>
-                          <td style={{ padding: "10px 12px", fontWeight: 700 }}>₹{work.sanctionedAmt.toFixed(2)} Cr</td>
-                          <td style={{ padding: "10px 12px" }}>₹{work.expenditureAmt.toFixed(2)} Cr</td>
-                          <td style={{ padding: "10px 12px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                                <div style={{ width: `${work.physicalProgress}%`, height: "100%", background: "#10b981" }} />
-                              </div>
-                              <span>{work.physicalProgress}%</span>
-                            </div>
+                          <td style={{ padding: "14px 16px" }}>
+                            <span className="gov-badge gov-badge-neutral">{rec.category}</span>
                           </td>
-                          <td style={{ padding: "10px 12px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <div style={{ flex: 1, height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                                <div style={{ width: `${work.financialProgress}%`, height: "100%", background: "#3b82f6" }} />
-                              </div>
-                              <span>{work.financialProgress}%</span>
-                            </div>
+                          <td style={{ padding: "14px 16px", fontWeight: 700, color: "var(--gov-primary)" }}>
+                            ₹{rec.estimatedCost.toFixed(2)} Cr
                           </td>
-                          <td style={{ padding: "10px 12px" }}>
-                            <span className={`gov-badge ${work.status === "Completed" ? "gov-badge-success" : work.status === "Delayed" ? "gov-badge-danger" : "gov-badge-info"}`}>
-                              {work.status.toUpperCase()}
-                            </span>
+                          <td style={{ padding: "14px 16px", fontSize: "0.80rem" }}>
+                            {rec.location}
                           </td>
-                          <td style={{ padding: "10px 12px" }} onClick={(e) => e.stopPropagation()}>
-                            <div style={{ display: "flex", gap: "6px" }}>
-                              <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForDetail(work)} icon={<Eye size={12} />}>
-                                Inspect
-                              </Button>
-                              <Button variant="secondary" size="sm" onClick={() => setSelectedWorkForAttachments(work)} icon={<ImageIcon size={12} />}>
-                                Photos
-                              </Button>
-                            </div>
+                          <td style={{ padding: "14px 16px", whiteSpace: "nowrap" }}>
+                            {rec.dateProposed}
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            {rec.status === "SANCTIONED" && <span className="gov-badge gov-badge-success">SANCTIONED</span>}
+                            {rec.status === "UNDER_SCRUTINY" && <span className="gov-badge gov-badge-warning">UNDER SCRUTINY</span>}
+                            {rec.status === "PROPOSED" && <span className="gov-badge gov-badge-info">PROPOSED</span>}
+                            {rec.status === "REJECTED" && <span className="gov-badge gov-badge-danger">REJECTED</span>}
+                          </td>
+                          <td style={{ padding: "14px 16px", fontSize: "0.78rem", color: "var(--text-body)", maxWidth: "220px", lineHeight: 1.35 }}>
+                            {rec.districtNotes || "Under review by District Administration"}
+                          </td>
+                          <td style={{ padding: "14px 16px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                            <Button 
+                              variant="secondary" 
+                              size="sm" 
+                              onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))} 
+                              icon={<Eye size={12} />}
+                            >
+                              Inspect
+                            </Button>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* TAB 3: DETAILED FUND RELATED INFORMATION & DISBURSAL LEDGER */}
         {activeTab === "fund_details" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
 
               {/* Header / Context Banner */}
-              <div className="gov-card" style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderLeft: "4px solid var(--gov-primary)" }}>
+              <div className="card-hover-accent accent-navy" style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", background: "#ffffff", borderRadius: "12px", border: "1px solid var(--border-light)" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                     <span className="gov-badge gov-badge-info">e-SAKSHI WEB-FUND FLOW</span>
@@ -1322,91 +2077,223 @@ export const MPDashboard: React.FC = () => {
 
               {/* Detailed Disbursal & Installment Ledger */}
               <div className="gov-card" style={{ padding: "16px 20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
                   <div>
                     <h4 style={{ fontSize: "0.96rem", fontWeight: 800, color: "var(--gov-primary)", margin: 0 }}>
                       Constituency Project Disbursal & Installment Ledger
                     </h4>
                     <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
-                      Showing {disbursalLedger.length} active project sanction vouchers in {constituency}
+                      Showing {sortedAndFilteredLedger.length} of {disbursalLedger.length} active project sanction vouchers in {constituency}
                     </p>
                   </div>
                   <span className="gov-badge gov-badge-info">PFMS Direct Electronic Advice Verified</span>
+                </div>
+
+                {/* Ledger General Filters Bar */}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Search size={14} color="var(--text-muted)" />
+                    <input
+                      type="text"
+                      className="gov-input"
+                      placeholder="Search voucher, title, agency, PFMS..."
+                      style={{ width: "260px", padding: "6px 12px", fontSize: "0.80rem" }}
+                      value={ledgerSearchQuery}
+                      onChange={(e) => setLedgerSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <select
+                    className="gov-select"
+                    style={{ width: "190px", padding: "6px 12px", fontSize: "0.80rem" }}
+                    value={ledgerUcFilter}
+                    onChange={(e) => setLedgerUcFilter(e.target.value)}
+                  >
+                    <option value="all">All UC Compliances</option>
+                    <option value="Audited">Audited & Verified (SNA)</option>
+                    <option value="Submitted">Submitted Under Review</option>
+                    <option value="Pending">Pending Milestone</option>
+                  </select>
+
+                  {(ledgerSearchQuery || ledgerUcFilter !== "all") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLedgerSearchQuery("");
+                        setLedgerUcFilter("all");
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 10px",
+                        borderRadius: "6px",
+                        background: "#fee2e2",
+                        border: "1px solid #fecaca",
+                        color: "#991b1b",
+                        fontSize: "0.74rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span>Reset</span>
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ overflowX: "auto" }}>
                   <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
-                        <th style={{ padding: "10px 12px" }}>Sanction Voucher No.</th>
-                        <th style={{ padding: "10px 12px" }}>Project Name & Agency</th>
-                        <th style={{ padding: "10px 12px" }}>Sanctioned Cost</th>
-                        <th style={{ padding: "10px 12px" }}>Tranche 1 (50%)</th>
-                        <th style={{ padding: "10px 12px" }}>Tranche 2 (50%)</th>
-                        <th style={{ padding: "10px 12px" }}>Total Released</th>
-                        <th style={{ padding: "10px 12px" }}>UC Compliance</th>
-                        <th style={{ padding: "10px 12px", textAlign: "center" }}>Actions</th>
+                        <TableColumnHeader
+                          title="Sanction Voucher No."
+                          field="voucherNo"
+                          currentSortField={ledgerSortBy}
+                          currentSortDirection={ledgerSortOrder}
+                          onSort={handleLedgerSort}
+                        />
+                        <TableColumnHeader
+                          title="Project Name & Agency"
+                          field="workTitle"
+                          currentSortField={ledgerSortBy}
+                          currentSortDirection={ledgerSortOrder}
+                          onSort={handleLedgerSort}
+                        />
+                        <TableColumnHeader
+                          title="Sanctioned Cost"
+                          field="sanctionedAmt"
+                          currentSortField={ledgerSortBy}
+                          currentSortDirection={ledgerSortOrder}
+                          onSort={handleLedgerSort}
+                        />
+                        <TableColumnHeader
+                          title="Tranche 1 (50%)"
+                          field="tranche1Amt"
+                          currentSortField={ledgerSortBy}
+                          currentSortDirection={ledgerSortOrder}
+                          onSort={handleLedgerSort}
+                        />
+                        <TableColumnHeader
+                          title="Tranche 2 (50%)"
+                          field="tranche2Amt"
+                          currentSortField={ledgerSortBy}
+                          currentSortDirection={ledgerSortOrder}
+                          onSort={handleLedgerSort}
+                        />
+                        <TableColumnHeader
+                          title="Total Released"
+                          field="totalDisbursed"
+                          currentSortField={ledgerSortBy}
+                          currentSortDirection={ledgerSortOrder}
+                          onSort={handleLedgerSort}
+                        />
+                        <TableColumnHeader
+                          title="UC Compliance"
+                          field="ucStatus"
+                          currentSortField={ledgerSortBy}
+                          currentSortDirection={ledgerSortOrder}
+                          onSort={handleLedgerSort}
+                          filterOptions={[
+                            { label: "All UC Compliances", value: "all" },
+                            { label: "Audited & Verified (SNA)", value: "audited" },
+                            { label: "Submitted Under Review", value: "submitted" },
+                            { label: "Pending 80% Milestone", value: "pending" },
+                          ]}
+                          selectedFilter={ledgerUcFilter}
+                          onFilterChange={setLedgerUcFilter}
+                        />
+                        <th style={{ padding: "10px 12px", textAlign: "center", color: "var(--text-secondary)", fontWeight: 700 }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {disbursalLedger.map((row) => (
-                        <tr
-                          key={row.voucherNo}
-                          onClick={() => setSelectedWorkForDetail(row.originalWork)}
-                          style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
-                          title="Click to inspect full project dossier"
-                        >
-                          <td style={{ padding: "10px 12px" }}>
-                            <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.78rem", color: "var(--gov-primary)" }}>
-                              {row.voucherNo}
+                      {sortedAndFilteredLedger.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} style={{ textAlign: "center", padding: "36px 16px", color: "var(--text-muted)" }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                              <span>No disbursal vouchers match your search or filter criteria.</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setLedgerSearchQuery("");
+                                  setLedgerUcFilter("all");
+                                }}
+                                style={{
+                                  padding: "5px 12px",
+                                  borderRadius: "6px",
+                                  background: "#eff6ff",
+                                  color: "#2563eb",
+                                  border: "1px solid #bfdbfe",
+                                  fontWeight: 600,
+                                  fontSize: "0.80rem",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Reset Ledger Filters
+                              </button>
                             </div>
-                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                              {row.pfmsRef}
-                            </div>
-                          </td>
-                          <td style={{ padding: "10px 12px", maxWidth: "260px" }}>
-                            <div style={{ fontWeight: 700, color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span>{row.workTitle}</span>
-                              <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
-                            </div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                              Agency: <strong>{row.agency}</strong> | Sanctioned: {row.sanctionDate}
-                            </div>
-                          </td>
-                          <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                            ₹{row.sanctionedAmt.toFixed(2)} Cr
-                          </td>
-                          <td style={{ padding: "10px 12px", color: "var(--status-info-text)", fontWeight: 600 }}>
-                            ₹{row.tranche1Amt.toFixed(2)} Cr
-                          </td>
-                          <td style={{ padding: "10px 12px", color: row.tranche2Amt > 0 ? "var(--status-success-text)" : "var(--text-muted)", fontWeight: 600 }}>
-                            {row.tranche2Amt > 0 ? `₹${row.tranche2Amt.toFixed(2)} Cr` : "Pending Milestone"}
-                          </td>
-                          <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--gov-primary)" }}>
-                            ₹{row.totalDisbursed.toFixed(2)} Cr
-                          </td>
-                          <td style={{ padding: "10px 12px" }}>
-                            <span className={`gov-badge ${row.ucStatus.includes("Audited")
-                                ? "gov-badge-success"
-                                : row.ucStatus.includes("Review")
-                                  ? "gov-badge-warning"
-                                  : "gov-badge-neutral"
-                              }`}>
-                              {row.ucStatus}
-                            </span>
-                          </td>
-                          <td style={{ padding: "10px 12px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setSelectedWorkForDetail(row.originalWork)}
-                              icon={<Eye size={12} />}
-                            >
-                              Inspect
-                            </Button>
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        sortedAndFilteredLedger.map((row) => (
+                          <tr
+                            key={row.voucherNo}
+                            onClick={() => setSelectedWorkForDetail(row.originalWork)}
+                            style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
+                            title="Click to inspect full project dossier"
+                          >
+                            <td style={{ padding: "10px 12px" }}>
+                              <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.78rem", color: "var(--gov-primary)" }}>
+                                {row.voucherNo}
+                              </div>
+                              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                                {row.pfmsRef}
+                              </div>
+                            </td>
+                            <td style={{ padding: "10px 12px", maxWidth: "260px" }}>
+                              <div style={{ fontWeight: 700, color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span>{row.workTitle}</span>
+                                <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
+                              </div>
+                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                                Agency: <strong>{row.agency}</strong> | Sanctioned: {row.sanctionDate}
+                              </div>
+                            </td>
+                            <td style={{ padding: "10px 12px", fontWeight: 700 }}>
+                              ₹{row.sanctionedAmt.toFixed(2)} Cr
+                            </td>
+                            <td style={{ padding: "10px 12px", color: "var(--status-info-text)", fontWeight: 600 }}>
+                              ₹{row.tranche1Amt.toFixed(2)} Cr
+                            </td>
+                            <td style={{ padding: "10px 12px", color: row.tranche2Amt > 0 ? "var(--status-success-text)" : "var(--text-muted)", fontWeight: 600 }}>
+                              {row.tranche2Amt > 0 ? `₹${row.tranche2Amt.toFixed(2)} Cr` : "Pending Milestone"}
+                            </td>
+                            <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--gov-primary)" }}>
+                              ₹{row.totalDisbursed.toFixed(2)} Cr
+                            </td>
+                            <td style={{ padding: "10px 12px" }}>
+                              <span className={`gov-badge ${row.ucStatus.includes("Audited")
+                                  ? "gov-badge-success"
+                                  : row.ucStatus.includes("Review")
+                                    ? "gov-badge-warning"
+                                    : "gov-badge-neutral"
+                                }`}>
+                                {row.ucStatus}
+                              </span>
+                            </td>
+                            <td style={{ padding: "10px 12px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setSelectedWorkForDetail(row.originalWork)}
+                                icon={<Eye size={12} />}
+                              >
+                                Inspect
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1465,9 +2352,6 @@ export const MPDashboard: React.FC = () => {
                     >
                       <div style={{ flex: 1, minWidth: "280px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                          <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.8rem", color: "var(--gov-primary)" }}>
-                            {issue.id}
-                          </span>
                           <span className="gov-badge gov-badge-neutral">{issue.category}</span>
                           <span className="gov-badge gov-badge-info">{issue.status}</span>
                         </div>
@@ -1481,6 +2365,47 @@ export const MPDashboard: React.FC = () => {
                         <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                           Submitted by: <strong>{issue.submittedBy || "Resident Citizen"}</strong> | Location: <strong>{issue.locationName}</strong> | Submitted: <strong>{issue.dateSubmitted}</strong>
                         </div>
+
+                        {/* Citizen Uploaded Evidence Photos Gallery */}
+                        {issue.photos && issue.photos.length > 0 && (
+                          <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "5px" }}>
+                              <Camera size={12} color="#059669" />
+                              <span>Citizen Ground Photos & Geotagged Proofs ({issue.photos.length}):</span>
+                            </div>
+                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                              {issue.photos.map((photo, pIdx) => (
+                                <div
+                                  key={photo.id || pIdx}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewPhotoModal({
+                                      url: photo.url,
+                                      title: photo.caption || issue.title,
+                                      metadata: `Uploaded by: ${issue.submittedBy || "Resident Citizen"} | Location: ${issue.locationName} | ${photo.lat && photo.lng ? `GPS: ${photo.lat.toFixed(5)}, ${photo.lng.toFixed(5)}` : "Geotagged"}`
+                                    });
+                                  }}
+                                  style={{
+                                    position: "relative",
+                                    width: "90px",
+                                    height: "64px",
+                                    borderRadius: "6px",
+                                    overflow: "hidden",
+                                    cursor: "pointer",
+                                    border: "1px solid var(--border-light)",
+                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+                                  }}
+                                  title="Click to view full citizen photo evidence"
+                                >
+                                  <img src={photo.url} alt={photo.caption || "Citizen Proof"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.65)", color: "#fff", fontSize: "0.6rem", padding: "1px 4px", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {photo.caption || "Ground Proof"}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <Button
@@ -1508,16 +2433,16 @@ export const MPDashboard: React.FC = () => {
               {highRiskWorks.map((work) => (
                 <div
                   key={work.id}
-                  className="gov-card"
+                  className="card-hover-accent accent-rose"
                   onClick={() => setSelectedWorkForDetail(work)}
-                  style={{ padding: "14px 16px", borderLeft: "4px solid var(--status-danger-text)", cursor: "pointer" }}
+                  style={{ padding: "14px 16px", cursor: "pointer", background: "#ffffff", borderRadius: "12px", border: "1px solid var(--border-light)" }}
                   title="Click to inspect full AI anomaly dossier"
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <span className="gov-badge gov-badge-danger">HIGH RISK (PRIORITY 1)</span>
-                        <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.8rem" }}>{work.id}</span>
+                        <span className="gov-badge gov-badge-neutral">{work.category}</span>
                       </div>
                       <h4 style={{ fontSize: "0.95rem", fontWeight: 800, margin: "6px 0 2px 0" }}>{work.title}</h4>
                       <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
@@ -1605,6 +2530,76 @@ export const MPDashboard: React.FC = () => {
         }}
         initialRole={targetLoginRole}
       />
+
+      {/* Fullscreen Photo Lightbox Modal */}
+      {previewPhotoModal && (
+        <div
+          onClick={() => setPreviewPhotoModal(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10000,
+            background: "rgba(15, 23, 42, 0.9)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px"
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "920px",
+              width: "100%",
+              maxHeight: "90vh",
+              background: "#1e293b",
+              borderRadius: "14px",
+              overflow: "hidden",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
+              border: "1px solid #334155",
+              display: "flex",
+              flexDirection: "column"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", background: "#0f172a", borderBottom: "1px solid #334155" }}>
+              <div style={{ color: "#ffffff", fontWeight: 700, fontSize: "0.95rem" }}>
+                {previewPhotoModal.title}
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoModal(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex"
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ flex: 1, maxHeight: "calc(90vh - 120px)", overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center", background: "#020617", padding: "12px" }}>
+              <img
+                src={previewPhotoModal.url}
+                alt={previewPhotoModal.title}
+                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: "8px" }}
+              />
+            </div>
+            {previewPhotoModal.metadata && (
+              <div style={{ padding: "10px 20px", background: "#0f172a", color: "#94a3b8", fontSize: "0.78rem", borderTop: "1px solid #334155" }}>
+                {previewPhotoModal.metadata}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <Footer t={t} onOpenPolicy={() => setIsPolicyOpen(true)} />
     </div>

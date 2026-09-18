@@ -89,6 +89,7 @@ import { StateList } from "../components/admin/states/StateList";
 import { StateDetail } from "../components/admin/states/StateDetail";
 import { MPList } from "../components/admin/mps/MPList";
 import { MPDetail } from "../components/admin/mps/MPDetail";
+import { ProjectDetail } from "../components/admin/projects/ProjectDetail";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { WorkItem, WorkReview, ALL_WORKS } from "../data/mpladsData";
@@ -176,7 +177,7 @@ const toWorkItem = (project: any): WorkItem => {
 
 export const MinistryDashboard: React.FC = () => {
   const { user, setRole } = useRole();
-  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t, tr } = usePreferences();
 
   // Active module navigation
   const [activeModule, setActiveModule] = useState<
@@ -186,6 +187,7 @@ export const MinistryDashboard: React.FC = () => {
   // Selection state for drill-down views
   const [selectedStateName, setSelectedStateName] = useState<string | null>(null);
   const [selectedMP, setSelectedMP] = useState<MPSummary | null>(null);
+  const [selectedProject, setSelectedProject] = useState<any | null>(null);
 
   // Live Supabase / Backend data
   const [nationalStats, setNationalStats] = useState<NationalStats | null>(null);
@@ -689,7 +691,8 @@ export const MinistryDashboard: React.FC = () => {
   };
 
   const openWorkDossier = (project: any) => {
-    setSelectedWorkForDetail(toWorkItem(project));
+    setSelectedProject(project);
+    setActiveModule("projects");
   };
 
   const openStateWorkspace = (state: string) => {
@@ -883,12 +886,13 @@ export const MinistryDashboard: React.FC = () => {
                   setActiveModule("overview");
                   setSelectedStateName(null);
                   setSelectedMP(null);
+                  setSelectedProject(null);
                 }}
-                className={`gov-tab ${activeModule === "overview" && !selectedStateName && !selectedMP ? "active" : ""}`}
+                className={`gov-tab ${activeModule === "overview" && !selectedStateName && !selectedMP && !selectedProject ? "active" : ""}`}
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <Activity size={16} />
-                <span>Overview</span>
+                <span>{tr("Overview")}</span>
               </button>
 
               <button
@@ -897,12 +901,13 @@ export const MinistryDashboard: React.FC = () => {
                   setActiveModule("states");
                   setSelectedStateName(null);
                   setSelectedMP(null);
+                  setSelectedProject(null);
                 }}
                 className={`gov-tab ${activeModule === "states" ? "active" : ""}`}
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <Building2 size={16} />
-                <span>States & UTs</span>
+                <span>{tr("States & UTs")}</span>
                 <span style={{
                   fontSize: "0.72rem",
                   padding: "2px 8px",
@@ -921,12 +926,13 @@ export const MinistryDashboard: React.FC = () => {
                   setActiveModule("mps");
                   setSelectedStateName(null);
                   setSelectedMP(null);
+                  setSelectedProject(null);
                 }}
                 className={`gov-tab ${activeModule === "mps" ? "active" : ""}`}
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <Users size={16} />
-                <span>Parliamentarians</span>
+                <span>{tr("Parliamentarians")}</span>
                 <span style={{
                   fontSize: "0.72rem",
                   padding: "2px 8px",
@@ -945,12 +951,13 @@ export const MinistryDashboard: React.FC = () => {
                   setActiveModule("projects");
                   setSelectedStateName(null);
                   setSelectedMP(null);
+                  setSelectedProject(null);
                 }}
                 className={`gov-tab ${activeModule === "projects" ? "active" : ""}`}
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <Layers size={16} />
-                <span>Project Registry</span>
+                <span>{tr("Project Registry")}</span>
                 <span style={{
                   fontSize: "0.72rem",
                   padding: "2px 8px",
@@ -970,12 +977,13 @@ export const MinistryDashboard: React.FC = () => {
                   setActiveModule("governance");
                   setSelectedStateName(null);
                   setSelectedMP(null);
+                  setSelectedProject(null);
                 }}
                 className={`gov-tab ${activeModule === "governance" ? "active" : ""}`}
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <ShieldCheck size={16} />
-                <span>AI Governance & Audit</span>
+                <span>{tr("AI Governance & Audit")}</span>
               </button>
             </div>
 
@@ -1932,7 +1940,34 @@ export const MinistryDashboard: React.FC = () => {
               TAB 4: WORKS REGISTRY (Deep Search over Works)
               ---------------------------------------------------------------- */}
           {activeModule === "projects" && (
-            <div style={{ width: "100%" }}>
+            <div>
+              {selectedProject ? (
+                <ProjectDetail
+                  project={selectedProject}
+                  onBack={() => setSelectedProject(null)}
+                  onSelectMP={(mp) => {
+                    setSelectedProject(null);
+                    const mpNameStr = typeof mp === "string" ? mp : mp.name;
+                    const matched = mps.find(
+                      (m) =>
+                        m.name.toLowerCase().includes(mpNameStr.toLowerCase()) ||
+                        mpNameStr.toLowerCase().includes(m.name.toLowerCase())
+                    );
+                    if (matched) {
+                      setSelectedMP(matched);
+                      setActiveModule("mps");
+                    }
+                  }}
+                  onSelectState={(stName) => {
+                    setSelectedProject(null);
+                    setSelectedStateName(stName);
+                    setActiveModule("states");
+                  }}
+                  mps={mps}
+                  allProjects={uniqueProjects}
+                />
+              ) : (
+                <div style={{ width: "100%" }}>
               {/* Header */}
               <div
                 style={{
@@ -2603,7 +2638,7 @@ export const MinistryDashboard: React.FC = () => {
                                   <thead>
                                     <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b" }}>
                                       <th style={{ padding: "14px 20px", width: "60px" }}>#</th>
-                                      <th style={{ padding: "14px 20px" }}>Project Name & ID</th>
+                                      <th style={{ padding: "14px 20px" }}>Project Name</th>
                                       <th style={{ padding: "14px 20px" }}>District / Location</th>
                                       <th style={{ padding: "14px 20px" }}>Sector & Category</th>
                                       <th style={{ padding: "14px 20px" }}>Sanctioned Outlay</th>
@@ -2629,9 +2664,6 @@ export const MinistryDashboard: React.FC = () => {
                                           <td style={{ padding: "16px 20px", maxWidth: "340px" }}>
                                             <div style={{ fontWeight: 700, color: "#0f172a" }}>
                                               {project.project_name || project.title || "MPLADS Community Work"}
-                                            </div>
-                                            <div style={{ fontSize: "0.72rem", color: "#64748b", fontFamily: "var(--font-mono)", marginTop: "2px" }}>
-                                              {project.project_id || project.id}
                                             </div>
                                           </td>
                                           <td style={{ padding: "16px 20px" }}>
@@ -2970,9 +3002,6 @@ export const MinistryDashboard: React.FC = () => {
                                   <div style={{ fontWeight: 700, color: "#0f172a", fontSize: "0.95rem" }}>
                                     {p.project_name || p.title || "MPLADS Community Work"}
                                   </div>
-                                  <div style={{ fontSize: "0.75rem", color: "#64748b", fontFamily: "var(--font-mono)", marginTop: "4px" }}>
-                                    ID: {p.project_id || p.id}
-                                  </div>
                                 </td>
                                 <td style={{ padding: "22px 24px", verticalAlign: "middle" }}>
                                   <div style={{ fontWeight: 600, color: "#1e293b", fontSize: "0.925rem" }}>{p.state || "National"}</div>
@@ -3091,6 +3120,8 @@ export const MinistryDashboard: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
 
           {/* ----------------------------------------------------------------
               TAB 6: AI GOVERNANCE & CRYPTOGRAPHIC AUDIT

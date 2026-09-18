@@ -361,11 +361,11 @@ export const SubmitRecommendationModal: React.FC<SubmitRecommendationModalProps>
             </div>
           </div>
 
-          {/* Quick Demo Sample Fillers */}
+          {/* Quick Sample Fillers */}
           <div style={{ background: "var(--bg-surface-subtle)", padding: "10px 14px", borderRadius: "6px", border: "1px dashed var(--border-light)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "6px" }}>
               <Sparkles size={13} color="var(--gov-accent)" />
-              <span>Quick Demo Fillers (Click to autofill sample evidence):</span>
+              <span>Quick Sample Templates (Click to autofill sample evidence):</span>
             </div>
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {SAMPLE_EVIDENCE_PRESETS.map((preset) => (
