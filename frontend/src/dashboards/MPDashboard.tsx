@@ -79,7 +79,7 @@ export const MPDashboard: React.FC = () => {
   // Live Supabase Data State
   const [liveMps, setLiveMps] = useState<MPSummary[]>([]);
   const [liveProjects, setLiveProjects] = useState<any[]>([]);
-  const [selectedMPId, setSelectedMPId] = useState<string>("Pune");
+  const [selectedMPId, setSelectedMPId] = useState<string>("Rohtak");
 
   useEffect(() => {
     async function loadLiveData() {

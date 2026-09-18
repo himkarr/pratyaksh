@@ -78,7 +78,7 @@ export const DistrictDashboard: React.FC = () => {
   // Action Notice Toast State
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => (user.district && user.district !== "Jabalpur" ? user.district : "Gurugram"));
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(() => (user.district && user.district !== "Jabalpur" ? user.district : "Rohtak"));
 
   // Dynamic District Authority Identity based on selected district
   const collectorName = useMemo(() => {

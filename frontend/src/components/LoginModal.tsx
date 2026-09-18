@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  X, Lock, Mail, Eye, EyeOff, ShieldCheck, CheckCircle2, UserCheck
+  X, Lock, Mail, Eye, EyeOff, ShieldCheck, CheckCircle2
 } from 'lucide-react';
 import { useRole, Role, ALL_USERS, User } from '../auth/roleContext';
 import { useBodyScrollLock } from '../utils/scrollLock';
@@ -229,44 +229,6 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                 <option value="contractor">Contractor / Implementing Agency</option>
                 <option value="field_officer">Field Quality Inspection Officer</option>
                 <option value="ministry">Ministry of Statistics (MoSPI)</option>
-              </select>
-            </div>
-
-            {/* Cascading Profile / Account Selector Dropdown */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <UserCheck size={14} color="#0284c7" />
-                Select Official Profile / Account
-              </label>
-              <select
-                value={selectedProfileId}
-                onChange={(e) => handleProfileChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #0284c7',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  color: '#0f172a',
-                  background: '#f8fafc',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                {availableProfiles.map((p) => {
-                  let label = p.name;
-                  if (p.role === 'mp') {
-                    label = `Member of Parliament - ${p.constituency} (${p.state})`;
-                  } else if (p.role === 'citizen') {
-                    label = `${p.name} (${p.constituency}, ${p.state})`;
-                  }
-                  return (
-                    <option key={p.id} value={p.id}>
-                      {label}
-                    </option>
-                  );
-                })}
               </select>
             </div>
 
