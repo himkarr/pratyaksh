@@ -115,8 +115,29 @@ export const CitizenDashboard: React.FC = () => {
             reviews: []
           }));
 
-          setWorks(mapped);
+          const seenIds = new Set<string>();
+          const mergedWorks: WorkItem[] = [];
+
+          mapped.forEach((w) => {
+            const id = String(w.id || "").trim();
+            if (id && !seenIds.has(id)) {
+              seenIds.add(id);
+              mergedWorks.push(w);
+            }
+          });
+
+          ALL_WORKS.forEach((w) => {
+            const id = String(w.id || "").trim();
+            if (id && !seenIds.has(id)) {
+              seenIds.add(id);
+              mergedWorks.push(w);
+            }
+          });
+
+          setWorks(mergedWorks);
           setIsLiveConnected(true);
+        } else {
+          setWorks(ALL_WORKS);
         }
       } catch (err) {
         console.warn("CitizenDashboard live fetch fallback:", err);

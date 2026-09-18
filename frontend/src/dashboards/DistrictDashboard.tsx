@@ -36,7 +36,7 @@ import { PolicyModal } from "../components/PolicyModal";
 import { LoginModal } from "../components/LoginModal";
 import { Button, Alert, Modal } from "../components/ui";
 
-import { WorkItem, WorkReview, ROHTAK_WORKS, GURUGRAM_WORKS, JABALPUR_WORKS } from "../data/mpladsData";
+import { WorkItem, WorkReview, ROHTAK_WORKS, GURUGRAM_WORKS, JABALPUR_WORKS, ALL_WORKS } from "../data/mpladsData";
 import { ContractorsManagementTab } from "../components/district/ContractorsManagementTab";
 import { CreateWorkModal } from "../components/district/CreateWorkModal";
 import { usePreferences } from "../context/PreferencesContext";
@@ -115,7 +115,11 @@ export const DistrictDashboard: React.FC = () => {
         let datasetToMap: any[] = (liveProjs && liveProjs.length > 0) ? liveProjs : [];
         if (datasetToMap.length === 0) {
           if (targetDistLower === "rohtak") datasetToMap = ROHTAK_WORKS as any[];
-          else datasetToMap = GURUGRAM_WORKS as any[];
+          else if (targetDistLower === "gurugram") datasetToMap = GURUGRAM_WORKS as any[];
+          else {
+            const districtMatches = ALL_WORKS.filter(w => (w.district || "").toLowerCase() === targetDistLower);
+            datasetToMap = districtMatches.length > 0 ? districtMatches as any[] : ROHTAK_WORKS as any[];
+          }
         }
 
         const mapped: WorkItem[] = datasetToMap.map((p: any, idx: number) => {
