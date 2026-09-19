@@ -79,7 +79,7 @@ export const MPDashboard: React.FC = () => {
   // Live Supabase Data State
   const [liveMps, setLiveMps] = useState<MPSummary[]>([]);
   const [liveProjects, setLiveProjects] = useState<any[]>([]);
-  const [selectedMPId, setSelectedMPId] = useState<string>("Pune");
+  const [selectedMPId, setSelectedMPId] = useState<string>("Rohtak");
 
   useEffect(() => {
     async function loadLiveData() {
@@ -170,12 +170,17 @@ export const MPDashboard: React.FC = () => {
     }
 
     // Fallback to ALL_WORKS matching
-    return ALL_WORKS.filter((w) => {
-      if (w.constituency_code === constituencyCode) return true;
-      if (w.constituency && constituency && w.constituency.toLowerCase() === constituency.toLowerCase()) return true;
-      if (district && w.district && w.district.toLowerCase() === district.toLowerCase()) return true;
+    const matched = ALL_WORKS.filter((w) => {
+      const cLower = constituency.toLowerCase();
+      const dLower = district.toLowerCase();
+      const sLower = mpState.toLowerCase();
+      if (w.constituency_code && constituencyCode && w.constituency_code.toLowerCase() === constituencyCode.toLowerCase()) return true;
+      if (w.constituency && (w.constituency.toLowerCase().includes(cLower) || cLower.includes(w.constituency.toLowerCase()))) return true;
+      if (w.district && (w.district.toLowerCase().includes(dLower) || dLower.includes(w.district.toLowerCase()))) return true;
+      if (w.state && (w.state.toLowerCase() === sLower || sLower.includes(w.state.toLowerCase()))) return true;
       return false;
     });
+    return matched.length > 0 ? matched : ALL_WORKS.slice(0, 25);
   }, [liveProjects, matchedLiveMP, constituencyCode, constituency, district, mpHouse, mpName, mpState]);
 
   const displayedRecommendations = useMemo(() => {

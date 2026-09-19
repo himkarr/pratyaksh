@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User as UserIcon, Key, Eye, EyeOff, RefreshCw, UserCheck } from "lucide-react";
+import { User as UserIcon, Key, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useRole, Role, ALL_USERS, User } from "../auth/roleContext";
 
 export interface LoginPageProps {
@@ -50,16 +50,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     setPassword("Mplads@2026!");
   };
 
-  // Handle profile selection change
-  const handleProfileSelect = (profileId: string) => {
-    setSelectedProfileId(profileId);
-    const matched = availableProfiles.find((p) => p.id === profileId);
-    if (matched) {
-      setUsername(matched.email);
-      setPassword("Mplads@2026!");
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const effectiveCaptcha = captchaInput.trim() || captchaCode;
@@ -86,13 +76,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
   return (
     <div className="gov-login-page">
-      {/* LEFT PANEL: Aerial Parliament Photograph & Blurred eSAKSHI Overlay */}
+      {/* LEFT PANEL: Aerial Parliament Photograph & Blurred Pratyaksh Overlay */}
       <div className="gov-login-left">
         <div className="gov-login-esakshi-banner">
-          <h1 className="gov-login-esakshi-title">eSAKSHI</h1>
-          <p className="gov-login-esakshi-subtitle">
-            SAnsad sadasya sthaniya KSHetra vikas yojana
-          </p>
+          <h1 className="gov-login-esakshi-title">Pratyaksh</h1>
         </div>
       </div>
 
@@ -127,7 +114,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           <div className="gov-login-form-container">
 
             {/* Dropdown 1: Stakeholder Role Selection */}
-            <div style={{ width: "100%", marginBottom: "12px" }}>
+            <div style={{ width: "100%", marginBottom: "16px" }}>
               <label style={{ fontSize: "0.76rem", color: "#334155", fontWeight: 700, marginBottom: "5px", display: "block" }}>
                 Select Stakeholder Role:
               </label>
@@ -154,44 +141,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 <option value="contractor">Contractor / Implementing Agency</option>
                 <option value="field_officer">Field Quality Inspection Officer</option>
                 <option value="ministry">Ministry of Statistics (MoSPI) / Central Admin</option>
-              </select>
-            </div>
-
-            {/* Dropdown 2: Dynamic Cascading Account / Profile Selector */}
-            <div style={{ width: "100%", marginBottom: "16px" }}>
-              <label style={{ fontSize: "0.76rem", color: "#334155", fontWeight: 700, marginBottom: "5px", display: "flex", alignItems: "center", gap: "5px" }}>
-                <UserCheck size={14} color="#0b69a3" />
-                Select Official Profile / Account:
-              </label>
-              <select
-                value={selectedProfileId}
-                onChange={(e) => handleProfileSelect(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "#0f172a",
-                  border: "1.5px solid #0284c7",
-                  borderRadius: "6px",
-                  background: "#f8fafc",
-                  cursor: "pointer",
-                  outline: "none"
-                }}
-              >
-                {availableProfiles.map((p) => {
-                  let label = p.name;
-                  if (p.role === "mp") {
-                    label = `Member of Parliament - ${p.constituency} (${p.state})`;
-                  } else if (p.role === "citizen") {
-                    label = `${p.name} (${p.constituency}, ${p.state})`;
-                  }
-                  return (
-                    <option key={p.id} value={p.id}>
-                      {label}
-                    </option>
-                  );
-                })}
               </select>
             </div>
 
