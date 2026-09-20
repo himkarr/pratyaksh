@@ -40,7 +40,7 @@ export interface User {
 }
 
 export const ALL_ROLES_DEFAULT_USERS: User[] = [
-  // MP Stakeholders (Haryana MP synced with official Supabase database)
+  // MP Stakeholders (Renamed to "Member of Parliament")
   {
     id: "usr-mp-rohtak",
     email: "mp.rohtak@nirikshak.gov.in",
@@ -50,6 +50,26 @@ export const ALL_ROLES_DEFAULT_USERS: User[] = [
     constituency_code: "HR-ROH-01",
     state: "Haryana",
     district: "Rohtak"
+  },
+  {
+    id: "usr-mp-01",
+    email: "mp.varanasi@nirikshak.gov.in",
+    name: "Member of Parliament",
+    role: "mp",
+    constituency: "Varanasi",
+    constituency_code: "UP-VAR-01",
+    state: "Uttar Pradesh",
+    district: "Varanasi"
+  },
+  {
+    id: "usr-mp-gurugram",
+    email: "mp.gurugram@nirikshak.gov.in",
+    name: "Member of Parliament",
+    role: "mp",
+    constituency: "Gurugram",
+    constituency_code: "HR-GGM-09",
+    state: "Haryana",
+    district: "Gurugram"
   },
 
   // Citizens
