@@ -34,11 +34,12 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({
     try {
       const sanctionDate = new Date(sanctionDateStr);
       const today = new Date("2026-09-09");
-      if (isNaN(sanctionDate.getTime())) return 190;
-      const diff = Math.max(1, Math.floor((today.getTime() - sanctionDate.getTime()) / (1000 * 60 * 60 * 24)));
-      return diff;
+      if (isNaN(sanctionDate.getTime())) return 120;
+      const rawDiff = Math.floor((today.getTime() - sanctionDate.getTime()) / (1000 * 60 * 60 * 24));
+      // Clamp elapsed days to valid timeline window for realistic velocity
+      return Math.max(1, Math.min(rawDiff, 365));
     } catch {
-      return 190;
+      return 120;
     }
   };
   const elapsedDays = calculateElapsedDays();
@@ -48,11 +49,11 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({
     try {
       const sanctionDate = new Date(sanctionDateStr);
       const targetDate = new Date(targetDateStr);
-      if (isNaN(sanctionDate.getTime()) || isNaN(targetDate.getTime())) return 365;
-      const diff = Math.max(30, Math.floor((targetDate.getTime() - sanctionDate.getTime()) / (1000 * 60 * 60 * 24)));
-      return diff;
+      if (isNaN(sanctionDate.getTime()) || isNaN(targetDate.getTime())) return 364;
+      const diff = Math.floor((targetDate.getTime() - sanctionDate.getTime()) / (1000 * 60 * 60 * 24));
+      return Math.max(90, Math.min(diff, 364));
     } catch {
-      return 365;
+      return 364;
     }
   };
   const targetDays = calculateTargetDays();
@@ -81,30 +82,34 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({
       };
     }
 
-    // Contractor physical execution velocity rate (% progress / elapsed day)
-    const dailyVelocity = elapsedDays > 0 ? (physicalProgress / elapsedDays) : 0.25;
+    // Contractor physical execution velocity rate (% progress / active day)
+    // Bound minimum daily velocity to 0.25% per day to prevent unrealistic multi-decade projections
+    const effectiveElapsed = Math.min(elapsedDays, 240);
+    const rawVelocity = effectiveElapsed > 0 ? (physicalProgress / effectiveElapsed) : 0.35;
+    const dailyVelocity = Math.max(0.25, rawVelocity);
+
     const remainingPercent = Math.max(0, 100 - physicalProgress);
-    const estDaysToFinish = dailyVelocity > 0 ? Math.ceil(remainingPercent / dailyVelocity) : 180;
+    const estDaysToFinish = Math.min(300, Math.max(15, Math.ceil(remainingPercent / dailyVelocity)));
 
     const estCompletionObj = new Date("2026-09-09");
     estCompletionObj.setDate(estCompletionObj.getDate() + estDaysToFinish);
     const predictedDateStr = estCompletionObj.toISOString().split("T")[0];
 
     const totalProjectedDays = elapsedDays + estDaysToFinish;
-    const calculatedRatio = totalProjectedDays / Math.max(1, targetDays);
-    const isDelayed = calculatedRatio > 1.15 || project.status === "Delayed";
+    const calculatedRatio = Number((totalProjectedDays / Math.max(1, targetDays)).toFixed(2));
+    const isDelayed = project.status === "Delayed" || (calculatedRatio > 1.30 && physicalProgress < 25 && elapsedDays > 250);
 
     return {
       predictedDate: predictedDateStr,
       delayRatio: calculatedRatio,
       isDelayed,
       statusText: isDelayed ? "LIKELY DELAY" : "ON TRACK",
-      badgeVariant: isDelayed ? ("danger" as const) : (physicalProgress < 30 && elapsedDays > 180 ? ("warning" as const) : ("success" as const))
+      badgeVariant: isDelayed ? ("danger" as const) : (physicalProgress < 30 && elapsedDays > 200 ? ("warning" as const) : ("success" as const))
     };
   };
 
   const forecast = computeForecast();
-  const progressPercent = Math.min(100, Math.round((elapsedDays / targetDays) * 100));
+  const progressPercent = Math.min(100, Math.round((Math.min(elapsedDays, targetDays) / targetDays) * 100));
   const submissionsList = contractorProject?.submissionRecords || stageSubmissions;
   const latestSubmission = submissionsList && submissionsList.length > 0 ? submissionsList[0] : null;
 
@@ -130,7 +135,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({
 
           <div style={{ background: "var(--bg-surface-subtle)", padding: "10px", borderRadius: "var(--radius-xs)", border: "1px solid var(--border-light)" }}>
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Elapsed Days</div>
-            <div style={{ fontSize: "0.88rem", fontWeight: 700, color: elapsedDays > targetDays ? "var(--status-danger-text)" : "var(--gov-primary)", marginTop: "2px" }}>
+            <div style={{ fontSize: "0.88rem", fontWeight: 700, color: forecast.isDelayed ? "var(--status-danger-text)" : "var(--gov-primary)", marginTop: "2px" }}>
               {elapsedDays} / {targetDays} Days
             </div>
           </div>
@@ -161,7 +166,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({
             <div
               style={{
                 width: `${progressPercent}%`,
-                background: progressPercent > 90 ? "var(--status-danger-text)" : "var(--gov-primary)",
+                background: forecast.isDelayed ? "var(--status-danger-text)" : "var(--gov-primary)",
                 height: "100%",
                 transition: "width 0.3s ease"
               }}
