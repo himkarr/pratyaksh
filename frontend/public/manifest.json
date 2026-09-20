@@ -1,6 +1,6 @@
 {
-  "name": "eSAKSHI MPLADS Monitoring Portal",
-  "short_name": "eSAKSHI",
+  "name": "Pratyaksh MPLADS Monitoring Portal",
+  "short_name": "Pratyaksh",
   "description": "Government of India MPLADS Implementation, Verification & Anomaly Decision Support Portal",
   "start_url": "/",
   "display": "standalone",

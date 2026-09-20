@@ -680,8 +680,10 @@ body.modal-open {
 }
 
 .gov-login-left {
-  flex: 1;
-  background: url('/assets/parliament_aerial.png') center/cover no-repeat;
+  flex: 0 0 50%;
+  width: 50%;
+  background: url('/assets/parliament_aerial.png') center/135% no-repeat;
+  background-size: 135% auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -718,8 +720,9 @@ body.modal-open {
 }
 
 .gov-login-right {
-  flex: 1;
-  max-width: 620px;
+  flex: 0 0 50%;
+  width: 50%;
+  max-width: 50%;
   padding: 40px 32px;
   display: flex;
   flex-direction: column;

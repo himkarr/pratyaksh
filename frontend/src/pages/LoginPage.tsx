@@ -89,10 +89,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       {/* LEFT PANEL: Aerial Parliament Photograph & Blurred eSAKSHI Overlay */}
       <div className="gov-login-left">
         <div className="gov-login-esakshi-banner">
-          <h1 className="gov-login-esakshi-title">eSAKSHI</h1>
-          <p className="gov-login-esakshi-subtitle">
-            SAnsad sadasya sthaniya KSHetra vikas yojana
-          </p>
+          <h1 className="gov-login-esakshi-title">Pratyaksh</h1>
         </div>
       </div>
 
