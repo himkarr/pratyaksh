@@ -79,23 +79,7 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
             >
               {assignedProjectCount} ASSIGNED WORKS
             </span>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                background: "#f0fdf4",
-                color: "#166534",
-                border: "1px solid #bbf7d0",
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                padding: "2px 8px",
-                borderRadius: "4px"
-              }}
-            >
-              <Database size={11} />
-              SUPABASE LIVE CONNECTED
-            </span>
+
           </div>
 
           <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "4px", display: "flex", gap: "14px", flexWrap: "wrap" }}>

@@ -570,9 +570,7 @@ export const MPDashboard: React.FC = () => {
               <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "#e0f2fe", color: "#0369a1" }}>
                 {mpHouse}
               </span>
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "9999px", background: "#ecfdf5", color: "#065f46" }}>
-                Live Supabase Connected
-              </span>
+
             </div>
             <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
               {mpName} — {constituency} ({mpState})
@@ -1012,10 +1010,8 @@ export const MPDashboard: React.FC = () => {
                             {work.id}
                           </td>
                           <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span>{work.title}</span>
-                              <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
-                            </div>
+                            <span>{work.title}</span>
+                            <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
                             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 400 }}>
                               {work.district}, {work.state} | Agency: {work.agency}
                             </div>

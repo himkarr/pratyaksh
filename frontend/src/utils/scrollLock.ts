@@ -18,14 +18,18 @@ export function lockBodyScroll() {
   lockCount++;
 }
 
-export function unlockBodyScroll() {
+export function unlockBodyScroll(force: boolean = false) {
   if (typeof document === "undefined") return;
-  lockCount = Math.max(0, lockCount - 1);
+  if (force) {
+    lockCount = 0;
+  } else {
+    lockCount = Math.max(0, lockCount - 1);
+  }
   if (lockCount === 0) {
     document.body.classList.remove("modal-open");
     document.documentElement.classList.remove("modal-open");
-    document.body.style.overflow = originalBodyOverflow;
-    document.documentElement.style.overflow = originalHtmlOverflow;
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
   }
 }
 

@@ -333,12 +333,7 @@ export const FieldOfficerDashboard: React.FC = () => {
               <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "#e0f2fe", color: "#0369a1", textTransform: "uppercase" }}>
                 Field Engineer Inspection Desk · {district} District
               </span>
-              {isLiveConnected && (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#065f46", fontWeight: 600 }}>
-                  <Database size={11} />
-                  <span>Live Supabase Connected</span>
-                </div>
-              )}
+
             </div>
             <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
               {officerName} — Field Inspection Workspace

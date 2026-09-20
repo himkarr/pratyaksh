@@ -546,12 +546,14 @@ body.modal-open {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
-  overflow-y: auto;
+  padding: 16px;
+  overflow: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
@@ -562,20 +564,23 @@ body.modal-open {
   border-radius: var(--radius-sm);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   width: 100%;
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   margin: auto;
   overscroll-behavior: contain;
+  box-sizing: border-box;
 }
 
 .gov-modal-body {
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   flex: 1 1 auto;
   min-height: 0;
-  -webkit-overflow-scrolling: touch;
+  max-height: 100%;
 }
 
 /* Modal Custom Scrollbar */
