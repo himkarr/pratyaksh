@@ -1609,14 +1609,14 @@ export const CUSTOM_WORKS: WorkItem[] = [
 export const ALL_WORKS = [...INITIAL_WORKS, ...CUSTOM_WORKS];
 
 export const SCHEME_POLICIES = {
-  title: "Guidelines on Member of Parliament Local Area Development Scheme (MPLADS) & Pratyaksh Implementation",
+  title: "Guidelines on Member of Parliament Local Area Development Scheme (MPLADS) & e-SAKSHI Implementation",
   clauses: [
     {
       title: "Statutory 1-Year Completion Ceiling",
       content: "All works sanctioned by District Authorities must be executed and completed within 12 calendar months from the formal sanction date. Any delay beyond 365 days triggers automated risk escalations and physical inspection audits."
     },
     {
-      title: "Pratyaksh Real-Time Web Fund Flow",
+      title: "e-SAKSHI Real-Time Web Fund Flow",
       content: "Since 1st April 2023, the entire workflow of recommendation, administrative sanction, fund disbursal, and expenditure tracking is executed end-to-end via the online portal without physical checks."
     },
     {

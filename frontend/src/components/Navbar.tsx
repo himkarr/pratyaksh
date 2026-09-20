@@ -51,7 +51,7 @@ const ROLES_HI: { id: Role; label: string; desc: string; icon: any }[] = [
 ];
 
 export function Navbar({ activeTab, setActiveTab, onOpenLogin, t: propT, adminHouseFilter, onAdminHouseFilterChange }: NavbarProps) {
-  const { user, logout } = useRole();
+  const { user, setRole, logout } = useRole();
   const { t: prefT, lang } = usePreferences();
   const t = prefT || propT;
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -72,6 +72,11 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, t: propT, adminHo
 
   const currentRoleInfo = rolesList.find(r => r.id === user.role) || rolesList[0];
   const CurrentIcon = currentRoleInfo.icon;
+
+  const handleSelectRole = (roleId: Role) => {
+    setRole(roleId);
+    setIsRoleDropdownOpen(false);
+  };
 
   const getRoleDisplayName = () => {
     if (user.role === 'mp') {
@@ -313,6 +318,70 @@ export function Navbar({ activeTab, setActiveTab, onOpenLogin, t: propT, adminHo
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-muted, #64748b)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <MapPin size={13} color="var(--gov-accent, #155eef)" />
                   <span>Area: <strong>{getSubLabel()}</strong></span>
+                </div>
+
+                {/* Quick Perspective / Role Switcher */}
+                <div style={{ borderTop: '1px solid var(--border-light, #e2e8f0)', paddingTop: '8px' }}>
+                  <div style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '6px' }}>
+                    {lang === 'hi' ? 'भूमिका बदलें (त्वरित नेविगेशन)' : 'Switch Role (Quick Navigation)'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '230px', overflowY: 'auto' }}>
+                    {rolesList.map((r) => {
+                      const Icon = r.icon;
+                      const isActive = r.id === user.role;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => handleSelectRole(r.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            border: isActive ? '1px solid #bfdbfe' : '1px solid transparent',
+                            background: isActive ? '#eff6ff' : 'transparent',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'all 0.12s ease'
+                          }}
+                          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = '#f8fafc'; }}
+                          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '6px',
+                              background: isActive ? 'var(--gov-primary, #0f2942)' : '#f1f5f9',
+                              color: isActive ? '#ffffff' : '#475569',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              <Icon size={13} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.78rem', fontWeight: isActive ? 800 : 600, color: isActive ? '#1e40af' : '#1e293b', lineHeight: 1.2 }}>
+                                {r.label}
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: '#64748b', lineHeight: 1.1 }}>
+                                {r.desc}
+                              </div>
+                            </div>
+                          </div>
+                          {isActive && (
+                            <span style={{ fontSize: '0.60rem', fontWeight: 800, color: '#1e40af', background: '#dbeafe', padding: '1px 5px', borderRadius: '4px' }}>
+                              Active
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Switch Account via Login & Logout */}

@@ -40,11 +40,11 @@ export interface User {
 }
 
 export const ALL_ROLES_DEFAULT_USERS: User[] = [
-  // MP Stakeholders (3 official MPs across Haryana, UP, and Maharashtra)
+  // MP Stakeholders (Renamed to "Member of Parliament")
   {
     id: "usr-mp-rohtak",
     email: "mp.rohtak@nirikshak.gov.in",
-    name: "Shri Deepender Singh Hooda",
+    name: "Member of Parliament",
     role: "mp",
     constituency: "Rohtak",
     constituency_code: "HR-ROH-01",
@@ -52,9 +52,9 @@ export const ALL_ROLES_DEFAULT_USERS: User[] = [
     district: "Rohtak"
   },
   {
-    id: "usr-mp-varanasi",
+    id: "usr-mp-01",
     email: "mp.varanasi@nirikshak.gov.in",
-    name: "Shri Narendra Modi",
+    name: "Member of Parliament",
     role: "mp",
     constituency: "Varanasi",
     constituency_code: "UP-VAR-01",
@@ -62,14 +62,14 @@ export const ALL_ROLES_DEFAULT_USERS: User[] = [
     district: "Varanasi"
   },
   {
-    id: "usr-mp-pune",
-    email: "mp.pune@nirikshak.gov.in",
-    name: "Shri Murlidhar Mohol",
+    id: "usr-mp-gurugram",
+    email: "mp.gurugram@nirikshak.gov.in",
+    name: "Member of Parliament",
     role: "mp",
-    constituency: "Pune",
-    constituency_code: "MH-PUN-01",
-    state: "Maharashtra",
-    district: "Pune"
+    constituency: "Gurugram",
+    constituency_code: "HR-GGM-09",
+    state: "Haryana",
+    district: "Gurugram"
   },
 
   // Citizens

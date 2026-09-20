@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { User as UserIcon, Bell, LayoutDashboard, LogOut, ChevronDown, ShieldCheck, Mail, MapPin, UserCheck } from "lucide-react";
+import { User as UserIcon, Bell, LayoutDashboard, LogOut, ChevronDown, ShieldCheck, Mail, MapPin } from "lucide-react";
 import { usePreferences } from "../../context/PreferencesContext";
 import { useRole } from "../../auth/roleContext";
 
@@ -15,8 +15,7 @@ export const CitizenNavbar: React.FC<CitizenNavbarProps> = ({
   activeTab,
   onSelectTab,
   unreadCount = 2,
-  currentConstituency = "Rohtak",
-  onOpenLogin
+  currentConstituency = "Rohtak"
 }) => {
   const { lang } = usePreferences();
   const { user, logout } = useRole();
@@ -185,7 +184,7 @@ export const CitizenNavbar: React.FC<CitizenNavbarProps> = ({
               {lang === "hi" ? "सांख्यिकी और कार्यक्रम कार्यान्वयन मंत्रालय" : "Ministry of Statistics and Programme Implementation"}
             </div>
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--gov-accent)", lineHeight: 1.2 }}>
-              {lang === "hi" ? "एमपीलैड्स नागरिक पोर्टल (प्रत्यक्ष)" : "MPLADS Citizen Portal (Pratyaksh)"}
+              {lang === "hi" ? "एमपीलैड्स नागरिक पोर्टल (e-SAKSHI)" : "MPLADS Citizen Portal (e-SAKSHI)"}
             </div>
           </div>
         </div>
@@ -318,36 +317,8 @@ export const CitizenNavbar: React.FC<CitizenNavbarProps> = ({
                   <span>Area: <strong>{currentConstituency}</strong></span>
                 </div>
 
-                {/* Switch Account via Login & Logout */}
-                <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "6px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {onOpenLogin && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAccountMenuOpen(false);
-                        onOpenLogin();
-                      }}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "6px",
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                        border: "1px solid var(--border-main, #cbd5e1)",
-                        background: "var(--bg-surface-subtle, #f8fafc)",
-                        color: "var(--gov-accent, #155eef)",
-                        fontSize: "0.76rem",
-                        fontWeight: 700,
-                        cursor: "pointer"
-                      }}
-                    >
-                      <UserCheck size={13} />
-                      <span>Login as Different User</span>
-                    </button>
-                  )}
-
+                {/* Logout Button */}
+                <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "6px" }}>
                   <button
                     type="button"
                     onClick={() => {

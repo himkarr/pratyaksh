@@ -70,69 +70,35 @@ export function Header(props: HeaderProps) {
           gap: '8px'
         }}
       >
-        {/* Left: IST Clock & Language Switcher */}
+        {/* Left: IST Clock & Language */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8', fontSize: '0.70rem' }}>
             <Clock size={11} color="#94a3b8" />
             <span>IST: {currentTime}</span>
           </div>
 
-          {/* Dual Segmented Language Switcher for Official Government Accessibility */}
-          <div
+          <button
+            type="button"
+            onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
             style={{
               display: 'flex',
               alignItems: 'center',
-              background: 'rgba(255, 255, 255, 0.12)',
-              borderRadius: '6px',
-              padding: '2px',
-              border: '1px solid rgba(255, 255, 255, 0.25)',
-              gap: '2px'
+              gap: '5px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              color: 'var(--text-white)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '4px',
+              padding: '2px 8px',
+              fontSize: '0.70rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
+            title={lang === 'en' ? 'हिंदी में बदलें' : 'Switch to English'}
           >
-            <button
-              type="button"
-              onClick={() => setLang('en')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                background: lang === 'en' ? '#38bdf8' : 'transparent',
-                color: lang === 'en' ? '#0f172a' : '#e2e8f0',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 8px',
-                fontSize: '0.70rem',
-                fontWeight: lang === 'en' ? 800 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              title="English Interface"
-            >
-              English
-            </button>
-            <button
-              type="button"
-              onClick={() => setLang('hi')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                background: lang === 'hi' ? '#38bdf8' : 'transparent',
-                color: lang === 'hi' ? '#0f172a' : '#e2e8f0',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 8px',
-                fontSize: '0.70rem',
-                fontWeight: lang === 'hi' ? 800 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              title="हिन्दी इंटरफ़ेस (Hindi)"
-            >
-              <Globe size={11} color={lang === 'hi' ? '#0f172a' : '#38bdf8'} />
-              <span>हिन्दी</span>
-            </button>
-          </div>
+            <Globe size={11} color="#38bdf8" />
+            <span>{lang === 'en' ? 'हिंदी' : 'English'}</span>
+          </button>
         </div>
 
         {/* Right: GIGW Accessibility Text Size (A- | A | A+) & Theme */}

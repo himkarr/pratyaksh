@@ -10,7 +10,7 @@
  * 6. `notifications` table (real-time alerts across roles)
  */
 
-import { WorkItem, JABALPUR_WORKS, ROHTAK_WORKS, GURUGRAM_WORKS } from '../data/mpladsData';
+import { WorkItem } from '../data/mpladsData';
 import { EvidenceSubmissionRecord, SubmittedFileItem } from '../data/contractorData';
 import { CitizenIssue } from '../data/citizenData';
 import { MPRecommendation } from '../data/mpData';
@@ -165,6 +165,7 @@ export interface SupabaseNotificationRow {
  */
 export async function seedJabalpurProjectsToSupabase(): Promise<void> {
   try {
+    const { JABALPUR_WORKS, ROHTAK_WORKS, GURUGRAM_WORKS } = await import('../data/mpladsData');
     const allDistrictWorks = [...JABALPUR_WORKS, ...(ROHTAK_WORKS || []), ...(GURUGRAM_WORKS || [])];
 
     for (const work of allDistrictWorks) {

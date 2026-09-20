@@ -66,18 +66,16 @@ export function FlagCard({ flag, projectTitle }: FlagCardProps) {
     setResolved(true);
   };
 
-  const accentClass = 
-    flag.severity === 'critical' ? 'accent-rose' :
-    flag.severity === 'high' ? 'accent-amber' : 'accent-sky';
-
   return (
     <article
-      className={`card-hover-accent ${accentClass}`}
+      className="gov-card"
       style={{
         margin: '10px 0',
-        background: resolved ? 'var(--bg-surface-subtle)' : '#ffffff',
-        borderRadius: '12px',
-        border: '1px solid var(--border-light)'
+        borderLeft: `4px solid ${
+          flag.severity === 'critical' ? 'var(--status-danger-text)' :
+          flag.severity === 'high' ? 'var(--status-warning-text)' : 'var(--gov-primary)'
+        }`,
+        background: resolved ? 'var(--bg-surface-subtle)' : 'var(--bg-surface)'
       }}
     >
       <div style={{ padding: '14px 16px' }}>

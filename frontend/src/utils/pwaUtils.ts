@@ -1,5 +1,5 @@
 /**
- * Pratyaksh MPLADS Portal — PWA Utility & Offline Queue Manager
+ * eSAKSHI MPLADS Portal — PWA Utility & Offline Queue Manager
  * -----------------------------------------------------------
  * Provides helpers for network status monitoring (ONLINE, OFFLINE, SYNCING, SYNC_FAILED),
  * HTML5 Geolocation coordinates capture, LocalStorage draft storage, and offline upload queueing.
@@ -22,7 +22,7 @@ export interface OfflineDraftItem {
   retryCount: number;
 }
 
-const OFFLINE_QUEUE_KEY = "pratyaksh_offline_queue_v1";
+const OFFLINE_QUEUE_KEY = "esakshi_offline_queue_v1";
 
 export const pwaUtils = {
   /**

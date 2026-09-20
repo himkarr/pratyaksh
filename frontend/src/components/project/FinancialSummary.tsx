@@ -132,10 +132,10 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", flexGrow: 1 }}>
             {/* Recommended Outlay */}
             <div
-              className="card-hover-accent accent-emerald"
               style={{
                 background: "#ffffff",
                 border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #10b981",
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",
@@ -172,10 +172,10 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
 
             {/* Sanctioned Amount */}
             <div
-              className="card-hover-accent accent-amber"
               style={{
                 background: "#ffffff",
                 border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #f59e0b",
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",
@@ -212,10 +212,10 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
 
             {/* Recorded Expenditure (Contractor Synced) */}
             <div
-              className={`card-hover-accent ${isAnomaly ? "accent-rose" : "accent-sky"}`}
               style={{
                 background: "#ffffff",
                 border: "1px solid #e2e8f0",
+                borderLeft: `4px solid ${isAnomaly ? "#ef4444" : "#0284c7"}`,
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",
@@ -252,10 +252,10 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
 
             {/* Unspent Allocation */}
             <div
-              className="card-hover-accent accent-navy"
               style={{
                 background: "#ffffff",
                 border: "1px solid #e2e8f0",
+                borderLeft: "4px solid #64748b",
                 borderRadius: "10px",
                 padding: "14px",
                 display: "flex",

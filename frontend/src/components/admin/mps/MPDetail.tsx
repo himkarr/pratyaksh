@@ -914,7 +914,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                     <thead>
                       <tr>
                         <TableColumnHeader
-                          title="Project Title"
+                          title="Work ID & Title"
                           sortKey="title"
                           currentSortKey={sortField}
                           currentSortOrder={sortOrder}
@@ -975,7 +975,7 @@ export const MPDetail: React.FC<MPDetailProps> = ({
                                   {p.title || p.work_name || "Community Development Work"}
                                 </span>
                                 <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                                  {p.district || p.location || mp.state}
+                                  ID: {p.work_id || p.id} | {p.district || p.location || mp.state}
                                 </span>
                               </div>
                             </td>

@@ -7,7 +7,7 @@
  * DOMAIN CONTEXT & PURPOSE:
  * -------------------------
  * This component delivers high-fidelity visual analytics grounded in official
- * MoSPI guidelines and the Pratyaksh operational framework:
+ * MoSPI guidelines and the e-SAKSHI operational framework:
  * 
  * 1. 12-Month Financial Burn Rate:
  *    - Compares cumulative fund disbursal against actual audited contractor expenditure
