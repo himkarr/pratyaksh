@@ -1,6 +1,7 @@
 import React from "react";
 import { ShieldAlert, Cpu, AlertTriangle, FileSearch, CheckCircle2, Info, Activity } from "lucide-react";
 import { Card, CardHeader, CardBody, Badge, PriorityBadge, Alert } from "../ui";
+import { calculateProjectAIRisk } from "../../utils/aiRiskEngine";
 
 export interface AIRiskData {
   work_id?: string;
@@ -33,6 +34,7 @@ export interface AIRiskData {
 
 export interface RiskSectionProps {
   data?: AIRiskData;
+  project?: any;
   // Backward compatibility props
   riskLevel?: "HIGH" | "MEDIUM" | "LOW";
   verificationPriority?: "PRIORITY_1" | "PRIORITY_2" | "PRIORITY_3";
@@ -46,23 +48,33 @@ export interface RiskSectionProps {
 
 export const RiskSection: React.FC<RiskSectionProps> = ({
   data,
-  riskLevel = data?.risk_level || "HIGH",
-  verificationPriority = data?.verification_priority || "PRIORITY_1",
-  mlRiskScore = data?.ml_risk_score ?? 0.84,
-  ruleRiskScore = data?.rule_risk_score ?? 0.75,
-  combinedRiskScore = data?.combined_risk_score ?? 0.81,
-  anomalyPercentile = data?.iforest_percentile ?? 96.4,
-  ruleFailures = data?.rule_reasons || [
-    "Rule R-03: Expenditure trajectory deviates from 12-month linear burn rate benchmark",
-    "Rule R-07: Physical milestone photos pending second-stage verification"
-  ],
-  riskReason = data?.risk_reason || "Extremely unusual ML pattern; rule(s) require review"
+  project,
+  riskLevel: propRiskLevel,
+  verificationPriority: propVerificationPriority,
+  mlRiskScore: propMlRiskScore,
+  ruleRiskScore: propRuleRiskScore,
+  combinedRiskScore: propCombinedRiskScore,
+  anomalyPercentile: propAnomalyPercentile,
+  ruleFailures: propRuleFailures,
+  riskReason: propRiskReason
 }) => {
-  const iforestAnomalyScore = data?.iforest_anomaly_score ?? 0.784;
-  const iforestDecisionFunc = data?.iforest_decision_function ?? -0.142;
-  const iforestBand = data?.iforest_risk_band || (riskLevel === "HIGH" ? "ANOMALY_HIGH" : "NORMAL");
-  const failCount = data?.rule_fail_count ?? ruleFailures.length;
-  const reviewCount = data?.rule_review_count ?? 1;
+  // Compute dynamic AI risk data if data or project is supplied
+  const computedData = data || calculateProjectAIRisk(project || {});
+
+  const riskLevel = propRiskLevel || computedData.risk_level || "LOW";
+  const verificationPriority = propVerificationPriority || computedData.verification_priority || "PRIORITY_3";
+  const mlRiskScore = propMlRiskScore ?? computedData.ml_risk_score ?? 0.24;
+  const ruleRiskScore = propRuleRiskScore ?? computedData.rule_risk_score ?? 0.15;
+  const combinedRiskScore = propCombinedRiskScore ?? computedData.combined_risk_score ?? 0.20;
+  const anomalyPercentile = propAnomalyPercentile ?? computedData.iforest_percentile ?? 24.0;
+  const ruleFailures = propRuleFailures || computedData.rule_reasons || ["Rule R-01: Compliant milestone execution velocity"];
+  const riskReason = propRiskReason || computedData.risk_reason || "Standard progress pattern; routine monitoring";
+
+  const iforestAnomalyScore = computedData.iforest_anomaly_score ?? Number((0.10 + (mlRiskScore * 0.85)).toFixed(3));
+  const iforestDecisionFunc = computedData.iforest_decision_function ?? Number((0.35 - (mlRiskScore * 0.70)).toFixed(3));
+  const iforestBand = computedData.iforest_risk_band || (riskLevel === "HIGH" ? "ANOMALY_HIGH" : riskLevel === "MEDIUM" ? "ELEVATED" : "NORMAL");
+  const failCount = computedData.rule_fail_count ?? ruleFailures.filter(r => r.includes("delayed") || r.includes("leads")).length;
+  const reviewCount = computedData.rule_review_count ?? Math.max(1, ruleFailures.length - failCount);
 
   return (
     <Card>
