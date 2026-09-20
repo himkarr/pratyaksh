@@ -381,7 +381,7 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
                   Government Financial Installments & Tranche Releases
                 </h4>
                 {loadingFinancials ? (
-                  <div className="py-6 text-center text-slate-400">Loading tranches from Supabase...</div>
+                  <div className="py-6 text-center text-slate-400">Loading tranches...</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">

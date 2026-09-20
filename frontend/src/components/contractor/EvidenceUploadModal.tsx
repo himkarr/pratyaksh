@@ -47,6 +47,15 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   const [materialStatus, setMaterialStatus] = useState<string>("Sufficient material stock available on site");
   const [notes, setNotes] = useState<string>("");
 
+  React.useEffect(() => {
+    if (stage) {
+      setWorkStage(stage.stageName);
+      setPhysicalProgress(stage.targetProgressPercent || project.physicalProgress || 0);
+      const stageCount = Math.max(1, project.schedule?.length || 4);
+      setExpenditureAmount(Math.round((project.sanctionAmountRs || 1000000) / stageCount));
+    }
+  }, [stage?.stageId, project.id]);
+
   // GPS Geolocation State
   const [latitude, setLatitude] = useState<number | null>(18.5204);
   const [longitude, setLongitude] = useState<number | null>(73.8567);
@@ -187,7 +196,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
     setDocuments(documents.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -211,15 +220,19 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
       notes: notes || `Evidence submitted for ${stage.stageName} period (${stage.scheduledStartDate} – ${stage.scheduledEndDate}).`
     };
 
-    setTimeout(() => {
+    try {
+      await Promise.resolve(onSubmitSuccess(stage.stageId, payload));
       setIsSubmitting(false);
       setIsSuccess(true);
       setTimeout(() => {
-        onSubmitSuccess(stage.stageId, payload);
         setIsSuccess(false);
         onClose();
-      }, 900);
-    }, 800);
+      }, 800);
+    } catch (err: any) {
+      console.error("Error submitting evidence payload:", err);
+      setIsSubmitting(false);
+      setErrorMsg(err?.message || "Failed to submit stage evidence. Please try again.");
+    }
   };
 
   const formatRs = (amt: number | null) => {

@@ -376,120 +376,7 @@ export const DistrictDashboard: React.FC = () => {
 
       <main className="mplads-main" style={{ flex: 1, padding: "2rem 0 4rem" }}>
         <div className="mplads-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {/* Module Tabs Navigation Bar (Admin Reference Standard) */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              borderBottom: "2px solid #e2e8f0",
-              paddingBottom: "10px",
-              marginBottom: "1.25rem",
-              flexWrap: "wrap"
-            }}
-          >
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-              <button
-                type="button"
-                onClick={() => setActiveTab("district_projects")}
-                className={`gov-tab ${activeTab === "district_projects" ? "active" : ""}`}
-                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
-              >
-                <Layers size={16} />
-                <span>District Works Directory</span>
-                <span style={{
-                  fontSize: "0.72rem",
-                  padding: "2px 8px",
-                  borderRadius: "9999px",
-                  background: activeTab === "district_projects" ? "rgba(255,255,255,0.25)" : "#eff6ff",
-                  color: activeTab === "district_projects" ? "#ffffff" : "#1d4ed8",
-                  fontWeight: 700
-                }}>
-                  {districtProjects.length}
-                </span>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab("verifications_review")}
-                className={`gov-tab ${activeTab === "verifications_review" ? "active" : ""}`}
-                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
-              >
-                <FileCheck size={16} />
-                <span>Inspection Approvals</span>
-                <span style={{
-                  fontSize: "0.72rem",
-                  padding: "2px 8px",
-                  borderRadius: "9999px",
-                  background: activeTab === "verifications_review" ? "rgba(255,255,255,0.25)" : "#f1f5f9",
-                  color: activeTab === "verifications_review" ? "#ffffff" : "#64748b",
-                  fontWeight: 700
-                }}>
-                  3
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("anomaly_dossiers")}
-                className={`gov-tab ${activeTab === "anomaly_dossiers" ? "active" : ""}`}
-                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
-              >
-                <ShieldAlert size={16} />
-                <span>Inquiries & Dossiers</span>
-                <span style={{
-                  fontSize: "0.72rem",
-                  padding: "2px 8px",
-                  borderRadius: "9999px",
-                  background: activeTab === "anomaly_dossiers" ? "rgba(255,255,255,0.25)" : "#fee2e2",
-                  color: activeTab === "anomaly_dossiers" ? "#ffffff" : "#b91c1c",
-                  fontWeight: 700
-                }}>
-                  {highRiskProjects.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("contractors_management")}
-                className={`gov-tab ${activeTab === "contractors_management" ? "active" : ""}`}
-                style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
-              >
-                <Building2 size={16} />
-                <span>Contractors & Vendors</span>
-              </button>
-            </div>
-
-            {/* Right Status Badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "6px 14px",
-                  borderRadius: "9999px",
-                  background: "#ecfdf5",
-                  border: "1px solid #a7f3d0",
-                  fontSize: "0.78rem",
-                  fontWeight: 700,
-                  color: "#065f46",
-                }}
-              >
-                <span
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#10b981",
-                    boxShadow: "0 0 6px #10b981",
-                  }}
-                />
-                <span>{districtProjects.length} District Works Active</span>
-              </div>
-            </div>
-          </div>
 
           {/* District Collectorate Header (Admin Reference Standard) */}
           <div className="dashboard-header" style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
@@ -502,12 +389,7 @@ export const DistrictDashboard: React.FC = () => {
                 <span style={{ fontSize: "0.76rem", color: "#64748b", fontWeight: 600 }}>
                   Government of {stateName}
                 </span>
-                {isLiveConnected && (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#065f46", fontWeight: 600 }}>
-                    <Database size={11} />
-                    <span>Live Supabase Connected</span>
-                  </div>
-                )}
+
               </div>
               <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
                 District Authority Workspace — {selectedDistrict}

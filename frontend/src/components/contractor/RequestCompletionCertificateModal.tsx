@@ -74,11 +74,11 @@ export const RequestCompletionCertificateModal: React.FC<RequestCompletionCertif
         bottom: 0,
         background: "rgba(15, 23, 42, 0.65)",
         backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: "grid",
+        placeItems: "center",
         zIndex: 1100,
-        padding: "16px"
+        padding: "16px",
+        overflowY: "auto"
       }}
       onClick={onClose}
     >
@@ -89,8 +89,11 @@ export const RequestCompletionCertificateModal: React.FC<RequestCompletionCertif
           borderRadius: "12px",
           width: "100%",
           maxWidth: "650px",
-          maxHeight: "90vh",
-          overflowY: "auto",
+          maxHeight: "calc(100vh - 32px)",
+          margin: "auto",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
           boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
         }}
         onClick={(e) => e.stopPropagation()}

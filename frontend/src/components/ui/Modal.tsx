@@ -39,11 +39,12 @@ export const Modal: React.FC<ModalProps> = ({
         className="gov-modal-content"
         style={{ 
           maxWidth,
-          maxHeight: "min(90vh, 820px)",
+          maxHeight: "calc(100vh - 32px)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          overscrollBehavior: "contain"
+          overscrollBehavior: "contain",
+          margin: "auto"
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -87,6 +88,8 @@ export const Modal: React.FC<ModalProps> = ({
             overflowY: "auto",
             flex: "1 1 auto",
             minHeight: 0,
+            maxHeight: "100%",
+            WebkitOverflowScrolling: "touch",
             overscrollBehavior: "contain"
           }}
         >
