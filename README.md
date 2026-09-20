@@ -1,6 +1,6 @@
-# MPLAD Sapphire - SIH26102
+#  Sapphire - SIH26102
 
-MPLAD Aqua is an explainable decision-support application for reviewing MPLADS works. It combines scheme-rule checks with an Isolation Forest anomaly signal. A flag is a **human-review priority**, not an accusation or a finding of fraud.
+Pratyaksh is an explainable decision-support application for reviewing MPLADS works. It combines scheme-rule checks with an Isolation Forest anomaly signal. A flag is a **human-review priority**, not an accusation or a finding of fraud.
 
 This guide is for the current non-Docker local setup. It uses the existing Supabase project and the small real-data sample already imported there.
 
