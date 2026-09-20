@@ -38,7 +38,7 @@ export const ContractorDashboard: React.FC = () => {
       }
       return user.id;
     }
-    return "2df07d35-4493-4bd4-b7e6-d6a55ea3d80d";
+    return "VEN-HR-GGM-01";
   };
 
   // Selected Vendor Identity state
