@@ -15,8 +15,8 @@ const DIRECTIVES = [
   },
   {
     id: "dir-2",
-    tag: "e-SAKSHI MANDATE",
-    text: "End-to-End Online Fund Flow: Recommendations, administrative sanctions, and milestone expenditure releases are processed exclusively on the e-SAKSHI digital platform."
+    tag: "PRATYAKSH MANDATE",
+    text: "End-to-End Online Fund Flow: Recommendations, administrative sanctions, and milestone expenditure releases are processed exclusively on the Pratyaksh digital platform."
   },
   {
     id: "dir-3",

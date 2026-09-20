@@ -270,7 +270,7 @@ export const DistrictDashboard: React.FC = () => {
 
   // All Projects in Selected District Jurisdiction (falls back gracefully to all if none in specific district)
   const projectsInDistrict = useMemo(() => {
-    const inDist = projects.filter((w) => w.district && w.district.toLowerCase() === selectedDistrict.toLowerCase());
+    const inDist = projects.filter((w) => w.district && w.district.toLowerCase() === (selectedDistrict || "").toLowerCase());
     return inDist.length > 0 ? inDist : projects;
   }, [projects, selectedDistrict]);
 

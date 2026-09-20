@@ -11,7 +11,7 @@
  * KEY POLICY DIRECTIVES:
  * 1. Statutory 1-Year Completion Ceiling:
  *    - All approved works must be completed within 365 calendar days from the sanction order.
- * 2. e-SAKSHI Web-Based Real-Time Fund Flow:
+ * 2. Pratyaksh Web-Based Real-Time Fund Flow:
  *    - End-to-end digital lifecycle (Recommendation -> Sanction -> PFMS Disbursal).
  * 3. Mandatory Geotagged Milestone Verification:
  *    - GPS verification before 1st tranche and final payment release.
@@ -76,7 +76,7 @@ export function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
               <span className="gov-badge gov-badge-info" style={{ fontSize: '0.66rem' }}>
                 Operational Framework
               </span>
-              <h3 style={{ fontSize: '0.96rem', fontWeight: 700 }}>MPLADS & e-SAKSHI Guidelines</h3>
+              <h3 style={{ fontSize: '0.96rem', fontWeight: 700 }}>MPLADS & Pratyaksh Guidelines</h3>
             </div>
           </div>
 

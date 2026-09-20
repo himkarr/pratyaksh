@@ -118,9 +118,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         {/* Bottom Container: Compact Blur Strip Just Above Footnote */}
         <div className="gov-login-left-bottom-container">
           {/* Centered Blur Background Strip */}
-          <div className="gov-login-esakshi-banner">
-            <h1 className="gov-login-esakshi-title">Pratyaksh</h1>
-            <p className="gov-login-esakshi-sub">
+          <div className="gov-login-pratyaksh-banner">
+            <h1 className="gov-login-pratyaksh-title">Pratyaksh</h1>
+            <p className="gov-login-pratyaksh-sub">
               National MPLADS Project Monitoring & Decision Support System
             </p>
           </div>
@@ -229,7 +229,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 >
                   {availableProfiles.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} {p.district ? `(${p.district})` : p.constituency ? `(${p.constituency})` : ""}
+                      {p.name} {p.constituency ? `(${p.constituency}, ${p.state || ""})` : p.district ? `(${p.district}, ${p.state || ""})` : p.state ? `(${p.state})` : ""}
                     </option>
                   ))}
                 </select>

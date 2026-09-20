@@ -56,17 +56,10 @@ import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { adminDataService, MPSummary } from "../api/adminDataService";
 
-const HARYANA_MPS: MPSummary[] = [
+const THREE_OFFICIAL_MPS: MPSummary[] = [
   { mpId: "Rohtak", name: "Shri Deepender Singh Hooda", constituency: "Rohtak", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.80, totalSanctioned: 4.20, totalUtilized: 3.48, utilizationPercentage: 70, worksRecommendedCount: 5, worksCompletedCount: 2, rank: 1 },
-  { mpId: "Kurukshetra", name: "Shri Naveen Jindal", constituency: "Kurukshetra", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.50, totalSanctioned: 3.90, totalUtilized: 3.12, utilizationPercentage: 62, worksRecommendedCount: 6, worksCompletedCount: 2, rank: 2 },
-  { mpId: "Gurugram", name: "Shri Rao Inderjit Singh", constituency: "Gurugram", state: "Haryana", house: "Lok Sabha", totalRecommended: 5.00, totalSanctioned: 4.80, totalUtilized: 4.25, utilizationPercentage: 85, worksRecommendedCount: 8, worksCompletedCount: 3, rank: 3 },
-  { mpId: "Karnal", name: "Shri Manohar Lal Khattar", constituency: "Karnal", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.90, totalSanctioned: 4.50, totalUtilized: 3.90, utilizationPercentage: 78, worksRecommendedCount: 7, worksCompletedCount: 3, rank: 4 },
-  { mpId: "Sirsa", name: "Kumari Selja", constituency: "Sirsa", state: "Haryana", house: "Lok Sabha", totalRecommended: 3.80, totalSanctioned: 3.20, totalUtilized: 2.80, utilizationPercentage: 56, worksRecommendedCount: 5, worksCompletedCount: 1, rank: 5 },
-  { mpId: "Faridabad", name: "Shri Krishan Pal Gurjar", constituency: "Faridabad", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.60, totalSanctioned: 4.10, totalUtilized: 3.65, utilizationPercentage: 73, worksRecommendedCount: 6, worksCompletedCount: 2, rank: 6 },
-  { mpId: "Sonipat", name: "Shri Satpal Brahamchari", constituency: "Sonipat", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.20, totalSanctioned: 3.70, totalUtilized: 3.30, utilizationPercentage: 66, worksRecommendedCount: 5, worksCompletedCount: 2, rank: 7 },
-  { mpId: "Hisar", name: "Shri Jai Parkash", constituency: "Hisar", state: "Haryana", house: "Lok Sabha", totalRecommended: 3.90, totalSanctioned: 3.40, totalUtilized: 2.95, utilizationPercentage: 59, worksRecommendedCount: 4, worksCompletedCount: 1, rank: 8 },
-  { mpId: "Ambala", name: "Shri Varun Chaudhary", constituency: "Ambala", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.30, totalSanctioned: 3.80, totalUtilized: 3.10, utilizationPercentage: 62, worksRecommendedCount: 5, worksCompletedCount: 2, rank: 9 },
-  { mpId: "Bhiwani-Mahendragarh", name: "Shri Dharambir Singh", constituency: "Bhiwani-Mahendragarh", state: "Haryana", house: "Lok Sabha", totalRecommended: 4.70, totalSanctioned: 4.00, totalUtilized: 3.40, utilizationPercentage: 68, worksRecommendedCount: 6, worksCompletedCount: 2, rank: 10 }
+  { mpId: "Varanasi", name: "Shri Narendra Modi", constituency: "Varanasi", state: "Uttar Pradesh", house: "Lok Sabha", totalRecommended: 5.00, totalSanctioned: 4.80, totalUtilized: 4.25, utilizationPercentage: 85, worksRecommendedCount: 8, worksCompletedCount: 3, rank: 2 },
+  { mpId: "Pune", name: "Shri Murlidhar Mohol", constituency: "Pune", state: "Maharashtra", house: "Lok Sabha", totalRecommended: 4.50, totalSanctioned: 3.90, totalUtilized: 3.12, utilizationPercentage: 62, worksRecommendedCount: 6, worksCompletedCount: 2, rank: 3 }
 ];
 
 export const MPDashboard: React.FC = () => {
@@ -117,6 +110,13 @@ export const MPDashboard: React.FC = () => {
   const [liveProjects, setLiveProjects] = useState<any[]>([]);
   const [selectedMPId, setSelectedMPId] = useState<string>(() => user.constituency || "Rohtak");
 
+  // Synchronize active MP ID whenever the authenticated user switches
+  useEffect(() => {
+    if (user.constituency) {
+      setSelectedMPId(user.constituency);
+    }
+  }, [user.constituency, user.id, user.name]);
+
   // Dynamic Multi-Source Evidence Cache (Contractor, Citizen, District Inspections)
   const [workEvidenceMap, setWorkEvidenceMap] = useState<Record<string, {
     totalPhotos: number;
@@ -126,9 +126,6 @@ export const MPDashboard: React.FC = () => {
     hasGeoTag: boolean;
   }>>({});
   const [previewPhotoModal, setPreviewPhotoModal] = useState<{ url: string; title: string; metadata?: string } | null>(null);
-
-  // Determine state of the logged-in MP (defaults to Haryana)
-  const mpState = user.state || "Haryana";
 
   useEffect(() => {
     async function loadLiveData() {
@@ -158,34 +155,38 @@ export const MPDashboard: React.FC = () => {
     loadLiveData();
   }, []);
 
-  // Filter available MPs to only those belonging to the logged-in MP's state
+  // Filter available MPs: prioritize the 3 official MPs, then live database
   const availableStateMps = useMemo(() => {
-    const sLower = mpState.toLowerCase();
-    const filtered = liveMps.filter((m) => (m.state || "").toLowerCase() === sLower);
-    if (filtered.length > 0) {
-      return filtered;
-    }
-    return HARYANA_MPS;
-  }, [liveMps, mpState]);
+    return THREE_OFFICIAL_MPS;
+  }, []);
 
   // Active Selected MP identity
   const activeSelectedMP = useMemo(() => {
-    const target = selectedMPId.toLowerCase();
-    return (
-      availableStateMps.find((m) => m.mpId.toLowerCase() === target || m.constituency.toLowerCase() === target) ||
-      availableStateMps.find((m) => (user.constituency && m.constituency.toLowerCase() === user.constituency.toLowerCase())) ||
-      availableStateMps[0]
+    const target = (selectedMPId || user.constituency || "Rohtak").toLowerCase();
+    const foundIn3 = THREE_OFFICIAL_MPS.find(
+      (m) => m.mpId.toLowerCase() === target || m.constituency.toLowerCase() === target || (user.name && m.name.toLowerCase() === user.name.toLowerCase())
     );
-  }, [availableStateMps, selectedMPId, user.constituency]);
+    if (foundIn3) return foundIn3;
 
+    const foundInLive = liveMps.find(
+      (m) => m.mpId.toLowerCase() === target || m.constituency.toLowerCase() === target || (user.name && m.name.toLowerCase() === user.name.toLowerCase())
+    );
+    if (foundInLive) return foundInLive;
+
+    return THREE_OFFICIAL_MPS[0];
+  }, [liveMps, selectedMPId, user.constituency, user.name]);
+
+  const mpState = activeSelectedMP?.state || user.state || "Haryana";
   const constituency = activeSelectedMP?.constituency || user.constituency || "Rohtak";
   const mpName = user.name && user.name !== "Member of Parliament"
     ? user.name
     : (activeSelectedMP?.name || "Shri Deepender Singh Hooda");
   const mpHouse = activeSelectedMP?.house || "Lok Sabha";
-  const constituencyCode = user.constituency_code || (activeSelectedMP
-    ? `HR-${constituency.slice(0, 3).toUpperCase()}-01`
-    : "HR-ROH-01");
+  const constituencyCode = user.constituency_code || (
+    constituency.toLowerCase() === "varanasi" ? "UP-VAR-01" :
+    constituency.toLowerCase() === "pune" ? "MH-PUN-01" :
+    `HR-${constituency.slice(0, 3).toUpperCase()}-01`
+  );
   const district = (activeSelectedMP as any)?.district || user.district || constituency;
 
   // Filtered Constituency Projects (Scoped strictly to MP's state & constituency)
@@ -686,15 +687,15 @@ export const MPDashboard: React.FC = () => {
 
   const sortedAndFilteredLedger = useMemo(() => {
     let list = disbursalLedger.filter((row) => {
-      if (ledgerUcFilter !== "all" && !row.ucStatus.toLowerCase().includes(ledgerUcFilter.toLowerCase())) {
+      if (ledgerUcFilter !== "all" && !(row.ucStatus || "").toLowerCase().includes(ledgerUcFilter.toLowerCase())) {
         return false;
       }
       if (ledgerSearchQuery.trim()) {
         const q = ledgerSearchQuery.toLowerCase();
-        const matchVoucher = row.voucherNo.toLowerCase().includes(q);
-        const matchTitle = row.workTitle.toLowerCase().includes(q);
-        const matchAgency = row.agency.toLowerCase().includes(q);
-        const matchPfms = row.pfmsRef.toLowerCase().includes(q);
+        const matchVoucher = (row.voucherNo || "").toLowerCase().includes(q);
+        const matchTitle = (row.workTitle || "").toLowerCase().includes(q);
+        const matchAgency = (row.agency || "").toLowerCase().includes(q);
+        const matchPfms = (row.pfmsRef || "").toLowerCase().includes(q);
         if (!matchVoucher && !matchTitle && !matchAgency && !matchPfms) return false;
       }
       return true;
@@ -706,9 +707,13 @@ export const MPDashboard: React.FC = () => {
       let valB: any = 0;
       switch (ledgerSortBy) {
         case "voucherNo":
-          return ledgerSortOrder === "asc" ? a.voucherNo.localeCompare(b.voucherNo) : b.voucherNo.localeCompare(a.voucherNo);
+          return ledgerSortOrder === "asc"
+            ? (a.voucherNo || "").localeCompare(b.voucherNo || "")
+            : (b.voucherNo || "").localeCompare(a.voucherNo || "");
         case "workTitle":
-          return ledgerSortOrder === "asc" ? a.workTitle.localeCompare(b.workTitle) : b.workTitle.localeCompare(a.workTitle);
+          return ledgerSortOrder === "asc"
+            ? (a.workTitle || "").localeCompare(b.workTitle || "")
+            : (b.workTitle || "").localeCompare(a.workTitle || "");
         case "sanctionedAmt":
           valA = a.sanctionedAmt || 0;
           valB = b.sanctionedAmt || 0;
@@ -1809,7 +1814,7 @@ export const MPDashboard: React.FC = () => {
               <div className="card-hover-accent accent-navy" style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", background: "#ffffff", borderRadius: "12px", border: "1px solid var(--border-light)" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                    <span className="gov-badge gov-badge-info">e-SAKSHI WEB-FUND FLOW</span>
+                    <span className="gov-badge gov-badge-info">PRATYAKSH WEB-FUND FLOW</span>
                     <span style={{ fontSize: "0.8rem", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
                       SNA-PFMS: {constituencyCode}
                     </span>
@@ -1827,7 +1832,7 @@ export const MPDashboard: React.FC = () => {
                     Print Statement
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setIsPolicyOpen(true)} icon={<Landmark size={13} />}>
-                    e-SAKSHI Guidelines
+                    Pratyaksh Guidelines
                   </Button>
                 </div>
               </div>
@@ -1931,10 +1936,10 @@ export const MPDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* e-SAKSHI Web-Fund Flow 4-Stage Architecture Diagram */}
+              {/* Pratyaksh Web-Fund Flow 4-Stage Architecture Diagram */}
               <div className="gov-card" style={{ padding: "16px 20px" }}>
                 <h4 style={{ fontSize: "0.96rem", fontWeight: 800, color: "var(--gov-primary)", marginBottom: "4px" }}>
-                  e-SAKSHI Central-to-District Real-Time Web Fund Architecture
+                  Pratyaksh Central-to-District Real-Time Web Fund Architecture
                 </h4>
                 <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "14px" }}>
                   Under revised guidelines effective 1st April 2023, physical checks are eliminated and funds flow electronically through PFMS Zero-Balance Virtual Accounts.
@@ -2304,7 +2309,7 @@ export const MPDashboard: React.FC = () => {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                   <CheckCircle2 size={16} color="#10b981" />
                   <h4 style={{ fontSize: "0.92rem", fontWeight: 800, margin: 0, color: "var(--text-main)" }}>
-                    Statutory e-SAKSHI Treasury & Audit Rules Reference
+                    Statutory Pratyaksh Treasury & Audit Rules Reference
                   </h4>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px", fontSize: "0.78rem", color: "var(--text-body)", lineHeight: "1.45" }}>

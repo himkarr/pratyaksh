@@ -1,6 +1,6 @@
 # MPLADS Project Improvement Log & Audit Record
 
-This document records the systematic improvements, optimizations, design synchronizations, and verification results across all stakeholder portals in the eSAKSHI Decision Support System.
+This document records the systematic improvements, optimizations, design synchronizations, and verification results across all stakeholder portals in the Pratyaksh Decision Support System.
 
 ---
 

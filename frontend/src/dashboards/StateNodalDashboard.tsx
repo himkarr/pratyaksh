@@ -53,6 +53,12 @@ export const StateNodalDashboard: React.FC = () => {
   const [selectedState, setSelectedState] = useState<string>(() => user.state || "Haryana");
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (user.state) {
+      setSelectedState(user.state);
+    }
+  }, [user.state, user.id]);
+
   // Comprehensive State Filters
   const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -121,10 +127,10 @@ export const StateNodalDashboard: React.FC = () => {
 
         if (statesData && statesData.length > 0) {
           setAvailableStates(statesData);
-          if (statesData.some(s => s.state.toLowerCase() === selectedState.toLowerCase())) {
+          if (statesData.some(s => (s.state || "").toLowerCase() === (selectedState || "").toLowerCase())) {
             // Keep selectedState as is
           } else if (!user.state) {
-            setSelectedState(statesData[0].state);
+            setSelectedState(statesData[0].state || "Haryana");
           }
         }
 
@@ -170,7 +176,7 @@ export const StateNodalDashboard: React.FC = () => {
 
   // Filter projects strictly belonging to selected State (with fallback to ALL_WORKS matching state)
   const projectsInSelectedState = useMemo(() => {
-    const sLower = selectedState.toLowerCase();
+    const sLower = (selectedState || "Haryana").toLowerCase();
     const matched = projects.filter((w) => w.state && w.state.toLowerCase() === sLower);
     if (matched.length > 0) return matched;
     const fallback = ALL_WORKS.filter((w) => (w.state || "").toLowerCase() === sLower);
@@ -271,7 +277,7 @@ export const StateNodalDashboard: React.FC = () => {
       if (matrixStatusFilter !== "all" && d.status !== matrixStatusFilter) return false;
       if (matrixSearchQuery.trim()) {
         const q = matrixSearchQuery.toLowerCase();
-        if (!d.district.toLowerCase().includes(q)) return false;
+        if (!(d.district || "").toLowerCase().includes(q)) return false;
       }
       return true;
     });
@@ -305,7 +311,7 @@ export const StateNodalDashboard: React.FC = () => {
         valB = b.status;
       }
       if (typeof valA === "string") {
-        return matrixSortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        return matrixSortOrder === "asc" ? (valA || "").localeCompare(valB || "") : (valB || "").localeCompare(valA || "");
       }
       return matrixSortOrder === "asc" ? valA - valB : valB - valA;
     });
@@ -313,7 +319,7 @@ export const StateNodalDashboard: React.FC = () => {
 
   // Selected State Summary from live Supabase
   const currentStateSummary = useMemo(() => {
-    return availableStates.find(s => s.state.toLowerCase() === selectedState.toLowerCase());
+    return availableStates.find(s => (s.state || "").toLowerCase() === (selectedState || "").toLowerCase());
   }, [availableStates, selectedState]);
 
   // Key KPI Numbers
@@ -497,39 +503,6 @@ export const StateNodalDashboard: React.FC = () => {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "0.70rem", textTransform: "uppercase", letterSpacing: "0.5px", color: "#64748b", fontWeight: 700 }}>
-                {tr("Select State / UT:") || "Select State / UT:"}
-              </label>
-              <select
-                value={selectedState}
-                onChange={(e) => setSelectedState(e.target.value)}
-                style={{
-                  background: "#ffffff",
-                  color: "#0f172a",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "8px",
-                  padding: "7px 14px",
-                  fontSize: "0.82rem",
-                  fontWeight: 600,
-                  outline: "none",
-                  cursor: "pointer"
-                }}
-              >
-                {availableStates.length > 0 ? (
-                  availableStates.map((s) => (
-                    <option key={s.state} value={s.state}>
-                      {s.state} (#{s.rank} · {s.utilizationPercentage}% {tr("Fund Utilisation Rate")})
-                    </option>
-                  ))
-                ) : (
-                  <option value={selectedState}>
-                    {selectedState}
-                  </option>
-                )}
-              </select>
-            </div>
-
             <Button
               variant="outline"
               size="sm"

@@ -246,7 +246,7 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                   >
                     {availableProfiles.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} {p.district ? `(${p.district})` : p.constituency ? `(${p.constituency})` : ""}
+                        {p.name} {p.constituency ? `(${p.constituency}, ${p.state || ""})` : p.district ? `(${p.district}, ${p.state || ""})` : p.state ? `(${p.state})` : ""}
                       </option>
                     ))}
                   </select>

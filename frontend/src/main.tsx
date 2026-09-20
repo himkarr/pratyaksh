@@ -112,7 +112,7 @@ function AppContent() {
   };
 
   return (
-    <ErrorBoundary activeRole={user.role} onSelectRole={setRole}>
+    <ErrorBoundary key={user.role} activeRole={user.role} onSelectRole={setRole}>
       <React.Suspense fallback={<DashboardLoader />}>
         {renderDashboard()}
       </React.Suspense>
@@ -125,7 +125,7 @@ function RootApp() {
     // Register PWA Service Worker for offline shell caching
     if ("serviceWorker" in navigator && import.meta.env.PROD) {
       navigator.serviceWorker.register("/sw.js").then((reg) => {
-        console.log("eSAKSHI PWA Service Worker registered:", reg.scope);
+        console.log("Pratyaksh PWA Service Worker registered:", reg.scope);
       }).catch((err) => {
         console.warn("Service Worker registration failed:", err);
       });
