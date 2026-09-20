@@ -48,6 +48,7 @@ import { ALL_WORKS, WorkItem, WorkReview } from "../data/mpladsData";
 import { INITIAL_CITIZEN_ISSUES, CitizenIssue, syncCitizenSubmissionsFromSupabase, getCitizenSubmissions, updateCitizenSubmissionStatus } from "../data/citizenData";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
+import { calculateProjectAIRisk } from "../utils/aiRiskEngine";
 import { adminDataService, MPSummary } from "../api/adminDataService";
 
 export const MPDashboard: React.FC = () => {
@@ -206,9 +207,12 @@ export const MPDashboard: React.FC = () => {
     });
   }, [citizenIssues, constituency, district]);
 
-  // High Risk Projects
+  // High Risk Projects (Strictly evaluated using dynamic AI Risk Engine)
   const highRiskWorks = useMemo(() => {
-    return constituencyWorks.filter((w) => w.status === "Delayed" || (w.financialProgress || 0) > (w.physicalProgress || 0) + 20);
+    return constituencyWorks.filter((w) => {
+      const risk = calculateProjectAIRisk(w);
+      return risk.risk_level === "HIGH" || (risk.combined_risk_score ?? 0) >= 0.65;
+    });
   }, [constituencyWorks]);
 
   // Handlers

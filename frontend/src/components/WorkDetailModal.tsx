@@ -367,18 +367,7 @@ export function WorkDetailModal({ work, onClose, onViewAttachments, onViewReview
               />
 
               {/* AI Risk & Anomaly Signals Section */}
-              <RiskSection
-                riskLevel={isDelayed ? "HIGH" : "LOW"}
-                verificationPriority={isDelayed ? "PRIORITY_1" : "PRIORITY_3"}
-                mlRiskScore={isDelayed ? 0.88 : 0.24}
-                ruleRiskScore={isDelayed ? 0.80 : 0.15}
-                combinedRiskScore={isDelayed ? 0.85 : 0.20}
-                ruleFailures={isDelayed ? [
-                  "Rule R-03: Expenditure trajectory deviates from statutory 12-month burn rate benchmark",
-                  "Rule R-07: Mid-stage geotag photos pending field officer re-inspection"
-                ] : ["Rule R-01: Compliant milestone execution velocity"]}
-                riskReason={isDelayed ? "Unusual ML anomaly pattern; 1-year ceiling deadline risk require review" : "Standard progress pattern; routine monitoring"}
-              />
+              <RiskSection project={work} />
             </>
           )}
 
