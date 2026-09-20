@@ -1,12 +1,12 @@
 /**
- * eSAKSHI MPLADS Portal — Progressive Web App Service Worker
+ * Pratyaksh MPLADS Portal — Progressive Web App Service Worker
  * --------------------------------------------------------
  * Caches static application shell resources for offline resilience.
  * Explicitly excludes backend API requests (/api/, /auth/, /predict/) from persistent caching
  * to ensure sensitive government records are never stored insecurely.
  */
 
-const CACHE_NAME = "esakshi-pwa-shell-v1";
+const CACHE_NAME = "pratyaksh-pwa-shell-v1";
 const STATIC_ASSETS = [
   "/",
   "/index.html",

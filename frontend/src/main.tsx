@@ -23,6 +23,7 @@ import "./styles/StateList.css";
 import "./styles/StateDetail.css";
 import "./styles/MPList.css";
 import "./styles/MPDetail.css";
+import "./styles/ProjectDetail.css";
 import "./styles/Compare.css";
 import "./styles/Dashboard.css";
 import "./styles/civicTheme.css";
@@ -40,20 +41,54 @@ import { PreferencesProvider } from "./context/PreferencesContext";
 import { RoleProvider, useRole } from "./auth/roleContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { NetworkStatusBanner } from "./components/NetworkStatusBanner";
-import { LoginPage } from "./pages/LoginPage";
-import { CitizenDashboard } from "./dashboards/CitizenDashboard";
-import { MPDashboard } from "./dashboards/MPDashboard";
-import { ContractorDashboard } from "./dashboards/ContractorDashboard";
-import { FieldOfficerDashboard } from "./dashboards/FieldOfficerDashboard";
-import { DistrictDashboard } from "./dashboards/DistrictDashboard";
-import { StateNodalDashboard } from "./dashboards/StateNodalDashboard";
-import { MinistryDashboard } from "./dashboards/MinistryDashboard";
+
+// Lazy-load dashboard routes for instant initial page loading & optimal bundle chunking
+const LoginPage = React.lazy(() => import("./pages/LoginPage").then(m => ({ default: m.LoginPage })));
+const CitizenDashboard = React.lazy(() => import("./dashboards/CitizenDashboard").then(m => ({ default: m.CitizenDashboard })));
+const MPDashboard = React.lazy(() => import("./dashboards/MPDashboard").then(m => ({ default: m.MPDashboard })));
+const ContractorDashboard = React.lazy(() => import("./dashboards/ContractorDashboard").then(m => ({ default: m.ContractorDashboard })));
+const FieldOfficerDashboard = React.lazy(() => import("./dashboards/FieldOfficerDashboard").then(m => ({ default: m.FieldOfficerDashboard })));
+const DistrictDashboard = React.lazy(() => import("./dashboards/DistrictDashboard").then(m => ({ default: m.DistrictDashboard })));
+const StateNodalDashboard = React.lazy(() => import("./dashboards/StateNodalDashboard").then(m => ({ default: m.StateNodalDashboard })));
+const MinistryDashboard = React.lazy(() => import("./dashboards/MinistryDashboard").then(m => ({ default: m.MinistryDashboard })));
+
+function DashboardLoader() {
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "var(--bg-page, #f8fafc)",
+      color: "var(--gov-primary, #0a2540)",
+      fontFamily: "Outfit, system-ui, sans-serif",
+      gap: "16px"
+    }}>
+      <div style={{
+        width: "48px",
+        height: "48px",
+        border: "4px solid rgba(10, 37, 64, 0.15)",
+        borderTopColor: "var(--gov-primary, #0a2540)",
+        borderRadius: "50%",
+        animation: "spin 0.8s linear infinite"
+      }} />
+      <div style={{ fontSize: "0.92rem", fontWeight: 700, letterSpacing: "0.4px" }}>
+        Loading Official Workspace...
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const { user, isAuthenticated, setRole } = useRole();
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return (
+      <React.Suspense fallback={<DashboardLoader />}>
+        <LoginPage />
+      </React.Suspense>
+    );
   }
 
   const renderDashboard = () => {
@@ -77,8 +112,10 @@ function AppContent() {
   };
 
   return (
-    <ErrorBoundary activeRole={user.role} onSelectRole={setRole}>
-      {renderDashboard()}
+    <ErrorBoundary key={user.role} activeRole={user.role} onSelectRole={setRole}>
+      <React.Suspense fallback={<DashboardLoader />}>
+        {renderDashboard()}
+      </React.Suspense>
     </ErrorBoundary>
   );
 }
@@ -88,7 +125,7 @@ function RootApp() {
     // Register PWA Service Worker for offline shell caching
     if ("serviceWorker" in navigator && import.meta.env.PROD) {
       navigator.serviceWorker.register("/sw.js").then((reg) => {
-        console.log("eSAKSHI PWA Service Worker registered:", reg.scope);
+        console.log("Pratyaksh PWA Service Worker registered:", reg.scope);
       }).catch((err) => {
         console.warn("Service Worker registration failed:", err);
       });

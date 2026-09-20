@@ -204,7 +204,7 @@ export const ContractorsManagementTab: React.FC<ContractorsManagementTabProps> =
           <table className="gov-table" style={{ width: "100%", fontSize: "0.80rem" }}>
             <thead>
               <tr>
-                <th>Work ID & Category</th>
+                <th>Category</th>
                 <th>Project Title & Location</th>
                 <th>Assigned Contractor</th>
                 <th>Official Dates</th>
@@ -218,8 +218,7 @@ export const ContractorsManagementTab: React.FC<ContractorsManagementTabProps> =
                 return (
                   <tr key={w.id}>
                     <td>
-                      <div style={{ fontWeight: 800, color: "var(--gov-primary)", fontFamily: "monospace" }}>{w.id}</div>
-                      <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.68rem" }}>
+                      <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
                         {w.sectorName || w.category || "Public Infra"}
                       </span>
                     </td>

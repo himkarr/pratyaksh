@@ -123,7 +123,7 @@ export const CitizenFooter: React.FC<CitizenFooterProps> = ({ onOpenPolicy }) =>
 
             <a
               href="#help"
-              onClick={(e) => { e.preventDefault(); alert("Citizen Helpdesk: Toll Free 1800-11-2024 / Email: support-sakshi@nic.in"); }}
+              onClick={(e) => { e.preventDefault(); alert("Citizen Helpdesk: Toll Free 1800-11-2024 / Email: support-pratyaksh@nic.in"); }}
               style={{ color: "#cbd5e1", textDecoration: "none", display: "flex", alignItems: "center", gap: "5px" }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "#cbd5e1")}

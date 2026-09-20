@@ -11,9 +11,9 @@ import {
   Plus, 
   Trash2, 
   FilePlus, 
-  Lock 
+  Lock,
+  X 
 } from "lucide-react";
-import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { ContractorProject, MonitoringScheduleItem, SubmittedFileItem } from "../../data/contractorData";
 import { SubmitStagePayload } from "../../api/contractorApi";
@@ -229,24 +229,112 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`Submit Evidence — ${stage.stageName}`}
-      maxWidth="780px"
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(15, 23, 42, 0.65)",
+        backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1100,
+        padding: "16px",
+        overflowY: "auto"
+      }}
+      onClick={onClose}
     >
-      {isSuccess ? (
-        <div style={{ padding: "36px 20px", textAlign: "center" }}>
-          <CheckCircle2 size={52} color="var(--status-success-text)" style={{ margin: "0 auto 12px auto" }} />
-          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--gov-primary)", marginBottom: "6px" }}>
-            Stage Evidence Submitted Successfully
-          </h3>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-body)", maxWidth: "500px", margin: "0 auto" }}>
-            Evidence for <strong>{stage.stageName}</strong> (Period: {stage.scheduledStartDate} – {stage.scheduledEndDate}) has been submitted and routed for District Officer verification.
-          </p>
+      <div
+        style={{
+          background: "var(--bg-surface, #ffffff)",
+          border: "1px solid var(--border-main, #cbd5e1)",
+          borderRadius: "12px",
+          width: "100%",
+          maxWidth: "780px",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          margin: "auto"
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div
+          style={{
+            padding: "18px 24px",
+            borderBottom: "1px solid var(--border-light, #e2e8f0)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            background: "linear-gradient(135deg, var(--gov-primary, #0a2540) 0%, #1e3a8a 100%)",
+            color: "#ffffff",
+            borderTopLeftRadius: "11px",
+            borderTopRightRadius: "11px"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                background: "rgba(255, 255, 255, 0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff"
+              }}
+            >
+              <Camera size={20} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: "1.08rem", fontWeight: 800, margin: 0, color: "#ffffff", fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
+                Submit Evidence — {stage.stageName}
+              </h3>
+              <div style={{ fontSize: "0.74rem", color: "rgba(255, 255, 255, 0.8)", marginTop: "2px" }}>
+                Work ID: {project.id} | Stage Target: {stage.targetProgressPercent}%
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "none",
+              color: "#ffffff",
+              borderRadius: "50%",
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer"
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+        {/* Modal Body */}
+        <div style={{ padding: "20px 24px" }}>
+          {isSuccess ? (
+            <div style={{ padding: "36px 20px", textAlign: "center" }}>
+              <CheckCircle2 size={52} color="var(--status-success-text)" style={{ margin: "0 auto 12px auto" }} />
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--gov-primary)", marginBottom: "6px" }}>
+                Stage Evidence Submitted Successfully
+              </h3>
+              <p style={{ fontSize: "0.82rem", color: "var(--text-body)", maxWidth: "500px", margin: "0 auto" }}>
+                Evidence for <strong>{stage.stageName}</strong> (Period: {stage.scheduledStartDate} – {stage.scheduledEndDate}) has been submitted and routed for District Officer verification.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           
           {/* Stage Period Summary Banner */}
           <div
@@ -619,8 +707,10 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               {isSubmitting ? "Submitting Stage Evidence Payload..." : "Submit Stage Evidence"}
             </Button>
           </div>
-        </form>
-      )}
-    </Modal>
+          </form>
+        )}
+        </div>
+      </div>
+    </div>
   );
 };

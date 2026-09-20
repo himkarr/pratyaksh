@@ -1379,7 +1379,7 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                   <thead>
                     <tr>
                       <TableColumnHeader
-                        title="Work ID & Title"
+                        title="Project Title"
                         field="title"
                         currentSortField={projectSortBy}
                         currentSortDirection={projectSortOrder}
@@ -1482,9 +1482,6 @@ export const StateDetail: React.FC<StateDetailProps> = ({
                         return (
                           <tr key={p.project_id || p.id}>
                             <td style={{ maxWidth: "320px" }}>
-                              <div style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "#64748b", fontWeight: 600 }}>
-                                {p.project_id || p.id}
-                              </div>
                               <button
                                 onClick={() => onSelectProject(p)}
                                 style={{

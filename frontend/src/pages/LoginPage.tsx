@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { User as UserIcon, Key, Eye, EyeOff, RefreshCw, UserCheck } from "lucide-react";
-import { useRole, Role, ALL_USERS, User } from "../auth/roleContext";
+import { 
+  User as UserIcon, 
+  Key, 
+  Eye, 
+  EyeOff, 
+  RefreshCw, 
+  ShieldCheck, 
+  Lock, 
+  CheckCircle2,
+  Sparkles,
+  Info
+} from "lucide-react";
+import { useRole, Role, ALL_USERS } from "../auth/roleContext";
 
 export interface LoginPageProps {
   onSuccess?: () => void;
@@ -14,6 +25,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const [username, setUsername] = useState("admin@nirikshak.gov.in");
   const [password, setPassword] = useState("Mplads@2026!");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [captchaCode, setCaptchaCode] = useState("er36x");
   const [captchaInput, setCaptchaInput] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -48,15 +60,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       setUsername(defaultUser.email);
     }
     setPassword("Mplads@2026!");
+    setErrorMsg("");
   };
 
-  // Handle profile selection change
+  // Handle individual profile change
   const handleProfileSelect = (profileId: string) => {
     setSelectedProfileId(profileId);
     const matched = availableProfiles.find((p) => p.id === profileId);
     if (matched) {
       setUsername(matched.email);
-      setPassword("Mplads@2026!");
     }
   };
 
@@ -64,7 +76,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     e.preventDefault();
     const effectiveCaptcha = captchaInput.trim() || captchaCode;
     if (effectiveCaptcha.toLowerCase() !== captchaCode.toLowerCase()) {
-      setErrorMsg("Invalid CAPTCHA code. Please check and try again.");
+      setErrorMsg("Invalid Security CAPTCHA code. Please check and try again.");
       generateCaptcha();
       return;
     }
@@ -84,126 +96,151 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     if (onSuccess) onSuccess();
   };
 
+  const selectedProfile = availableProfiles.find((p) => p.id === selectedProfileId) || availableProfiles[0];
+
   return (
     <div className="gov-login-page">
-      {/* LEFT PANEL: Aerial Parliament Photograph & Blurred eSAKSHI Overlay */}
+      {/* Tricolor National Ribbon Accent */}
+      <div className="gov-login-tricolor-bar" />
+
+      {/* LEFT PANEL: Aerial Parliament Photograph & Minimal Branding Text */}
       <div className="gov-login-left">
-        <div className="gov-login-esakshi-banner">
-          <h1 className="gov-login-esakshi-title">eSAKSHI</h1>
-          <p className="gov-login-esakshi-subtitle">
-            SAnsad sadasya sthaniya KSHetra vikas yojana
-          </p>
+        <div className="gov-login-left-glow" />
+
+        {/* Top Badge */}
+        <div className="gov-login-left-top">
+          <span className="gov-login-badge-pill">
+            <span className="gov-login-pulse-dot" />
+            MoSPI Central Gateway
+          </span>
+        </div>
+
+        {/* Bottom Container: Compact Blur Strip Just Above Footnote */}
+        <div className="gov-login-left-bottom-container">
+          {/* Centered Blur Background Strip */}
+          <div className="gov-login-pratyaksh-banner">
+            <h1 className="gov-login-pratyaksh-title">Pratyaksh</h1>
+            <p className="gov-login-pratyaksh-sub">
+              National MPLADS Project Monitoring & Decision Support System
+            </p>
+          </div>
+
+          {/* Bottom Left System Footnote */}
+          <div className="gov-login-left-bottom">
+            <span>STQC Certified</span>
+            <span>•</span>
+            <span>NIC Cloud Infrastructure</span>
+          </div>
         </div>
       </div>
 
-      {/* RIGHT PANEL: Reference-Matched Login Form */}
+      {/* RIGHT PANEL: Official Login Card Form */}
       <div className="gov-login-right">
-        <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div className="gov-login-card-wrapper">
           
-          {/* Government of India Header Logo */}
+          {/* Government of India Emblem & Ministry Branding */}
           <div className="gov-login-brand-header">
-            {/* Official State Emblem of India */}
             <img 
               src="/assets/emblem_of_india.svg" 
               alt="State Emblem of India" 
-              style={{ height: '54px', width: 'auto', display: 'block', objectFit: 'contain' }} 
+              className="gov-login-emblem-img"
             />
             <div>
-              <div style={{ fontSize: "0.78rem", fontWeight: 500, color: "#475569", lineHeight: "1.25" }}>
+              <div className="gov-login-brand-text-gov">
                 Government of India
               </div>
-              <div style={{ fontSize: "0.90rem", fontWeight: 800, color: "#000000", lineHeight: "1.25" }}>
-                Ministry of Statistics and Programme Implementation
+              <div className="gov-login-brand-text-ministry">
+                Ministry of Statistics & Programme Implementation
               </div>
-              <div style={{ fontSize: "0.88rem", fontWeight: 800, color: "#000000", lineHeight: "1.25" }}>
+              <div className="gov-login-brand-text-scheme">
                 Members of Parliament Local Area Development Scheme
               </div>
             </div>
           </div>
 
-          <h2 className="gov-login-heading">Log In</h2>
+          {/* Form Header */}
+          <div className="gov-login-form-title-row">
+            <h2 className="gov-login-heading">Official Portal Login</h2>
+            <span className="gov-login-secure-tag">
+              <Lock size={12} />
+              256-Bit SSL
+            </span>
+          </div>
 
-          {/* Form Container */}
-          <div className="gov-login-form-container">
+          {/* Error Message Display */}
+          {errorMsg && (
+            <div style={{
+              width: "100%",
+              padding: "10px 14px",
+              backgroundColor: "#fef2f2",
+              border: "1.5px solid #fecaca",
+              color: "#991b1b",
+              borderRadius: "10px",
+              fontSize: "0.80rem",
+              fontWeight: 600,
+              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxSizing: "border-box"
+            }}>
+              <Info size={16} style={{ flexShrink: 0 }} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-            {/* Dropdown 1: Stakeholder Role Selection */}
-            <div style={{ width: "100%", marginBottom: "12px" }}>
-              <label style={{ fontSize: "0.76rem", color: "#334155", fontWeight: 700, marginBottom: "5px", display: "block" }}>
-                Select Stakeholder Role:
+          <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+            
+            {/* Field 1: Stakeholder Role Selection */}
+            <div className="gov-login-field-group">
+              <label className="gov-login-field-label">
+                <span>Select Stakeholder Role</span>
+                <span style={{ fontSize: "0.70rem", color: "#64748b", fontWeight: 500 }}>Step 1 of 2</span>
               </label>
               <select
                 value={selectedRole}
                 onChange={(e) => handleRoleSelect(e.target.value as Role)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "#0f172a",
-                  border: "1.5px solid #0b69a3",
-                  borderRadius: "6px",
-                  background: "#ffffff",
-                  cursor: "pointer",
-                  outline: "none"
-                }}
+                className="gov-login-select"
               >
-                <option value="mp">Member of Parliament</option>
-                <option value="citizen">Citizen Transparency Portal</option>
-                <option value="district">District Authority (DM)</option>
+                <option value="ministry">Ministry of Statistics (MoSPI) / Central Admin</option>
+                <option value="mp">Member of Parliament (Lok Sabha / Rajya Sabha)</option>
+                <option value="district">District Authority (District Magistrate / DC)</option>
                 <option value="state_nodal">State Nodal Department (Planning & Dev)</option>
                 <option value="contractor">Contractor / Implementing Agency</option>
                 <option value="field_officer">Field Quality Inspection Officer</option>
-                <option value="ministry">Ministry of Statistics (MoSPI) / Central Admin</option>
+                <option value="citizen">Citizen Transparency Portal</option>
               </select>
             </div>
 
-            {/* Dropdown 2: Dynamic Cascading Account / Profile Selector */}
-            <div style={{ width: "100%", marginBottom: "16px" }}>
-              <label style={{ fontSize: "0.76rem", color: "#334155", fontWeight: 700, marginBottom: "5px", display: "flex", alignItems: "center", gap: "5px" }}>
-                <UserCheck size={14} color="#0b69a3" />
-                Select Official Profile / Account:
-              </label>
-              <select
-                value={selectedProfileId}
-                onChange={(e) => handleProfileSelect(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "#0f172a",
-                  border: "1.5px solid #0284c7",
-                  borderRadius: "6px",
-                  background: "#f8fafc",
-                  cursor: "pointer",
-                  outline: "none"
-                }}
-              >
-                {availableProfiles.map((p) => {
-                  let label = p.name;
-                  if (p.role === "mp") {
-                    label = `Member of Parliament - ${p.constituency} (${p.state})`;
-                  } else if (p.role === "citizen") {
-                    label = `${p.name} (${p.constituency}, ${p.state})`;
-                  }
-                  return (
+            {/* Field 2: Account Persona Selector (when multiple exist) */}
+            {availableProfiles.length > 1 && (
+              <div className="gov-login-field-group">
+                <label className="gov-login-field-label">
+                  <span>Select Active Official Account</span>
+                  <span style={{ fontSize: "0.70rem", color: "#0284c7", fontWeight: 600 }}>
+                    {availableProfiles.length} available
+                  </span>
+                </label>
+                <select
+                  value={selectedProfileId}
+                  onChange={(e) => handleProfileSelect(e.target.value)}
+                  className="gov-login-select"
+                  style={{ backgroundColor: "#f8fafc" }}
+                >
+                  {availableProfiles.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {label}
+                      {p.name} {p.constituency ? `(${p.constituency}, ${p.state || ""})` : p.district ? `(${p.district}, ${p.state || ""})` : p.state ? `(${p.state})` : ""}
                     </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            {errorMsg && (
-              <div style={{ width: "100%", padding: "8px 12px", backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: "6px", fontSize: "0.78rem", marginBottom: "12px", textAlign: "center" }}>
-                {errorMsg}
+                  ))}
+                </select>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ width: "100%" }}>
-              
-              {/* Username Input Field */}
+            {/* Field 3: Username / Email Input */}
+            <div className="gov-login-field-group">
+              <label className="gov-login-field-label">
+                <span>Official User ID / Email</span>
+              </label>
               <div className="gov-login-input-wrapper">
                 <span className="gov-login-input-icon">
                   <UserIcon size={18} />
@@ -212,14 +249,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                   type="text"
                   required
                   className="gov-login-input"
-                  placeholder="Username / Email"
+                  placeholder="name@nirikshak.gov.in"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
               </div>
+            </div>
 
-              {/* Password Input Field */}
-              <div className="gov-login-input-wrapper" style={{ marginBottom: "6px" }}>
+            {/* Field 4: Password Input */}
+            <div className="gov-login-field-group" style={{ marginBottom: "8px" }}>
+              <label className="gov-login-field-label">
+                <span>Account Password</span>
+              </label>
+              <div className="gov-login-input-wrapper">
                 <span className="gov-login-input-icon">
                   <Key size={18} />
                 </span>
@@ -227,51 +269,57 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                   type={showPassword ? "text" : "password"}
                   required
                   className="gov-login-input"
-                  placeholder="Password"
+                  placeholder="Enter your security password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  style={{ paddingRight: "36px" }}
+                  style={{ paddingRight: "42px" }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute",
-                    right: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    color: "#475569",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center"
-                  }}
+                  className="gov-login-eye-btn"
                   aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+            </div>
 
-              {/* Forgot Password Link */}
+            {/* Remember Me & Forgot Password Row */}
+            <div className="gov-login-forgot-row">
+              <label className="gov-login-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="gov-login-checkbox"
+                />
+                <span>Remember this terminal</span>
+              </label>
               <a
                 href="#forgot-password"
                 className="gov-login-forgot-link"
                 onClick={(e) => {
                   e.preventDefault();
-                  alert("Please contact MoSPI Nodal Helpdesk or System Administrator to reset credentials.");
+                  alert("Credential Reset Advisory: Please contact the MoSPI Central Helpdesk or District Nodal Administrator with your Government Employee ID.");
                 }}
               >
                 Forgot Password?
               </a>
+            </div>
 
-              {/* CAPTCHA Row */}
+            {/* Field 5: Security CAPTCHA Verification Row */}
+            <div className="gov-login-field-group" style={{ marginBottom: "18px" }}>
+              <label className="gov-login-field-label">
+                <span>Security CAPTCHA Verification</span>
+                <span style={{ fontSize: "0.70rem", color: "#64748b" }}>Case-insensitive</span>
+              </label>
               <div className="gov-login-captcha-row">
                 <div 
                   className="gov-login-captcha-box"
                   onClick={() => setCaptchaInput(captchaCode)}
-                  title="Click to auto-fill CAPTCHA code"
-                  style={{ cursor: "pointer" }}
+                  title="Click to auto-fill security code"
                 >
                   {captchaCode}
                 </div>
@@ -279,42 +327,58 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                   type="button"
                   className="gov-login-captcha-refresh"
                   onClick={generateCaptcha}
-                  title="Refresh Captcha"
+                  title="Generate New CAPTCHA"
                   aria-label="Refresh Captcha"
                 >
-                  <RefreshCw size={20} />
+                  <RefreshCw size={18} />
                 </button>
                 <input
                   type="text"
                   required
                   className="gov-login-captcha-input"
-                  placeholder="Captcha"
+                  placeholder="Enter Code"
                   value={captchaInput}
                   onChange={(e) => setCaptchaInput(e.target.value)}
+                  maxLength={6}
                 />
               </div>
+            </div>
 
-              {/* Login Button */}
-              <button
-                type="submit"
-                className="gov-login-btn"
-                disabled={isLoading}
-              >
-                {isLoading ? "Logging in..." : "Login"}
-              </button>
+            {/* Login Action Submit Button */}
+            <button
+              type="submit"
+              className="gov-login-btn"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="gov-spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                  <span>Verifying Credentials...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={20} />
+                  <span>Sign In as {selectedProfile?.name ? selectedProfile.name.split(" ")[0] : "Official"}</span>
+                </>
+              )}
+            </button>
 
-              {/* Red OTP Warning Notice */}
-              <p className="gov-login-otp-note">
-                If the OTP is not received via SMS, please check your registered email inbox for the OTP.
+            {/* Security Advisory Callout */}
+            <div className="gov-login-advisory-box">
+              <Info size={16} className="gov-login-advisory-icon" />
+              <p className="gov-login-advisory-text">
+                <strong>2-Factor Authentication:</strong> If SMS OTP is delayed, check your registered MoSPI / NIC official email inbox.
               </p>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
 
-        {/* Footer Note */}
-        <div className="gov-login-footer">
-          Website Content Owned & Managed by Ministry of Statistics and Programme Implementation (MoSPI), Government of India
-        </div>
+        {/* Official MoSPI Footer */}
+        <footer className="gov-login-footer">
+          Website Content Owned & Managed by <strong>Ministry of Statistics and Programme Implementation (MoSPI)</strong>, Government of India.
+          <br />
+          Designed, Developed and Hosted by <strong>National Informatics Centre (NIC)</strong>.
+        </footer>
       </div>
     </div>
   );

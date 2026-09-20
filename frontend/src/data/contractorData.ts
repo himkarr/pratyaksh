@@ -200,385 +200,220 @@ export interface ContractorProject {
 }
 
 export const DEFAULT_CONTRACTOR_PROFILE: ContractorProfile = {
-  id: "USR-CONTRACTOR-01",
-  agencyName: "Gurugram Metropolitan Development Authority (GMDA)",
-  vendorId: "VEN-HR-GGM-01",
-  gstin: "06AACCG7712L1Z4",
+  id: "2df07d35-4493-4bd4-b7e6-d6a55ea3d80d",
+  agencyName: "The Sahil Co-operative Labour and Construction Society Ltd",
+  vendorId: "2df07d35-4493-4bd4-b7e6-d6a55ea3d80d",
+  gstin: "06AABCT1234F1Z5",
   registrationNo: "PWD/HR/CLASS-A/901",
-  circle: "Gurugram Infrastructure Division Circle",
-  district: "Gurugram",
+  circle: "Rohtak Infrastructure Division Circle",
+  district: "Rohtak",
   state: "Haryana",
-  nodalOfficer: "Er. Vikas Rao (Chief Engineer)",
-  contactEmail: "gmda.gurugram@haryana.gov.in",
-  contactPhone: "+91 99990 12345"
+  nodalOfficer: "Sahil Verma",
+  contactEmail: "vendor.sahil.rohtak@contractor.gov.in",
+  contactPhone: "+919812033441"
 };
 
 export const MOCK_CONTRACTOR_PROJECTS: ContractorProject[] = [
   {
-    id: "WORK-MH-2024-001",
-    title: "Construction of Concrete Link Road connecting NH-48 to Village Connectivity Hub",
-    category: "Roads",
-    state: "Maharashtra",
-    district: "Pune",
-    constituency: "Baramati (ST-18)",
-    mpName: "Shri Supriya Sule",
-    implementingAuthority: "District Collectorate Pune / Public Works Department (PWD)",
-    contractorName: "M/s Infra Buildcon India Ltd.",
-    vendorId: "VEN-2024-MH-8842",
+    id: "WORK-HR-RTK-001",
+    title: "Construction of Community Health Centre (CHC) Building & Oxygen Plant, Kalanaur",
+    category: "Health",
+    state: "Haryana",
+    district: "Rohtak",
+    constituency: "Rohtak (PC-07)",
+    mpName: "Shri Deepender Singh Hooda",
+    implementingAuthority: "Public Health Engineering Department / DC Rohtak",
+    contractorName: "The Sahil Co-operative Labour and Construction Society Ltd",
+    vendorId: "2df07d35-4493-4bd4-b7e6-d6a55ea3d80d",
     
-    sanctionAmountRs: 3850000,
-    recommendedAmountRs: 4000000,
-    utilizedAmountRs: 2310000,
-    remainingAmountRs: 1540000,
-    physicalProgress: 48,
+    sanctionAmountRs: 15000000,
+    recommendedAmountRs: 15000000,
+    utilizedAmountRs: 9500000,
+    remainingAmountRs: 5500000,
+    physicalProgress: 70,
     
-    officialStartDate: "01 Sep 2026",
-    officialExpectedCompletionDate: "28 Feb 2027",
-    
-    currentWorkStatus: "InProgress",
-    monitoringStatus: "Active Monitoring",
-    nextRequiredSubmission: "Upload Material Evidence for Stage 2",
-    nextSubmissionDueDate: "20 Oct 2026",
-    riskIndicator: "Delay Risk",
-    
-    checkpointActions: [],
-    
-    schedule: [
-      {
-        stageId: "stg-01",
-        stageName: "Stage 1 — Site Preparation & Boundary Demarcation",
-        targetProgressPercent: 10,
-        scheduledStartDate: "01 Sep 2026",
-        scheduledEndDate: "20 Sep 2026",
-        requiredEvidenceTypes: ["Geo-tagged site demarcation photo", "Initial survey layout report"],
-        status: "COMPLETED",
-        submissionStatus: "Verified",
-        submittedDate: "18 Sep 2026",
-        submissionRecord: {
-          id: "sub-01",
-          workId: "WORK-MH-2024-001",
-          contractorName: "M/s Infra Buildcon India Ltd.",
-          checkpointActionId: "stg-01",
-          checkpointActionName: "Stage 1 — Site Preparation & Boundary Demarcation",
-          evidenceType: "Geo-tagged Work Progress Photo",
-          files: [
-            {
-              name: "Initial_Site_Demarcation_GeoTag.jpg",
-              url: "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=400&q=80",
-              size: "2.4 MB",
-              type: "Geo-tagged Photo",
-              lat: 18.5204,
-              lng: 73.8567,
-              timestamp: "18 Sep 2026 10:15 AM"
-            }
-          ],
-          uploadTimestamp: "18 Sep 2026 10:25 AM",
-          latitude: 18.5204,
-          longitude: 73.8567,
-          locationText: "Haveli Block, Pune (18.5204° N, 73.8567° E)",
-          physicalProgressPercent: 10,
-          expenditureAmountRs: 385000,
-          workStage: "Stage 1 — Site Preparation & Boundary Demarcation",
-          materialStatus: "Initial aggregate & equipment mobilized",
-          description: "Demarcation completed. Topsoil excavated and aggregate bed laid.",
-          submissionStatus: "Submitted",
-          verificationStatus: "Verified",
-          verificationRemarks: "Verified on site by Assistant Engineer PWD."
-        }
-      },
-      {
-        stageId: "stg-02",
-        stageName: "Stage 2 — Earthwork & Foundation Subgrade Excavation",
-        targetProgressPercent: 30,
-        scheduledStartDate: "21 Sep 2026",
-        scheduledEndDate: "20 Oct 2026",
-        requiredEvidenceTypes: ["Geo-tagged progress photographs", "Material test reports", "Material invoices"],
-        status: "IN_PROGRESS",
-        submissionStatus: "Verified",
-        submittedDate: "03 Oct 2026",
-        submissionRecord: {
-          id: "sub-02",
-          workId: "WORK-MH-2024-001",
-          contractorName: "M/s Infra Buildcon India Ltd.",
-          checkpointActionId: "stg-02",
-          checkpointActionName: "Stage 2 — Earthwork & Foundation Subgrade Excavation",
-          evidenceType: "Geo-tagged Work Progress Photo",
-          files: [
-            {
-              name: "Subgrade_Excavation_Progress.jpg",
-              url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=400&q=80",
-              size: "3.1 MB",
-              type: "Geo-tagged Photo",
-              lat: 18.5210,
-              lng: 73.8572,
-              timestamp: "03 Oct 2026 02:45 PM"
-            }
-          ],
-          uploadTimestamp: "03 Oct 2026 02:50 PM",
-          latitude: 18.5210,
-          longitude: 73.8572,
-          locationText: "Haveli Block, Pune (18.5210° N, 73.8572° E)",
-          physicalProgressPercent: 30,
-          expenditureAmountRs: 1155000,
-          workStage: "Stage 2 — Earthwork & Foundation Subgrade Excavation",
-          materialStatus: "Crushed stone aggregate stacked on site",
-          description: "Subgrade soil compaction verified with roller equipment.",
-          submissionStatus: "Submitted",
-          verificationStatus: "Verified",
-          verificationRemarks: "Subgrade compaction test passed."
-        }
-      },
-      {
-        stageId: "stg-03",
-        stageName: "Stage 3 — Rigid Pavement Sub-Base & RCC Slab Pouring",
-        targetProgressPercent: 65,
-        scheduledStartDate: "21 Oct 2026",
-        scheduledEndDate: "20 Dec 2026",
-        requiredEvidenceTypes: ["Geo-tagged photos of RCC pour", "Compressive strength test documentation", "Expenditure log"],
-        status: "UPCOMING",
-        submissionStatus: "Pending",
-        submittedDate: null
-      },
-      {
-        stageId: "stg-04",
-        stageName: "Stage 4 — Storm Drainage & Side Finishing Works",
-        targetProgressPercent: 90,
-        scheduledStartDate: "21 Dec 2026",
-        scheduledEndDate: "10 Feb 2027",
-        requiredEvidenceTypes: ["Geo-tagged drainage photographs", "Material evidence", "Expenditure details"],
-        status: "UPCOMING",
-        submissionStatus: "Pending",
-        submittedDate: null
-      },
-      {
-        stageId: "stg-05",
-        stageName: "Stage 5 — Final Inspection & Statutory Handover",
-        targetProgressPercent: 100,
-        scheduledStartDate: "11 Feb 2027",
-        scheduledEndDate: "28 Feb 2027",
-        requiredEvidenceTypes: ["Final completion geotagged photos", "Completion certificate", "Final MB voucher"],
-        status: "UPCOMING",
-        submissionStatus: "Pending",
-        submittedDate: null
-      }
-    ],
-    
-    submissionRecords: [
-      {
-        id: "sub-01",
-        workId: "WORK-MH-2024-001",
-        contractorName: "M/s Infra Buildcon India Ltd.",
-        checkpointActionId: "stg-01",
-        checkpointActionName: "Stage 1 — Site Preparation & Boundary Demarcation",
-        evidenceType: "Geo-tagged Work Progress Photo",
-        files: [
-          {
-            name: "Initial_Site_Demarcation_GeoTag.jpg",
-            url: "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=400&q=80",
-            size: "2.4 MB",
-            type: "Geo-tagged Photo",
-            lat: 18.5204,
-            lng: 73.8567,
-            timestamp: "18 Sep 2026 10:15 AM"
-          }
-        ],
-        uploadTimestamp: "18 Sep 2026 10:25 AM",
-        latitude: 18.5204,
-        longitude: 73.8567,
-        locationText: "Haveli Block, Pune (18.5204° N, 73.8567° E)",
-        physicalProgressPercent: 10,
-        expenditureAmountRs: 385000,
-        workStage: "Stage 1 — Site Preparation & Boundary Demarcation",
-        materialStatus: "Initial aggregate & equipment mobilized",
-        description: "Demarcation completed. Topsoil excavated and aggregate bed laid.",
-        submissionStatus: "Submitted",
-        verificationStatus: "Verified",
-        verificationRemarks: "Verified on site by Assistant Engineer PWD."
-      },
-      {
-        id: "sub-02",
-        workId: "WORK-MH-2024-001",
-        contractorName: "M/s Infra Buildcon India Ltd.",
-        checkpointActionId: "stg-02",
-        checkpointActionName: "Stage 2 — Earthwork & Foundation Subgrade Excavation",
-        evidenceType: "Geo-tagged Work Progress Photo",
-        files: [
-          {
-            name: "Subgrade_Excavation_Progress.jpg",
-            url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=400&q=80",
-            size: "3.1 MB",
-            type: "Geo-tagged Photo",
-            lat: 18.5210,
-            lng: 73.8572,
-            timestamp: "03 Oct 2026 02:45 PM"
-          }
-        ],
-        uploadTimestamp: "03 Oct 2026 02:50 PM",
-        latitude: 18.5210,
-        longitude: 73.8572,
-        locationText: "Haveli Block, Pune (18.5210° N, 73.8572° E)",
-        physicalProgressPercent: 30,
-        expenditureAmountRs: 1155000,
-        workStage: "Stage 2 — Earthwork & Foundation Subgrade Excavation",
-        materialStatus: "Crushed stone aggregate stacked on site",
-        description: "Subgrade soil compaction verified with roller equipment.",
-        submissionStatus: "Submitted",
-        verificationStatus: "Verified",
-        verificationRemarks: "Subgrade compaction test passed."
-      }
-    ]
-  },
-  {
-    id: "WORK-MH-2024-002",
-    title: "Installation of Solar-Powered Drinking Water Filtration System & Overhead Tank",
-    category: "Drinking Water",
-    state: "Maharashtra",
-    district: "Pune",
-    constituency: "Shirur (LS-19)",
-    mpName: "Shri Dr. Amol Kolhe",
-    implementingAuthority: "District Water & Sanitation Mission / Zilla Parishad Pune",
-    contractorName: "M/s Infra Buildcon India Ltd.",
-    vendorId: "VEN-2024-MH-8842",
-    
-    sanctionAmountRs: 2400000,
-    recommendedAmountRs: 2500000,
-    utilizedAmountRs: 1200000,
-    remainingAmountRs: 1200000,
-    physicalProgress: 50,
-    
-    officialStartDate: "15 Aug 2026",
-    officialExpectedCompletionDate: "15 Dec 2026",
+    officialStartDate: "15 Mar 2024",
+    officialExpectedCompletionDate: "30 Apr 2025",
     
     currentWorkStatus: "InProgress",
     monitoringStatus: "Active Monitoring",
     nextRequiredSubmission: "Upload Material Evidence for Stage 3",
-    nextSubmissionDueDate: "15 Oct 2026",
+    nextSubmissionDueDate: "20 Nov 2024",
     riskIndicator: "Low Risk",
     
     checkpointActions: [],
     
     schedule: [
       {
-        stageId: "stg-dw-01",
-        stageName: "Stage 1 — Hydrogeological Survey & Borehole Drilling",
+        stageId: "stg-01",
+        stageName: "Stage 1 — Site Preparation & RCC Foundation Pouring",
         targetProgressPercent: 25,
-        scheduledStartDate: "15 Aug 2026",
-        scheduledEndDate: "31 Aug 2026",
-        requiredEvidenceTypes: ["Borehole Geo-tagged Photo", "Yield Test Log"],
+        scheduledStartDate: "15 Mar 2024",
+        scheduledEndDate: "15 May 2024",
+        requiredEvidenceTypes: ["Geo-tagged site demarcation photo", "Foundation RCC inspection report"],
         status: "COMPLETED",
         submissionStatus: "Verified",
-        submittedDate: "30 Aug 2026",
+        submittedDate: "12 May 2024",
         submissionRecord: {
-          id: "sub-dw-01",
-          workId: "WORK-MH-2024-002",
-          contractorName: "M/s Infra Buildcon India Ltd.",
-          checkpointActionId: "stg-dw-01",
-          checkpointActionName: "Stage 1 — Hydrogeological Survey & Borehole Drilling",
+          id: "sub-hr-01",
+          workId: "WORK-HR-RTK-001",
+          contractorName: "The Sahil Co-operative Labour and Construction Society Ltd",
+          checkpointActionId: "stg-01",
+          checkpointActionName: "Stage 1 — Site Preparation & RCC Foundation Pouring",
           evidenceType: "Geo-tagged Work Progress Photo",
           files: [
             {
-              name: "Borehole_Drilling_GeoTag.jpg",
+              name: "CHC_Kalanaur_Foundation_GeoTag.jpg",
               url: "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=400&q=80",
-              size: "1.8 MB",
+              size: "2.4 MB",
               type: "Geo-tagged Photo",
-              lat: 18.8251,
-              lng: 74.3725,
-              timestamp: "30 Aug 2026 02:30 PM"
+              lat: 28.8955,
+              lng: 76.6066,
+              timestamp: "12 May 2024 10:15 AM"
             }
           ],
-          uploadTimestamp: "30 Aug 2026 02:35 PM",
-          latitude: 18.8251,
-          longitude: 74.3725,
-          locationText: "Shirur Block, Pune (18.8251° N, 74.3725° E)",
+          uploadTimestamp: "12 May 2024 10:25 AM",
+          latitude: 28.8955,
+          longitude: 76.6066,
+          locationText: "Kalanaur Block, Rohtak (28.8955° N, 76.6066° E)",
           physicalProgressPercent: 25,
-          expenditureAmountRs: 600000,
-          workStage: "Stage 1 — Hydrogeological Survey & Borehole Drilling",
-          materialStatus: "Casing pipes & pump set delivered",
-          description: "200ft deep borehole successfully drilled with water discharge rate of 4,500 LPH.",
+          expenditureAmountRs: 3750000,
+          workStage: "Stage 1 — Site Preparation & RCC Foundation Pouring",
+          materialStatus: "Steel reinforcement & cement batch verified",
+          description: "RCC foundation plinth completed with structural test clearance.",
           submissionStatus: "Submitted",
           verificationStatus: "Verified",
-          verificationRemarks: "Verified by Block Development Officer."
+          verificationRemarks: "Verified on site by Executive Engineer PHED Rohtak."
         }
       },
       {
-        stageId: "stg-dw-02",
-        stageName: "Stage 2 — RCC Overhead Reservoir & Staging Construction",
-        targetProgressPercent: 50,
-        scheduledStartDate: "01 Sep 2026",
-        scheduledEndDate: "30 Sep 2026",
-        requiredEvidenceTypes: ["RCC Staging Photo", "Curing Log"],
+        stageId: "stg-02",
+        stageName: "Stage 2 — Main Superstructure, Brickwork & Roof Casting",
+        targetProgressPercent: 65,
+        scheduledStartDate: "16 May 2024",
+        scheduledEndDate: "30 Sep 2024",
+        requiredEvidenceTypes: ["Geo-tagged progress photographs", "Oxygen manifold pipeline test report"],
         status: "COMPLETED",
         submissionStatus: "Verified",
-        submittedDate: "28 Sep 2026"
-      },
-      {
-        stageId: "stg-dw-03",
-        stageName: "Stage 3 — Solar Array Mounting & RO Plant Installation",
-        targetProgressPercent: 80,
-        scheduledStartDate: "01 Oct 2026",
-        scheduledEndDate: "31 Oct 2026",
-        requiredEvidenceTypes: ["Panel Installation Photo", "Equipment Invoices"],
-        status: "IN_PROGRESS",
-        submissionStatus: "Pending",
-        submittedDate: null
-      },
-      {
-        stageId: "stg-dw-04",
-        stageName: "Stage 4 — Pipeline Network Distribution & Final Handover",
-        targetProgressPercent: 100,
-        scheduledStartDate: "01 Nov 2026",
-        scheduledEndDate: "15 Dec 2026",
-        requiredEvidenceTypes: ["Water Quality Certificate", "Handover Receipt"],
-        status: "UPCOMING",
-        submissionStatus: "Pending",
-        submittedDate: null
+        submittedDate: "25 Sep 2024",
+        submissionRecord: {
+          id: "sub-hr-02",
+          workId: "WORK-HR-RTK-001",
+          contractorName: "The Sahil Co-operative Labour and Construction Society Ltd",
+          checkpointActionId: "stg-02",
+          checkpointActionName: "Stage 2 — Main Superstructure, Brickwork & Roof Casting",
+          evidenceType: "Geo-tagged Work Progress Photo",
+          files: [
+            {
+              name: "CHC_Superstructure_RoofCast.jpg",
+              url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=400&q=80",
+              size: "3.1 MB",
+              type: "Geo-tagged Photo",
+              lat: 28.8960,
+              lng: 76.6072,
+              timestamp: "25 Sep 2024 02:45 PM"
+            }
+          ],
+          uploadTimestamp: "25 Sep 2024 02:50 PM",
+          latitude: 28.8960,
+          longitude: 76.6072,
+          locationText: "Kalanaur Block, Rohtak (28.8960° N, 76.6072° E)",
+          physicalProgressPercent: 65,
+          expenditureAmountRs: 5750000,
+          workStage: "Stage 2 — Main Superstructure, Brickwork & Roof Casting",
+          materialStatus: "Oxygen plant compressor and cylinder bank installed",
+          description: "Superstructure complete. Oxygen pipeline manifold pressure tested.",
+          submissionStatus: "Submitted",
+          verificationStatus: "Verified",
+          verificationRemarks: "Pressure test passed. Tranche 2 release cleared."
+        }
       }
     ],
     
     submissionRecords: [
       {
-        id: "sub-dw-01",
-        workId: "WORK-MH-2024-002",
-        contractorName: "M/s Infra Buildcon India Ltd.",
-        checkpointActionId: "stg-dw-01",
-        checkpointActionName: "Stage 1 — Hydrogeological Survey & Borehole Drilling",
+        id: "sub-hr-01",
+        workId: "WORK-HR-RTK-001",
+        contractorName: "The Sahil Co-operative Labour and Construction Society Ltd",
+        checkpointActionId: "stg-01",
+        checkpointActionName: "Stage 1 — Site Preparation & RCC Foundation Pouring",
         evidenceType: "Geo-tagged Work Progress Photo",
         files: [
           {
-            name: "Borehole_Drilling_GeoTag.jpg",
+            name: "CHC_Kalanaur_Foundation_GeoTag.jpg",
             url: "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=400&q=80",
-            size: "1.8 MB",
+            size: "2.4 MB",
             type: "Geo-tagged Photo",
-            lat: 18.8251,
-            lng: 74.3725,
-            timestamp: "30 Aug 2026 02:30 PM"
+            lat: 28.8955,
+            lng: 76.6066,
+            timestamp: "12 May 2024 10:15 AM"
           }
         ],
-        uploadTimestamp: "30 Aug 2026 02:35 PM",
-        latitude: 18.8251,
-        longitude: 74.3725,
-        locationText: "Shirur Block, Pune (18.8251° N, 74.3725° E)",
+        uploadTimestamp: "12 May 2024 10:25 AM",
+        latitude: 28.8955,
+        longitude: 76.6066,
+        locationText: "Kalanaur Block, Rohtak (28.8955° N, 76.6066° E)",
         physicalProgressPercent: 25,
-        expenditureAmountRs: 600000,
-        workStage: "Stage 1 — Hydrogeological Survey & Borehole Drilling",
-        materialStatus: "Casing pipes & pump set delivered",
-        description: "200ft deep borehole successfully drilled with water discharge rate of 4,500 LPH.",
+        expenditureAmountRs: 3750000,
+        workStage: "Stage 1 — Site Preparation & RCC Foundation Pouring",
+        materialStatus: "Steel reinforcement & cement batch verified",
+        description: "RCC foundation plinth completed with structural test clearance.",
         submissionStatus: "Submitted",
         verificationStatus: "Verified",
-        verificationRemarks: "Verified by Block Development Officer."
+        verificationRemarks: "Verified on site by Executive Engineer PHED Rohtak."
       }
     ]
+  },
+  {
+    id: "WORK-HR-RTK-002",
+    title: "Construction of Concrete Rural Access Road & Drainage Network, Sampla Block",
+    category: "Roads",
+    state: "Haryana",
+    district: "Rohtak",
+    constituency: "Rohtak (PC-07)",
+    mpName: "Shri Deepender Singh Hooda",
+    implementingAuthority: "Public Works Department (PWD B&R), Rohtak",
+    contractorName: "The Sahil Co-operative Labour and Construction Society Ltd",
+    vendorId: "2df07d35-4493-4bd4-b7e6-d6a55ea3d80d",
+    
+    sanctionAmountRs: 9000000,
+    recommendedAmountRs: 9000000,
+    utilizedAmountRs: 8800000,
+    remainingAmountRs: 200000,
+    physicalProgress: 100,
+    
+    officialStartDate: "10 Jan 2024",
+    officialExpectedCompletionDate: "30 Nov 2024",
+    
+    currentWorkStatus: "Completed",
+    monitoringStatus: "Completed",
+    nextRequiredSubmission: "Final Completion Certificate Handover",
+    nextSubmissionDueDate: "Completed",
+    riskIndicator: "Low Risk",
+    
+    checkpointActions: [],
+    schedule: [],
+    submissionRecords: []
   }
 ];
 
 export const INITIAL_NOTIFICATIONS: ContractorNotification[] = [
   {
     id: "notif-01",
-    workId: "WORK-MH-2024-001",
+    workId: "WORK-HR-RTK-001",
     title: "Stage 3 Evidence Action Due Soon",
-    message: "Stage 3 ('RCC Rigid Pavement Slab Pour') evidence submission is scheduled for 21 Oct 2026.",
-    date: "08 Sep 2026",
+    message: "Stage 3 ('Internal Plumbing & Electrical Fitting') evidence submission for Kalanaur CHC is scheduled for 20 Nov 2024.",
+    date: "10 Oct 2024",
     type: "info",
     read: false
+  },
+  {
+    id: "notif-02",
+    workId: "WORK-HR-RTK-002",
+    title: "Final Completion Milestone Approved",
+    message: "District Authority Rohtak has verified 100% completion of Sampla Rural Road.",
+    date: "05 Nov 2024",
+    type: "success",
+    read: true
   }
 ];

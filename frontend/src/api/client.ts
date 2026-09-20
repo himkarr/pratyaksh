@@ -15,7 +15,7 @@
  */
 
 import type { FlagItem } from "../components/FlagCard";
-import type { WorkItem } from "../data/mpladsData";
+import { INITIAL_WORKS, type WorkItem } from "../data/mpladsData";
 
 // Environment variable endpoints with standard local fallback ports
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -114,7 +114,6 @@ export const apiClient = {
       // Static fallback
     }
 
-    const { INITIAL_WORKS } = await import("../data/mpladsData");
     return INITIAL_WORKS;
   },
 
@@ -148,7 +147,6 @@ export const apiClient = {
       // Static fallback
     }
 
-    const { INITIAL_WORKS } = await import("../data/mpladsData");
     return INITIAL_WORKS;
   },
 

@@ -13,6 +13,7 @@ export interface MPRecommendation {
   sanctionedCost?: number; // in Cr
   location: string;
   district: string;
+  state?: string;
   constituency: string;
   constituency_code: string;
   mpName: string;
@@ -25,56 +26,94 @@ export interface MPRecommendation {
 }
 
 export const INITIAL_MP_RECOMMENDATIONS: MPRecommendation[] = [
-  // Pune (MH-PUNE-01) - Hon'ble Murlidhar Mohol
+  // Rohtak, Haryana (HR-ROH-01) - Hon'ble Shri Deepender Singh Hooda
   {
-    id: "REC-MH-PUNE-2024-001",
-    title: "Construction of Multi-Specialty Mobile Healthcare Van Facility",
-    category: "Health",
-    estimatedCost: 1.20,
-    sanctionedCost: 1.20,
-    location: "Kothrud & Karve Nagar Sub-districts",
-    district: "Pune",
-    constituency: "Pune",
-    constituency_code: "MH-PUNE-01",
-    mpName: "Murlidhar Mohol",
-    justification: "Fulfills urgent demand for mobile primary healthcare diagnostics in peri-urban areas.",
-    status: "SANCTIONED",
-    dateProposed: "2024-01-15",
-    dateSanctioned: "2024-02-10",
-    districtNotes: "Technical feasibility approved by District Health Officer. Sanction issued."
-  },
-  {
-    id: "REC-MH-PUNE-2024-002",
-    title: "Rooftop Solar PV Installation across 15 Zilla Parishad Schools",
-    category: "Renewable Energy",
-    estimatedCost: 0.85,
-    sanctionedCost: 0.85,
-    location: "Haveli & Pune Rural Blocks",
-    district: "Pune",
-    constituency: "Pune",
-    constituency_code: "MH-PUNE-01",
-    mpName: "Murlidhar Mohol",
-    justification: "Provides 24/7 uninterrupted green power for computer labs and digital smart classrooms.",
-    status: "SANCTIONED",
-    dateProposed: "2024-02-01",
-    dateSanctioned: "2024-02-28",
-    districtNotes: "Sanctioned under Green Energy Initiative. Vendor procurement underway."
-  },
-  {
-    id: "REC-MH-PUNE-2024-003",
-    title: "Augmentation of Overhead Water Tank Capacity & Feeder Pipeline",
+    id: "REC-HR-ROH-2024-001",
+    title: "Establishment of Advanced High-Volume Drinking Water RO Purification Plants",
     category: "Drinking Water",
-    estimatedCost: 1.50,
-    location: "Shivajinagar Ward 12",
-    district: "Pune",
-    constituency: "Pune",
-    constituency_code: "MH-PUNE-01",
-    mpName: "Murlidhar Mohol",
-    justification: "Recommended based on citizen grievance regarding drinking water shortage.",
+    estimatedCost: 0.75,
+    sanctionedCost: 0.75,
+    location: "Meham & Sampla Sub-divisions, Rohtak",
+    district: "Rohtak",
+    state: "Haryana",
+    constituency: "Rohtak",
+    constituency_code: "HR-ROH-01",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Fulfills vital need for safe drinking water with automated dispensing kiosks in rural blocks.",
+    status: "SANCTIONED",
+    dateProposed: "2024-02-15",
+    dateSanctioned: "2024-03-10",
+    districtNotes: "Technical feasibility approved by Public Health Engineering Department. Work commenced.",
+    citizenRequestId: "REC-CIT-HR-ROH-101"
+  },
+  {
+    id: "REC-HR-ROH-2024-002",
+    title: "Smart STEM Laboratories & Digital Interactive Panels in 12 Govt Model Senior Secondary Schools",
+    category: "Education",
+    estimatedCost: 0.60,
+    sanctionedCost: 0.60,
+    location: "Rohtak City & Kalanaur Block",
+    district: "Rohtak",
+    state: "Haryana",
+    constituency: "Rohtak",
+    constituency_code: "HR-ROH-01",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Equips government schools with modern digital learning equipment and robotics laboratories.",
+    status: "SANCTIONED",
+    dateProposed: "2024-03-01",
+    dateSanctioned: "2024-03-25",
+    districtNotes: "Sanctioned under Digital Education Initiative. Equipment delivery in progress."
+  },
+  {
+    id: "REC-HR-ROH-2024-003",
+    title: "Construction of Concrete Access Road & Covered Storm Drainage to Govt Girls School",
+    category: "Roads",
+    estimatedCost: 0.65,
+    sanctionedCost: 0.65,
+    location: "Govt Girls Sr Sec School Approach Road, Rohtak",
+    district: "Rohtak",
+    state: "Haryana",
+    constituency: "Rohtak",
+    constituency_code: "HR-ROH-01",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Adopting citizen demand from #REC-CIT-HR-ROH-102. Prevents monsoon waterlogging on school corridor.",
+    status: "SANCTIONED",
+    dateProposed: "2024-04-10",
+    dateSanctioned: "2024-05-02",
+    districtNotes: "Technical estimate verified by PWD (B&R) Rohtak. Work under execution.",
+    citizenRequestId: "REC-CIT-HR-ROH-102"
+  },
+  {
+    id: "REC-HR-ROH-2024-004",
+    title: "Installation of High-Mast Solar Lighting & CCTV Network at Grain Mandis and Bus Terminals",
+    category: "Renewable Energy",
+    estimatedCost: 0.45,
+    location: "New Grain Market, Rohtak & Meham Chowk",
+    district: "Rohtak",
+    state: "Haryana",
+    constituency: "Rohtak",
+    constituency_code: "HR-ROH-01",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Improves security and transit illumination for farmers and passengers arriving at night.",
     status: "UNDER_SCRUTINY",
-    dateProposed: "2024-05-12",
-    districtNotes: "Under technical scrutiny by Executive Engineer, Public Health Engineering Dept.",
-    citizenRequestId: "ISSUE-MH-2024-001"
+    dateProposed: "2024-05-18",
+    districtNotes: "Survey in progress by Haryana Renewable Energy Development Agency (HAREDA)."
+  },
+  {
+    id: "REC-HR-ROH-2024-005",
+    title: "Augmentation of Multi-Purpose Rural Sports Complex & Gymnasium Facility",
+    category: "Sports",
+    estimatedCost: 0.80,
+    location: "Bhalout & Bohar Villages, Rohtak",
+    district: "Rohtak",
+    state: "Haryana",
+    constituency: "Rohtak",
+    constituency_code: "HR-ROH-01",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Promotes athletic training and fitness infrastructure for youth wrestling and athletics.",
+    status: "PROPOSED",
+    dateProposed: "2024-06-05",
+    districtNotes: "Submitted to District Collector / Nodal Authority for technical scrutiny."
   }
 ];
 

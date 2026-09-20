@@ -64,12 +64,12 @@ export function ReviewRatingModal({ work, onClose, onAddReview }: ReviewRatingMo
         className="gov-modal-content"
         style={{ 
           maxWidth: '680px', 
-          maxHeight: 'min(90vh, 760px)',
+          maxHeight: 'min(90vh, 780px)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           padding: '0',
-          overscrollBehavior: 'contain'
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -109,9 +109,11 @@ export function ReviewRatingModal({ work, onClose, onAddReview }: ReviewRatingMo
             flexDirection: 'column', 
             gap: '14px',
             overflowY: 'auto',
+            overscrollBehavior: 'auto',
             flex: '1 1 auto',
             minHeight: 0,
-            overscrollBehavior: 'contain'
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y'
           }}
         >
           {/* Average Rating Banner */}

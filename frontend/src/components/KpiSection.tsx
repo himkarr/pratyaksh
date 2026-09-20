@@ -122,6 +122,12 @@ export function KpiSection({ stats, selectedStatusFilter, setSelectedStatusFilte
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           const isActive = selectedStatusFilter === kpi.filterKey && kpi.filterKey !== 'all';
+          const accentClass = 
+            kpi.id === 'allocated' ? 'metric-navy' :
+            kpi.id === 'recommended' ? 'metric-purple' :
+            kpi.id === 'sanctioned' ? 'metric-blue' :
+            kpi.id === 'completed' ? 'metric-green' :
+            kpi.id === 'ongoing' ? 'metric-amber' : 'metric-teal';
 
           return (
             <div
@@ -131,12 +137,11 @@ export function KpiSection({ stats, selectedStatusFilter, setSelectedStatusFilte
                   setSelectedStatusFilter(selectedStatusFilter === kpi.filterKey ? 'all' : kpi.filterKey);
                 }
               }}
-              className="gov-card"
+              className={`metric-card ${accentClass} cursor-pointer`}
               style={{
                 padding: '14px 16px',
                 cursor: kpi.filterKey !== 'all' ? 'pointer' : 'default',
-                borderLeft: `4px solid ${kpi.accent}`,
-                background: isActive ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                background: isActive ? 'var(--bg-hover)' : '#ffffff',
                 outline: isActive ? `2px solid ${kpi.accent}` : 'none'
               }}
             >
