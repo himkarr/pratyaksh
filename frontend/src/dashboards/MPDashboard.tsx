@@ -79,7 +79,7 @@ export const MPDashboard: React.FC = () => {
   // Live Supabase Data State
   const [liveMps, setLiveMps] = useState<MPSummary[]>([]);
   const [liveProjects, setLiveProjects] = useState<any[]>([]);
-  const [selectedMPId, setSelectedMPId] = useState<string>("Pune");
+  const [selectedMPId, setSelectedMPId] = useState<string>("Rohtak");
 
   useEffect(() => {
     async function loadLiveData() {
@@ -92,7 +92,6 @@ export const MPDashboard: React.FC = () => {
         ]);
         if (mpsList && mpsList.length > 0) {
           setLiveMps(mpsList);
-          setSelectedMPId(mpsList[0].mpId);
         }
         if (projs && projs.length > 0) {
           setLiveProjects(projs);
@@ -110,25 +109,26 @@ export const MPDashboard: React.FC = () => {
     loadLiveData();
   }, []);
 
-  // Active MP identity
-  const userConstituency = user.constituency || "Rohtak";
-  const matchedLiveMP = liveMps.find(
-    (m) => m.constituency.toLowerCase() === userConstituency.toLowerCase()
-  ) || liveMps.find(
-    (m) => m.mpId.toLowerCase() === userConstituency.toLowerCase() || m.name.toLowerCase().includes(userConstituency.toLowerCase())
-  );
-  const mpName = user.name || "Member of Parliament";
-  const constituency = user.constituency || matchedLiveMP?.constituency || "Rohtak";
-  const mpState = user.state || matchedLiveMP?.state || "Haryana";
-  const mpHouse = matchedLiveMP?.house || "Lok Sabha";
-  const constituencyCode = user.constituency_code || (matchedLiveMP
-    ? `${mpState.slice(0, 2).toUpperCase()}-${constituency.slice(0, 4).toUpperCase()}-01`
-    : "HR-ROH-01");
-  const district = user.district || constituency;
+  // Allowed MP options for the dropdown (Rohtak & Gurugram only)
+  const HARYANA_MPS = [
+    { mpId: "Rohtak", name: "Shri Deepender Singh Hooda", constituency: "Rohtak", state: "Haryana", house: "Lok Sabha", party: "INC", constituencyCode: "HR-RTK-07" },
+    { mpId: "Gurugram", name: "Shri Rao Inderjit Singh", constituency: "Gurugram", state: "Haryana", house: "Lok Sabha", party: "BJP", constituencyCode: "HR-GUG-01" }
+  ];
+
+  const activeMP = HARYANA_MPS.find(
+    (m) => m.mpId === selectedMPId || m.constituency.toLowerCase() === selectedMPId.toLowerCase()
+  ) || HARYANA_MPS[0];
+
+  const mpName = activeMP.name;
+  const constituency = activeMP.constituency;
+  const mpState = activeMP.state;
+  const mpHouse = activeMP.house;
+  const constituencyCode = activeMP.constituencyCode;
+  const district = constituency;
 
   // Filtered Constituency Projects (Scoped to MP from Supabase live projects)
   const constituencyWorks: WorkItem[] = useMemo(() => {
-    if (liveProjects.length > 0 && matchedLiveMP) {
+    if (liveProjects.length > 0 && activeMP) {
       const filtered = liveProjects.filter((p) => {
         const pState = (p.state || "").toLowerCase();
         const pDist = (p.district || "").toLowerCase();
@@ -176,16 +176,26 @@ export const MPDashboard: React.FC = () => {
       if (district && w.district && w.district.toLowerCase() === district.toLowerCase()) return true;
       return false;
     });
-  }, [liveProjects, matchedLiveMP, constituencyCode, constituency, district, mpHouse, mpName, mpState]);
+  }, [liveProjects, activeMP, constituencyCode, constituency, district, mpHouse, mpName, mpState]);
 
   const displayedRecommendations = useMemo(() => {
     return recommendations.filter((rec) => {
-      return !constituency || rec.constituency_code === constituencyCode ||
-        (rec.constituency && rec.constituency.toLowerCase() === constituency.toLowerCase()) ||
-        (rec.district && rec.district.toLowerCase() === district.toLowerCase()) ||
-        recommendations.length <= 10;
+      const cLower = constituency.toLowerCase();
+      const recCLower = (rec.constituency || "").toLowerCase();
+      const recDLower = (rec.district || "").toLowerCase();
+      const recMpLower = (rec.mpName || "").toLowerCase();
+      const recIdLower = (rec.id || "").toLowerCase();
+
+      if (cLower.includes("rohtak")) {
+        return recCLower.includes("rohtak") || recDLower.includes("rohtak") || recDLower.includes("jhajjar") || recIdLower.includes("deepender");
+      }
+      if (cLower.includes("gurugram")) {
+        return recCLower.includes("gurugram") || recDLower.includes("gurugram") || recIdLower.includes("inderjit") || recMpLower.includes("inderjit");
+      }
+
+      return rec.constituency_code === constituencyCode || recCLower.includes(cLower) || recDLower.includes(cLower);
     });
-  }, [recommendations, constituencyCode, constituency, district]);
+  }, [recommendations, constituency, constituencyCode]);
 
   // Filter citizen issues for the selected constituency from live Supabase list
   const filteredCitizenIssues = useMemo(() => {
@@ -579,24 +589,16 @@ export const MPDashboard: React.FC = () => {
                 fontSize: "0.82rem", 
                 fontWeight: 600,
                 cursor: "pointer",
-                maxWidth: "260px"
+                maxWidth: "340px"
               }} 
               value={selectedMPId} 
               onChange={(e) => setSelectedMPId(e.target.value)}
             >
-              {liveMps.length > 0 ? (
-                liveMps.slice(0, 40).map((m) => (
-                  <option key={m.mpId} value={m.mpId}>
-                    {m.name} ({m.constituency}, {m.state})
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="Pune">Murlidhar Mohol (Pune)</option>
-                  <option value="Varanasi">Narendra Modi (Varanasi)</option>
-                  <option value="New Delhi">Bansuri Swaraj (New Delhi)</option>
-                </>
-              )}
+              {HARYANA_MPS.map((m) => (
+                <option key={m.mpId} value={m.mpId}>
+                  {m.name} ({m.constituency}, {m.state})
+                </option>
+              ))}
             </select>
             <Button 
               variant="primary" 
@@ -735,81 +737,97 @@ export const MPDashboard: React.FC = () => {
             <div className="gov-card" style={{ overflowX: "auto" }}>
               <table className="gov-table" style={{ width: "100%", fontSize: "0.82rem", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
-                    <th style={{ padding: "10px 12px" }}>Recommendation ID</th>
-                    <th style={{ padding: "10px 12px" }}>Work Title & Description</th>
-                    <th style={{ padding: "10px 12px" }}>Category</th>
-                    <th style={{ padding: "10px 12px" }}>Estimated Outlay</th>
-                    <th style={{ padding: "10px 12px" }}>Location</th>
-                    <th style={{ padding: "10px 12px" }}>Date Proposed</th>
-                    <th style={{ padding: "10px 12px" }}>Status</th>
-                    <th style={{ padding: "10px 12px" }}>District Status & Notes</th>
-                    <th style={{ padding: "10px 12px", textAlign: "center" }}>Actions</th>
+                  <tr style={{ background: "#ffffff", textAlign: "left", borderBottom: "1px solid #e2e8f0" }}>
+                    <th style={{ padding: "14px 16px", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px", color: "#64748b", fontWeight: 700 }}>DESCRIPTION</th>
+                    <th style={{ padding: "14px 16px", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px", color: "#64748b", fontWeight: 700 }}>CATEGORY</th>
+                    <th style={{ padding: "14px 16px", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px", color: "#64748b", fontWeight: 700 }}>STATUS</th>
+                    <th style={{ padding: "14px 16px", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px", color: "#64748b", fontWeight: 700 }}>RECOMMENDED</th>
+                    <th style={{ padding: "14px 16px", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px", color: "#64748b", fontWeight: 700 }}>DATES</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRecommendations.length === 0 ? (
                     <tr>
-                      <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "var(--text-muted)" }}>
+                      <td colSpan={5} style={{ textAlign: "center", padding: "24px", color: "var(--text-muted)" }}>
                         No work recommendations found matching your criteria.
                       </td>
                     </tr>
                   ) : (
-                    filteredRecommendations.map((rec) => (
-                      <tr 
-                        key={rec.id} 
-                        onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))}
-                        style={{ borderBottom: "1px solid var(--border-light)", cursor: "pointer" }}
-                        title="Click to inspect all project details and dossier"
-                      >
-                        <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)" }}>
-                          {rec.id}
-                        </td>
-                        <td style={{ padding: "10px 12px", maxWidth: "280px" }}>
-                          <div style={{ fontWeight: 700, color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>{rec.title}</span>
-                            <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
-                          </div>
-                          <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>{rec.justification}</div>
-                          {rec.citizenRequestId && (
-                            <span className="gov-badge gov-badge-info" style={{ fontSize: "0.64rem", marginTop: "4px", display: "inline-block" }}>
-                              Citizen Request #{rec.citizenRequestId}
+                    filteredRecommendations.map((rec) => {
+                      const formattedDate = rec.dateProposed.startsWith("Rec:") ? rec.dateProposed : `Rec: ${rec.dateProposed}`;
+                      const authorityText = rec.justification.startsWith("Authority:") 
+                        ? rec.justification 
+                        : `Authority: ${rec.districtNotes || rec.justification}`;
+
+                      return (
+                        <tr 
+                          key={rec.id} 
+                          onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))}
+                          style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", transition: "background 0.15s ease" }}
+                          title="Click to inspect all project details and dossier"
+                        >
+                          <td style={{ padding: "16px", maxWidth: "460px" }}>
+                            {/* ID Pill Badge */}
+                            <div style={{
+                              display: "inline-block",
+                              fontSize: "0.72rem",
+                              fontFamily: "monospace",
+                              color: "#475569",
+                              background: "#f1f5f9",
+                              padding: "3px 8px",
+                              borderRadius: "4px",
+                              marginBottom: "6px",
+                              wordBreak: "break-all"
+                            }}>
+                              ID: {rec.id}
+                            </div>
+
+                            {/* Work Title */}
+                            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#0f172a", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span>{rec.title}</span>
+                              <Eye size={13} color="var(--gov-primary)" style={{ opacity: 0.6 }} />
+                            </div>
+
+                            {/* Authority Subtitle */}
+                            <div style={{ fontSize: "0.76rem", fontStyle: "italic", color: "#64748b" }}>
+                              {authorityText}
+                            </div>
+                          </td>
+
+                          {/* Category */}
+                          <td style={{ padding: "16px", fontSize: "0.85rem", color: "#334155", verticalAlign: "middle" }}>
+                            {rec.category || "Normal/Others"}
+                          </td>
+
+                          {/* Status Badge */}
+                          <td style={{ padding: "16px", verticalAlign: "middle" }}>
+                            <span style={{
+                              display: "inline-block",
+                              fontSize: "0.74rem",
+                              fontWeight: 800,
+                              letterSpacing: "0.5px",
+                              padding: "5px 12px",
+                              borderRadius: "4px",
+                              background: "#fffbeb",
+                              color: "#78350f",
+                              border: "1px solid #fef3c7"
+                            }}>
+                              {rec.status === "SANCTIONED" ? "SANCTIONED" : rec.status === "REJECTED" ? "REJECTED" : "RECOMMENDED"}
                             </span>
-                          )}
-                        </td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <span className="gov-badge gov-badge-neutral">{rec.category}</span>
-                        </td>
-                        <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--gov-primary)" }}>
-                          ₹{rec.estimatedCost.toFixed(2)} Cr
-                        </td>
-                        <td style={{ padding: "10px 12px", fontSize: "0.78rem" }}>
-                          {rec.location}
-                        </td>
-                        <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
-                          {rec.dateProposed}
-                        </td>
-                        <td style={{ padding: "10px 12px" }}>
-                          {rec.status === "SANCTIONED" && <span className="gov-badge gov-badge-success">SANCTIONED</span>}
-                          {rec.status === "UNDER_SCRUTINY" && <span className="gov-badge gov-badge-warning">UNDER SCRUTINY</span>}
-                          {rec.status === "PROPOSED" && <span className="gov-badge gov-badge-info">PROPOSED</span>}
-                          {rec.status === "REJECTED" && <span className="gov-badge gov-badge-danger">REJECTED</span>}
-                        </td>
-                        <td style={{ padding: "10px 12px", fontSize: "0.76rem", color: "var(--text-body)", maxWidth: "220px" }}>
-                          {rec.districtNotes || "Under review by District Administration"}
-                        </td>
-                        <td style={{ padding: "10px 12px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-                          <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            onClick={() => setSelectedWorkForDetail(recommendationToWorkItem(rec))} 
-                            icon={<Eye size={12} />}
-                          >
-                            Inspect
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+
+                          {/* Recommended Amount */}
+                          <td style={{ padding: "16px", fontWeight: 700, fontSize: "0.90rem", color: "#0f172a", verticalAlign: "middle" }}>
+                            ₹{rec.estimatedCost.toFixed(2)} Cr
+                          </td>
+
+                          {/* Dates */}
+                          <td style={{ padding: "16px", fontSize: "0.82rem", color: "#475569", whiteSpace: "nowrap", verticalAlign: "middle" }}>
+                            {formattedDate}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
