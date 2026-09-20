@@ -25,6 +25,143 @@ export interface MPRecommendation {
 }
 
 export const INITIAL_MP_RECOMMENDATIONS: MPRecommendation[] = [
+  // Rohtak (HR-RTK-07) - Hon'ble Shri Deepender Singh Hooda
+  {
+    id: "#na-deepender-singh-hooda-rohtak-const-of-hall-in-baratgarh-09-sep-2026-800000",
+    title: "Const. of Hall in Baratgarh",
+    category: "Normal/Others",
+    estimatedCost: 0.08,
+    location: "Jhajjar Block",
+    district: "Jhajjar",
+    constituency: "Rohtak",
+    constituency_code: "HR-RTK-07",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Authority: JHAJJAR(DEPUTY COMMISSIONER cum NODAL OFFICER MPLADS JHAJJAR)",
+    status: "PROPOSED",
+    dateProposed: "09 Sept 2026",
+    districtNotes: "JHAJJAR(DEPUTY COMMISSIONER cum NODAL OFFICER MPLADS JHAJJAR)"
+  },
+  {
+    id: "#na-deepender-singh-hooda-rohtak-development-works-in-brahaman-choupal-9812185674-09-sep-2026-1100000",
+    title: "Development works in Brahaman Choupal 9812185674",
+    category: "Normal/Others",
+    estimatedCost: 0.11,
+    location: "Rohtak Block",
+    district: "Rohtak",
+    constituency: "Rohtak",
+    constituency_code: "HR-RTK-07",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Authority: ROHTAK(DEPUTY COMMISSIONER ROHTAK_IDA)",
+    status: "PROPOSED",
+    dateProposed: "09 Sept 2026",
+    districtNotes: "ROHTAK(DEPUTY COMMISSIONER ROHTAK_IDA)"
+  },
+  {
+    id: "#na-deepender-singh-hooda-rohtak-const-of-hall-in-panchayat-land-8708474162-09-sep-2026-1100000",
+    title: "Const. of Hall in Panchayat Land 8708474162",
+    category: "Normal/Others",
+    estimatedCost: 0.11,
+    location: "Rohtak Block",
+    district: "Rohtak",
+    constituency: "Rohtak",
+    constituency_code: "HR-RTK-07",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Authority: ROHTAK(DEPUTY COMMISSIONER ROHTAK_IDA)",
+    status: "PROPOSED",
+    dateProposed: "09 Sept 2026",
+    districtNotes: "ROHTAK(DEPUTY COMMISSIONER ROHTAK_IDA)"
+  },
+  {
+    id: "#na-deepender-singh-hooda-rohtak-const-of-hall-in-panchayat-land-09-sep-2026-700000",
+    title: "Const. of Hall in Panchayat Land",
+    category: "Normal/Others",
+    estimatedCost: 0.07,
+    location: "Rohtak Block",
+    district: "Rohtak",
+    constituency: "Rohtak",
+    constituency_code: "HR-RTK-07",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Authority: ROHTAK(DEPUTY COMMISSIONER ROHTAK_IDA)",
+    status: "PROPOSED",
+    dateProposed: "09 Sept 2026",
+    districtNotes: "ROHTAK(DEPUTY COMMISSIONER ROHTAK_IDA)"
+  },
+  {
+    id: "#na-deepender-singh-hooda-rohtak-development-works-in-saheed-park-09-sep-2026-1000000",
+    title: "Development works in Saheed Park",
+    category: "Normal/Others",
+    estimatedCost: 0.10,
+    location: "Jhajjar Block",
+    district: "Jhajjar",
+    constituency: "Rohtak",
+    constituency_code: "HR-RTK-07",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Authority: JHAJJAR(DEPUTY COMMISSIONER cum NODAL OFFICER MPLADS JHAJJAR)",
+    status: "PROPOSED",
+    dateProposed: "09 Sept 2026",
+    districtNotes: "JHAJJAR(DEPUTY COMMISSIONER cum NODAL OFFICER MPLADS JHAJJAR)"
+  },
+  {
+    id: "#na-deepender-singh-hooda-rohtak-comp-of-kabaddi-hall-near-shiv-mandir-03-sep-2026-500000",
+    title: "Comp. of Kabaddi Hall near Shiv Mandir",
+    category: "Normal/Others",
+    estimatedCost: 0.05,
+    location: "Jhajjar Block",
+    district: "Jhajjar",
+    constituency: "Rohtak",
+    constituency_code: "HR-RTK-07",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Authority: JHAJJAR(DEPUTY COMMISSIONER cum NODAL OFFICER MPLADS JHAJJAR)",
+    status: "PROPOSED",
+    dateProposed: "03 Sept 2026",
+    districtNotes: "JHAJJAR(DEPUTY COMMISSIONER cum NODAL OFFICER MPLADS JHAJJAR)"
+  },
+  {
+    id: "#na-deepender-singh-hooda-rohtak-const-of-r-wall-of-dimpti-pond-03-sep-2026-500000",
+    title: "Const. of R/wall of Dimpti Pond",
+    category: "Normal/Others",
+    estimatedCost: 0.05,
+    location: "Rohtak Block",
+    district: "Rohtak",
+    constituency: "Rohtak",
+    constituency_code: "HR-RTK-07",
+    mpName: "Shri Deepender Singh Hooda",
+    justification: "Authority: ROHTAK(DEPUTY COMMISSIONER ROHTAK_IDA)",
+    status: "PROPOSED",
+    dateProposed: "03 Sept 2026",
+    districtNotes: "ROHTAK(DEPUTY COMMISSIONER ROHTAK_IDA)"
+  },
+  // Gurugram (HR-GUG-01) - Hon'ble Shri Rao Inderjit Singh
+  {
+    id: "#na-rao-inderjit-singh-gurugram-const-of-community-center-sec-14-15-sep-2026-1200000",
+    title: "Construction of Modern Community Center, Sector 14",
+    category: "Community Assets",
+    estimatedCost: 0.12,
+    location: "Gurugram Sadar Block",
+    district: "Gurugram",
+    constituency: "Gurugram",
+    constituency_code: "HR-GUG-01",
+    mpName: "Shri Rao Inderjit Singh",
+    justification: "Authority: GURUGRAM(DEPUTY COMMISSIONER GURUGRAM_IDA)",
+    status: "PROPOSED",
+    dateProposed: "15 Sept 2026",
+    districtNotes: "GURUGRAM(DEPUTY COMMISSIONER GURUGRAM_IDA)"
+  },
+  {
+    id: "#na-rao-inderjit-singh-gurugram-solar-street-lighting-sohna-08-sep-2026-900000",
+    title: "Installation of High-Mast Solar Street Lighting across 20 Rural Villages",
+    category: "Renewable Energy",
+    estimatedCost: 0.09,
+    location: "Sohna Block",
+    district: "Gurugram",
+    constituency: "Gurugram",
+    constituency_code: "HR-GUG-01",
+    mpName: "Shri Rao Inderjit Singh",
+    justification: "Authority: GURUGRAM(DEPUTY COMMISSIONER GURUGRAM_IDA)",
+    status: "PROPOSED",
+    dateProposed: "08 Sept 2026",
+    districtNotes: "GURUGRAM(DEPUTY COMMISSIONER GURUGRAM_IDA)"
+  },
   // Pune (MH-PUNE-01) - Hon'ble Murlidhar Mohol
   {
     id: "REC-MH-PUNE-2024-001",
@@ -42,39 +179,6 @@ export const INITIAL_MP_RECOMMENDATIONS: MPRecommendation[] = [
     dateProposed: "2024-01-15",
     dateSanctioned: "2024-02-10",
     districtNotes: "Technical feasibility approved by District Health Officer. Sanction issued."
-  },
-  {
-    id: "REC-MH-PUNE-2024-002",
-    title: "Rooftop Solar PV Installation across 15 Zilla Parishad Schools",
-    category: "Renewable Energy",
-    estimatedCost: 0.85,
-    sanctionedCost: 0.85,
-    location: "Haveli & Pune Rural Blocks",
-    district: "Pune",
-    constituency: "Pune",
-    constituency_code: "MH-PUNE-01",
-    mpName: "Murlidhar Mohol",
-    justification: "Provides 24/7 uninterrupted green power for computer labs and digital smart classrooms.",
-    status: "SANCTIONED",
-    dateProposed: "2024-02-01",
-    dateSanctioned: "2024-02-28",
-    districtNotes: "Sanctioned under Green Energy Initiative. Vendor procurement underway."
-  },
-  {
-    id: "REC-MH-PUNE-2024-003",
-    title: "Augmentation of Overhead Water Tank Capacity & Feeder Pipeline",
-    category: "Drinking Water",
-    estimatedCost: 1.50,
-    location: "Shivajinagar Ward 12",
-    district: "Pune",
-    constituency: "Pune",
-    constituency_code: "MH-PUNE-01",
-    mpName: "Murlidhar Mohol",
-    justification: "Recommended based on citizen grievance regarding drinking water shortage.",
-    status: "UNDER_SCRUTINY",
-    dateProposed: "2024-05-12",
-    districtNotes: "Under technical scrutiny by Executive Engineer, Public Health Engineering Dept.",
-    citizenRequestId: "ISSUE-MH-2024-001"
   }
 ];
 
@@ -85,8 +189,15 @@ export const getMPRecommendations = (): MPRecommendation[] => {
     const raw = localStorage.getItem(MP_RECOMMENDATIONS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      if (Array.isArray(parsed)) {
+        const map = new Map<string, MPRecommendation>();
+        INITIAL_MP_RECOMMENDATIONS.forEach((item) => map.set(item.id, item));
+        parsed.forEach((item: MPRecommendation) => {
+          if (item && item.id) map.set(item.id, item);
+        });
+        const combined = Array.from(map.values());
+        localStorage.setItem(MP_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(combined));
+        return combined;
       }
     }
   } catch (err) {
@@ -98,13 +209,16 @@ export const getMPRecommendations = (): MPRecommendation[] => {
 export const syncMPRecommendationsFromSupabase = async (params?: { mpId?: string; district?: string }): Promise<MPRecommendation[]> => {
   try {
     const live = await fetchRecommendationsFromSupabase(params);
+    const existing = getMPRecommendations();
     if (live && live.length > 0) {
-      const existing = getMPRecommendations();
-      // Merge unique by id
-      const combined = [...live, ...existing.filter(e => !live.some(l => l.id === e.id))];
+      const combinedMap = new Map<string, MPRecommendation>();
+      existing.forEach(item => combinedMap.set(item.id, item));
+      live.forEach(item => combinedMap.set(item.id, item));
+      const combined = Array.from(combinedMap.values());
       localStorage.setItem(MP_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(combined));
       return combined;
     }
+    return existing;
   } catch (err) {
     console.warn("Failed to sync recommendations from Supabase:", err);
   }
