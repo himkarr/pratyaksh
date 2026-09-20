@@ -184,7 +184,7 @@ export const CitizenNavbar: React.FC<CitizenNavbarProps> = ({
               {lang === "hi" ? "सांख्यिकी और कार्यक्रम कार्यान्वयन मंत्रालय" : "Ministry of Statistics and Programme Implementation"}
             </div>
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--gov-accent)", lineHeight: 1.2 }}>
-              {lang === "hi" ? "एमपीलैड्स नागरिक पोर्टल (e-SAKSHI)" : "MPLADS Citizen Portal (e-SAKSHI)"}
+              {lang === "hi" ? "एमपीलैड्स नागरिक पोर्टल (Pratyaksh)" : "MPLADS Citizen Portal (Pratyaksh)"}
             </div>
           </div>
         </div>

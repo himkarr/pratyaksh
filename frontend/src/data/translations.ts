@@ -85,7 +85,7 @@ export const TRANSLATIONS: Record<'en' | 'hi', TranslationDict> = {
     syntheticNotice: "Decision-Support Mode: Connected to MoSPI Official MPLADS Information System. All anomaly flags represent explainable AI decision support signals."
   },
   hi: {
-    portalTitle: "एमपीलैड्स ई-साक्षी (MPLADS e-SAKSHI)",
+    portalTitle: "एमपीलैड्स प्रत्यक्ष (MPLADS Pratyaksh)",
     portalSubtitle: "सांख्यिकी और कार्यक्रम कार्यान्वयन मंत्रालय | भारत सरकार",
     dashboard: "डैशबोर्ड",
     analytics: "विश्लेषण एवं प्रवृत्तियाँ",
