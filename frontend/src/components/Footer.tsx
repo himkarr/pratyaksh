@@ -81,7 +81,7 @@ export function Footer({ t: _t, onOpenPolicy }: FooterProps) {
                   border: 'none',
                 }}
               >
-                • How MPLADS Works (Pratyaksh Guidelines & Norms)
+                • How MPLADS Works (e-SAKSHI Guidelines & Norms)
               </button>
             </li>
             <li>
@@ -147,7 +147,7 @@ export function Footer({ t: _t, onOpenPolicy }: FooterProps) {
               <Server size={11} /> PFMS SNA Gateway: Connected
             </span>
             <span>•</span>
-            <span>v2.4.1-Pratyaksh (Build 2026.09)</span>
+            <span>v2.4.1-eSakshi (Build 2026.09)</span>
           </div>
         </div>
       </div>

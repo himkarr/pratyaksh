@@ -1,5 +1,5 @@
 import React from "react";
-import { Building2, Bell } from "lucide-react";
+import { Building2, Bell, Database } from "lucide-react";
 import { ContractorProfile, ContractorNotification } from "../../data/contractorData";
 
 interface ContractorHeaderBannerProps {
@@ -78,6 +78,23 @@ export const ContractorHeaderBanner: React.FC<ContractorHeaderBannerProps> = ({
               }}
             >
               {assignedProjectCount} ASSIGNED WORKS
+            </span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                background: "#f0fdf4",
+                color: "#166534",
+                border: "1px solid #bbf7d0",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: "4px"
+              }}
+            >
+              <Database size={11} />
+              SUPABASE LIVE CONNECTED
             </span>
           </div>
 

@@ -60,6 +60,7 @@ export const CitizenWorkDetailModal: React.FC<CitizenWorkDetailModalProps> = ({
           overflow: "hidden",
           border: "1px solid var(--border-main)",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+          overscrollBehavior: "contain",
           boxSizing: "border-box"
         }}
         onClick={(e) => e.stopPropagation()}

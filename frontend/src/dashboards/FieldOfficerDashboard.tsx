@@ -31,7 +31,7 @@ import { LoginModal } from "../components/LoginModal";
 import { Button, Alert } from "../components/ui";
 import { SubmitVerificationModal, VerificationReportSubmission } from "../components/field/SubmitVerificationModal";
 
-import { INITIAL_WORKS, WorkItem, WorkReview, ALL_WORKS } from "../data/mpladsData";
+import { INITIAL_WORKS, WorkItem, WorkReview } from "../data/mpladsData";
 import { usePreferences } from "../context/PreferencesContext";
 import { useRole, Role } from "../auth/roleContext";
 import { adminDataService } from "../api/adminDataService";
@@ -44,7 +44,7 @@ import {
 
 export const FieldOfficerDashboard: React.FC = () => {
   const { user } = useRole();
-  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t, tr } = usePreferences();
+  const { fontScale, setFontScale, theme, setTheme, lang, setLang, t } = usePreferences();
 
   // Tab View
   const [activeTab, setActiveTab] = useState<"pending_queue" | "my_verifications" | "flagged_projects">("pending_queue");
@@ -56,15 +56,12 @@ export const FieldOfficerDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Projects State
-  const [projects, setProjects] = useState<WorkItem[]>(() => {
-    const haryana = ALL_WORKS.filter(w => (w.state || "").toLowerCase() === "haryana");
-    return haryana.length > 0 ? haryana : INITIAL_WORKS;
-  });
+  const [projects, setProjects] = useState<WorkItem[]>(INITIAL_WORKS);
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   
   // Field Officer Info
-  const officerName = user.name || "Senior Field Inspection Officer (Rohtak Division)";
-  const district = user.district || "Rohtak";
+  const officerName = user.name || "Senior Field Inspection Officer";
+  const district = user.district || "Pune";
 
   // Hydrate projects from live Supabase
   useEffect(() => {
@@ -76,10 +73,10 @@ export const FieldOfficerDashboard: React.FC = () => {
             id: p.project_id || p.id || `INSP-${idx}`,
             title: p.project_name || p.title || "Public Infrastructure Inspection Task",
             house: "Lok Sabha",
-            state: p.state || "Haryana",
+            state: p.state || "Maharashtra",
             district: p.district || district,
             constituency: p.district || district,
-            constituency_code: "HR-ROH-01",
+            constituency_code: "DIST-01",
             mpName: "District Parliamentary Representative",
             category: p.category || "Community Work",
             sectorName: p.category || "Infrastructure",
@@ -114,19 +111,19 @@ export const FieldOfficerDashboard: React.FC = () => {
   // Verification Records List
   const [verificationRecords, setVerificationRecords] = useState<VerificationReportSubmission[]>([
     {
-      workId: "WORK-HR-RTK-001",
+      workId: "WORK-MH-2024-001",
       verificationStatus: "VERIFIED",
       verificationOutcome: "Work Physically Verified on Site",
-      verifiedBy: "Shri Rajesh Tanwar (Senior Field Inspection Officer)",
+      verifiedBy: "Suresh Patil (Senior Field Inspection Officer)",
       verificationDate: "2024-05-15",
-      verificationNotes: "Physical foundation plinth and structural columns verified on site at Kalanaur CHC. 70% physical progress confirmed with correct structural steel grade specifications.",
-      verifiedPhysicalProgress: 70,
+      verificationNotes: "Physical pipeline laying verified near Ward 12 depot. 40% physical progress confirmed with correct pipe diameter specifications.",
+      verifiedPhysicalProgress: 40,
       evidenceAvailable: true,
       fieldPhotos: [
         {
           url: "https://images.unsplash.com/photo-1541888946425-d0fbb18f15f6?w=800&auto=format&fit=crop&q=60",
-          lat: 28.8955,
-          lng: 76.6066,
+          lat: 18.5314,
+          lng: 73.8446,
           timestamp: "2024-05-15 10:30 AM"
         }
       ]
@@ -272,7 +269,7 @@ export const FieldOfficerDashboard: React.FC = () => {
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <ShieldCheck size={16} />
-                <span>{tr("Pending Inspection Queue") || "Assigned Queue"}</span>
+                <span>Assigned Queue</span>
                 <span className="civic-tab-badge">{filteredQueue.length}</span>
               </button>
 
@@ -283,7 +280,7 @@ export const FieldOfficerDashboard: React.FC = () => {
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <CheckCircle2 size={16} />
-                <span>{tr("My Verifications") || "Completed Reports"}</span>
+                <span>Completed Reports</span>
                 <span className="civic-tab-badge">{verificationRecords.length}</span>
               </button>
 
@@ -294,7 +291,7 @@ export const FieldOfficerDashboard: React.FC = () => {
                 style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.85rem", fontWeight: 700, borderRadius: "8px" }}
               >
                 <ShieldAlert size={16} />
-                <span>{tr("Flagged Anomalies") || "Flagged Dossiers"}</span>
+                <span>Flagged Dossiers</span>
                 <span className="civic-tab-badge">{verificationRecords.filter(r => r.verificationStatus === "FLAGGED").length}</span>
               </button>
             </div>
@@ -324,7 +321,7 @@ export const FieldOfficerDashboard: React.FC = () => {
                     boxShadow: "0 0 6px #10b981",
                   }}
                 />
-                <span>{filteredQueue.length} {tr("Active Field Tasks") || "Active Field Tasks"}</span>
+                <span>{filteredQueue.length} Active Field Tasks</span>
               </div>
             </div>
           </div>
@@ -334,14 +331,20 @@ export const FieldOfficerDashboard: React.FC = () => {
           <div className="dashboard-title-section">
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", background: "#e0f2fe", color: "#0369a1", textTransform: "uppercase" }}>
-                {tr("Field Inspection Officer")} · {district} {tr("District")}
+                Field Engineer Inspection Desk · {district} District
               </span>
+              {isLiveConnected && (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "20px", padding: "2px 8px", fontSize: "0.70rem", color: "#065f46", fontWeight: 600 }}>
+                  <Database size={11} />
+                  <span>Live Supabase Connected</span>
+                </div>
+              )}
             </div>
             <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--gov-primary, #0a2540)", margin: "0 0 6px 0", fontFamily: "Outfit, sans-serif" }}>
-              {officerName} — {tr("Field Officer Workspace") || "Field Inspection Workspace"}
+              {officerName} — Field Inspection Workspace
             </h1>
             <p style={{ fontSize: "0.92rem", color: "#64748b", margin: 0, maxWidth: "780px" }}>
-              {tr("On-site physical verifications, geotagged evidence capture, and inspection report submissions in")} {district} {tr("District")}.
+              On-site physical verifications, geotagged evidence capture, and inspection report submissions in {district} District.
             </p>
           </div>
 
@@ -353,7 +356,7 @@ export const FieldOfficerDashboard: React.FC = () => {
               icon={<Download size={14} />}
               style={{ background: "#ffffff", color: "var(--gov-primary, #0a2540)", borderColor: "#cbd5e1", fontWeight: 700, borderRadius: "8px" }}
             >
-              {tr("Print") || "Export Inspection Log (PDF)"}
+              Export Inspection Log (PDF)
             </Button>
           </div>
         </div>
@@ -363,49 +366,49 @@ export const FieldOfficerDashboard: React.FC = () => {
           
           <div className="metric-card metric-navy" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
-              {tr("Assigned Tasks") || "Assigned Tasks"}
+              Assigned Tasks
             </div>
             <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--text-main, #0f172a)", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
               {kpis.totalAssigned}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              {tr("Pending")}: <strong>{kpis.pendingCount}</strong>
+              Pending Action: <strong>{kpis.pendingCount}</strong>
             </div>
           </div>
 
           <div className="metric-card metric-rose" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
-              {tr("Priority 1 (Urgent Audit)") || "Priority 1 (Urgent Audit)"}
+              Priority 1 (Urgent Audit)
             </div>
             <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#dc2626", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
               {kpis.priority1Count}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              {tr("High Risk")}
+              Immediate Field Audit Needed
             </div>
           </div>
 
           <div className="metric-card metric-green" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
-              {tr("Verified Clean") || tr("Verified")}
+              Verified Clean
             </div>
             <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#16a34a", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
               {kpis.verifiedCount}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              {tr("Report Transmitted to DM") || "Report Transmitted to DM"}
+              Report Transmitted to DM
             </div>
           </div>
 
           <div className="metric-card metric-orange" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.3px" }}>
-              {tr("Flagged Issues") || tr("Audit Flags")}
+              Flagged Issues
             </div>
             <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#ea580c", lineHeight: 1.1, fontFamily: "var(--font-display, Outfit, sans-serif)" }}>
               {kpis.flaggedCount}
             </div>
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-              {tr("Escalated to District Collector") || "Escalated to District Collector"}
+              Escalated to District Collector
             </div>
           </div>
 
@@ -529,13 +532,13 @@ export const FieldOfficerDashboard: React.FC = () => {
                       onClick={() => setSelectedWorkForDetail(item)}
                     >
                       <div>
-                        {/* Top: Priority & Sector Badge */}
+                        {/* Top: Work ID & Priority Badge */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                          <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.82rem", color: "var(--gov-primary)" }}>
+                            {item.id}
+                          </span>
                           <span className={`gov-badge ${item.priority === "PRIORITY_1" ? "gov-badge-danger" : item.priority === "PRIORITY_2" ? "gov-badge-warning" : "gov-badge-info"}`} style={{ fontSize: "0.68rem" }}>
                             {item.priority.replace("_", " ")}
-                          </span>
-                          <span className="gov-badge gov-badge-neutral" style={{ fontSize: "0.68rem" }}>
-                            {item.category || "Public Infrastructure"}
                           </span>
                         </div>
 
@@ -628,7 +631,7 @@ export const FieldOfficerDashboard: React.FC = () => {
                   <thead>
                     <tr style={{ background: "var(--bg-surface-subtle)", textAlign: "left" }}>
                       <th style={{ padding: "10px 12px" }}>Priority</th>
-                      <th style={{ padding: "10px 12px" }}>Project Title</th>
+                      <th style={{ padding: "10px 12px" }}>Work ID & Title</th>
                       <th style={{ padding: "10px 12px" }}>Location & MP</th>
                       <th style={{ padding: "10px 12px" }}>Sanction Cost</th>
                       <th style={{ padding: "10px 12px" }}>Physical Progress</th>
@@ -651,12 +654,12 @@ export const FieldOfficerDashboard: React.FC = () => {
                               {item.priority.replace("_", " ")}
                             </span>
                           </td>
-                          <td style={{ padding: "10px 12px", maxWidth: "280px" }}>
-                            <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
-                              {item.title}
+                          <td style={{ padding: "10px 12px", maxWidth: "260px" }}>
+                            <div style={{ fontFamily: "monospace", fontWeight: 700, color: "var(--gov-primary)", fontSize: "0.78rem" }}>
+                              {item.id}
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                              Category: {item.category || "Public Infrastructure"}
+                            <div style={{ fontWeight: 700, color: "var(--text-main)", marginTop: "2px" }}>
+                              {item.title}
                             </div>
                           </td>
                           <td style={{ padding: "10px 12px", fontSize: "0.76rem" }}>

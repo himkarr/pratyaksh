@@ -25,7 +25,7 @@ export default defineConfig({
     port: 5173
   },
   build: {
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -37,9 +37,6 @@ export default defineConfig({
           }
           if (id.includes('node_modules/lucide-react')) {
             return 'vendor-icons';
-          }
-          if (id.includes('src/data/mpladsData') || id.includes('src/data/contractorData') || id.includes('src/data/citizenData')) {
-            return 'gov-datasets';
           }
         }
       }

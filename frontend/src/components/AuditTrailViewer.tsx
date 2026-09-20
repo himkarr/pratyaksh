@@ -207,12 +207,12 @@ export function AuditTrailViewer() {
             className="gov-modal-content"
             style={{ 
               maxWidth: '580px', 
-              maxHeight: 'min(90vh, 660px)',
+              maxHeight: 'min(90vh, 640px)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
               padding: '0',
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+              overscrollBehavior: 'contain'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -249,11 +249,9 @@ export function AuditTrailViewer() {
                 gap: '12px', 
                 background: 'var(--bg-surface)',
                 overflowY: 'auto',
-                overscrollBehavior: 'auto',
                 flex: '1 1 auto',
                 minHeight: 0,
-                WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-y'
+                overscrollBehavior: 'contain'
               }}
             >
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>

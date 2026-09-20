@@ -30,10 +30,10 @@ export const CreateRecommendationModal: React.FC<CreateRecommendationModalProps>
   isOpen,
   onClose,
   onSubmitted,
-  mpName = "Shri Deepender Singh Hooda",
-  constituency = "Rohtak",
-  constituencyCode = "HR-ROH-01",
-  district = "Rohtak",
+  mpName = "Murlidhar Mohol",
+  constituency = "Pune",
+  constituencyCode = "MH-PUNE-01",
+  district = "Pune",
   initialCitizenId = "",
   initialCitizenIssue = null
 }) => {
