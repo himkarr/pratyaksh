@@ -318,24 +318,47 @@ export function LoginModal({ isOpen, onClose, initialRole }: LoginModalProps) {
                 </a>
               </div>
 
-              {/* Secure Sign In Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="gov-login-btn"
-              >
-                {isLoading ? (
-                  <>
-                    <span className="gov-spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
-                    <span>Authenticating...</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck size={20} />
-                    <span>Sign In to Dashboard</span>
-                  </>
-                )}
-              </button>
+              {/* Action Buttons: Cancel & Sign In */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  style={{
+                    flex: '0 0 auto',
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    fontSize: '0.90rem',
+                    fontWeight: 700,
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#475569',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="gov-login-btn"
+                  style={{ flex: 1, margin: 0 }}
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="gov-spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                      <span>Authenticating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={20} />
+                      <span>Sign In to Dashboard</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
               {/* Security Advisory */}
               <div className="gov-login-advisory-box" style={{ marginTop: '4px' }}>
