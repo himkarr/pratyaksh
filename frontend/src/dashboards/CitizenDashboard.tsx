@@ -90,10 +90,10 @@ export const CitizenDashboard: React.FC = () => {
             id: p.project_id || p.id || `CW-${idx}`,
             title: p.project_name || p.title || "Public Community Infrastructure Work",
             house: "Lok Sabha",
-            state: p.state || "Haryana",
-            district: p.district || "Rohtak",
-            constituency: p.district || "Rohtak",
-            constituency_code: "HR-ROH-01",
+            state: p.state || "Maharashtra",
+            district: p.district || "Pune",
+            constituency: p.district || "Pune",
+            constituency_code: "PC-01",
             mpName: "Local Member of Parliament",
             category: p.category || "Community Asset",
             sectorName: p.category || "Public Works",
@@ -115,29 +115,8 @@ export const CitizenDashboard: React.FC = () => {
             reviews: []
           }));
 
-          const seenIds = new Set<string>();
-          const mergedWorks: WorkItem[] = [];
-
-          mapped.forEach((w) => {
-            const id = String(w.id || "").trim();
-            if (id && !seenIds.has(id)) {
-              seenIds.add(id);
-              mergedWorks.push(w);
-            }
-          });
-
-          ALL_WORKS.forEach((w) => {
-            const id = String(w.id || "").trim();
-            if (id && !seenIds.has(id)) {
-              seenIds.add(id);
-              mergedWorks.push(w);
-            }
-          });
-
-          setWorks(mergedWorks);
+          setWorks(mapped);
           setIsLiveConnected(true);
-        } else {
-          setWorks(ALL_WORKS);
         }
       } catch (err) {
         console.warn("CitizenDashboard live fetch fallback:", err);
